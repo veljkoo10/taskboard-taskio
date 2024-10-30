@@ -16,7 +16,7 @@ import (
 type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Role     string `json:"role"` // Role can be "NK", "M", or "Č"
+	Role     string `json:"role"`
 	Name     string `json:"name"`
 	Surname  string `json:"surname"`
 	Email    string `json:"email"`
@@ -25,9 +25,9 @@ type User struct {
 var client *mongo.Client
 
 func connectToMongo() error {
-	var err error
 	mongoURI := os.Getenv("MONGO_URI")
 	clientOptions := options.Client().ApplyURI(mongoURI)
+	var err error
 	client, err = mongo.Connect(context.TODO(), clientOptions)
 	return err
 }
@@ -58,7 +58,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -102,45 +101,13 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(dbUser)
 }
 
-func insertMockUsers() {
-	collection := client.Database("testdb").Collection("users")
-
-	mockUsers := []User{
-		{Username: "user1", Password: "password1", Role: "NK", Name: "John", Surname: "Doe", Email: "john.doe@example.com"},
-		{Username: "user2", Password: "password2", Role: "M", Name: "Jane", Surname: "Doe", Email: "jane.doe@example.com"},
-		{Username: "user3", Password: "password3", Role: "Č", Name: "Alice", Surname: "Smith", Email: "alice.smith@example.com"},
-	}
-
-	for _, user := range mockUsers {
-		// Hash the password before inserting
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-		if err != nil {
-			fmt.Println("Error hashing password:", err)
-			continue
-		}
-		user.Password = string(hashedPassword)
-
-		_, err = collection.InsertOne(context.TODO(), user)
-		if err != nil {
-			fmt.Println("Error inserting user:", err)
-		}
-	}
-}
-
 func main() {
 	err := connectToMongo()
 	if err != nil {
 		fmt.Println("Error connecting to MongoDB:", err)
 		os.Exit(1)
 	}
-
-	insertMockUsers() // Insert mock users
-
-	defer func() {
-		if err = client.Disconnect(context.TODO()); err != nil {
-			fmt.Println("Error disconnecting from MongoDB:", err)
-		}
-	}()
+	defer client.Disconnect(context.TODO())
 
 	http.HandleFunc("/users", getUsers)
 	http.HandleFunc("/register", registerUser)
@@ -151,9 +118,9 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	fmt.Println("Server started on port 8080")
+	fmt.Println("User service started on port 8080")
 	if err := server.ListenAndServe(); err != nil {
-		fmt.Println("Error starting server:", err)
+		fmt.Println("Error starting user service:", err)
 		os.Exit(1)
 	}
 }

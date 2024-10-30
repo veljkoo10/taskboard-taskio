@@ -1,10 +1,21 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
+  user-service:
+    build: ./user-service
     ports:
       - "8080:8080"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/testdb
+    networks:
+      - app-network
+
+  project-service:
+    build: ./project-service
+    ports:
+      - "8081:8080" # Expose project service on port 8081
     depends_on:
       - mongo
     environment:
