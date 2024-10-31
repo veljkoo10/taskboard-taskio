@@ -19,7 +19,7 @@ func main() {
 	}
 	defer db.DisconnectMongo()
 	bootstrap.InsertInitialUsers()
-
+	bootstrap.ClearUsers()
 	http.HandleFunc("/users", handlers.GetUsers)
 	http.HandleFunc("/register", handlers.RegisterUser)
 	http.HandleFunc("/login", handlers.LoginUser)
