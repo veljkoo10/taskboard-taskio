@@ -5,7 +5,6 @@ import (
 	"go-mongo-app/models"
 	"go-mongo-app/service"
 	"net/http"
-	"regexp"
 )
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -19,36 +18,19 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-func ValidEmail(email string) bool {
-	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	return re.MatchString(email)
-}
-
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
-	var user models.User
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
+	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
-	if user.Username == "" || user.Email == "" || user.Password == "" || user.Name == "" || user.Surname == "" {
-		http.Error(w, "All fields (username, email, password, name, surname) are required", http.StatusBadRequest)
-		return
-	}
-
-	if !ValidEmail(user.Email) {
-		http.Error(w, "Invalid email format", http.StatusBadRequest)
-		return
-	}
-
-	existingUser, err := service.FindUserByUsername(user.Username)
-	if err == nil && existingUser.Username != "" {
-		http.Error(w, "Username already exists", http.StatusConflict)
-		return
-	}
-
-	createdUser, err := service.RegisterUser(user)
+	message, err := service.RegisterUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -56,7 +38,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdUser)
+	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
+	"regexp"
 	"time"
 )
 
@@ -30,26 +31,56 @@ func GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
-func RegisterUser(user models.User) (models.User, error) {
+func validateUser(user models.User) error {
+	if user.Username == "" || user.Email == "" || user.Password == "" || user.Name == "" || user.Surname == "" {
+		return errors.New("all fields (username, email, password, name, surname) are required")
+	}
+
+	if !isValidEmail(user.Email) {
+		return errors.New("invalid email format")
+	}
+
+	existingUserByUsername, err := FindUserByUsername(user.Username)
+	if err == nil && existingUserByUsername.Username != "" {
+		return errors.New("username already exists")
+	}
+
+	existingUserByEmail, err := FindUserByEmail(user.Email)
+	if err == nil && existingUserByEmail.Email != "" {
+		return errors.New("email already exists")
+	}
+
+	return nil
+}
+
+func isValidEmail(email string) bool {
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
+}
+
+func RegisterUser(user models.User) (string, error) {
+	if err := validateUser(user); err != nil {
+		return "", err
+	}
+
 	collection := db.Client.Database("testdb").Collection("users")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Hesuj lozinku pre ubacivanja korisnika u bazu
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return models.User{}, err
+		return "", err
 	}
 	user.Password = string(hashedPassword)
 	user.IsActive = false
 
 	_, err = collection.InsertOne(ctx, user)
 	if err != nil {
-		return models.User{}, err
+		return "", err
 	}
 
-	return user, nil
+	return "Registration successful", nil
 }
 
 func FindUserByUsername(username string) (models.User, error) {
@@ -64,8 +95,19 @@ func FindUserByUsername(username string) (models.User, error) {
 	}
 	return user, nil
 }
+func FindUserByEmail(email string) (models.User, error) {
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	err := collection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return models.User{}, nil
+	}
+	if err != nil {
+		return models.User{}, err
+	}
+	return user, nil
+}
 
-// LoginUser autentifikuje korisnika poređenjem lozinki
 func LoginUser(user models.User) (models.User, error) {
 	collection := db.Client.Database("testdb").Collection("users")
 
@@ -80,7 +122,6 @@ func LoginUser(user models.User) (models.User, error) {
 		return models.User{}, err
 	}
 
-	// Poredi heširanu lozinku iz baze sa lozinkom koju je korisnik uneo
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
 	if err != nil {
 		return models.User{}, errors.New("invalid password")

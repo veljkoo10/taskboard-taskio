@@ -20,7 +20,10 @@ func GetProjects(w http.ResponseWriter, r *http.Request) {
 
 func CreateProject(w http.ResponseWriter, r *http.Request) {
 	var project models.Project
-
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	if err := json.NewDecoder(r.Body).Decode(&project); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
