@@ -3,10 +3,10 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"go-mongo-app/db"
-	"go-mongo-app/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"os"
+	"project-service/db"
+	"project-service/models"
 )
 
 func InsertInitialProjects() {

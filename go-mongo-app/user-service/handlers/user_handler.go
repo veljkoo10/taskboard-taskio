@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"go-mongo-app/models"
-	"go-mongo-app/service"
 	"net/http"
+	"user-service/models"
+	"user-service/service"
 )
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +16,24 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+func GetUserByID(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("id") // Assuming the user ID is passed as a query parameter
+
+	if userID == "" {
+		http.Error(w, "Missing user ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := service.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {

@@ -3,10 +3,10 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"go-mongo-app/db"
-	"go-mongo-app/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"os"
+	"user-service/db"
+	"user-service/models"
 )
 
 func InsertInitialUsers() {

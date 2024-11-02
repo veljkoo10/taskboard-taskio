@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	bootstrap "go-mongo-app/boostrap"
 	"net/http"
 	"os"
+	bootstrap "project-service/boostrap"
 	"time"
 
-	"go-mongo-app/db"
-	"go-mongo-app/handlers"
+	"project-service/db"
+	"project-service/handlers"
 )
 
 func main() {
@@ -19,12 +19,13 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Client.Disconnect(context.TODO())
-	
+
 	bootstrap.InsertInitialProjects()
 	bootstrap.ClearProjects()
 
 	http.HandleFunc("/projects", handlers.GetProjects)
 	http.HandleFunc("/projects/create", handlers.CreateProject)
+	http.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject)
 
 	server := &http.Server{
 		Addr:         ":8080",

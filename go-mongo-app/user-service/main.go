@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"go-mongo-app/bootstrap"
 	"net/http"
 	"os"
 	"time"
+	"user-service/bootstrap"
 
-	"go-mongo-app/db"
-	"go-mongo-app/handlers"
+	"user-service/db"
+	"user-service/handlers"
 )
 
 func enableCors(next http.Handler) http.Handler {
@@ -39,6 +39,7 @@ func main() {
 	http.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser)))
 	http.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser)))
 	http.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser)))
+	http.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))) // New route for GetUserByID
 
 	server := &http.Server{
 		Addr:         ":8080",

@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"errors"
-	"go-mongo-app/db"
-	"go-mongo-app/models"
-	"go-mongo-app/notification"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"time"
+	"user-service/db"
+	"user-service/models"
+	"user-service/notification"
 )
 
 var emailConfig = notification.EmailConfig{
@@ -37,6 +38,24 @@ func GetUsers() ([]models.User, error) {
 	}
 
 	return users, nil
+}
+
+func GetUserByID(userID string) (models.User, error) {
+	collection := db.Client.Database("testdb").Collection("users")
+
+	// Convert string to ObjectID
+	objectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return models.User{}, errors.New("invalid user ID format")
+	}
+
+	var user models.User
+	err = collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&user)
+	if err != nil {
+		return models.User{}, errors.New("user not found")
+	}
+
+	return user, nil
 }
 
 func validateUser(user models.User) error {

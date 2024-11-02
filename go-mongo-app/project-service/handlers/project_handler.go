@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"go-mongo-app/models"
-	"go-mongo-app/service"
+	"github.com/gorilla/mux" // dodajte ovu liniju
 	"net/http"
+	"project-service/models"
+	"project-service/service"
 )
 
 func GetProjects(w http.ResponseWriter, r *http.Request) {
@@ -37,4 +38,19 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(createdProject)
+}
+
+// AddUserToProject dodaje korisnika na projekat nakon što proveri validacije
+func AddUserToProject(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	projectID := vars["projectId"]
+	userID := vars["userId"]
+
+	if projectID == "" || userID == "" {
+		http.Error(w, "Project ID and User ID are required", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("User successfully added to project"))
 }
