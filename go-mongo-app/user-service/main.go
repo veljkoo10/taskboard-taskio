@@ -38,6 +38,7 @@ func main() {
 	http.Handle("/users", enableCors(http.HandlerFunc(handlers.GetUsers)))
 	http.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser)))
 	http.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser)))
+	http.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser)))
 
 	server := &http.Server{
 		Addr:         ":8080",

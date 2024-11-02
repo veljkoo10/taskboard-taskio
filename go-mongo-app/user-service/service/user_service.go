@@ -5,12 +5,20 @@ import (
 	"errors"
 	"go-mongo-app/db"
 	"go-mongo-app/models"
+	"go-mongo-app/notification"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"time"
 )
+
+var emailConfig = notification.EmailConfig{
+	From:     "taskio2024@gmail.com",
+	Password: "znnbgxgvshvythfq",
+	SMTPHost: "smtp.gmail.com",
+	SMTPPort: "587",
+}
 
 func GetUsers() ([]models.User, error) {
 	collection := db.Client.Database("testdb").Collection("users")
@@ -80,7 +88,14 @@ func RegisterUser(user models.User) (string, error) {
 		return "", err
 	}
 
-	return "Registration successful", nil
+	subject := "Hvala na registraciji"
+	body := "Vaša registracija je uspešna! Kliknite na sledeći link za aktivaciju naloga: http://localhost:8080/confirm?email=" + user.Email
+	err = notification.SendEmail(user.Email, subject, body, emailConfig)
+	if err != nil {
+		return "Registration successful, but failed to send confirmation email", nil
+	}
+
+	return "Registration successful. Please check your email to confirm registration.", nil
 }
 
 func FindUserByUsername(username string) (models.User, error) {
@@ -106,6 +121,26 @@ func FindUserByEmail(email string) (models.User, error) {
 		return models.User{}, err
 	}
 	return user, nil
+}
+func ConfirmUser(email string) error {
+	collection := db.Client.Database("testdb").Collection("users")
+
+	filter := bson.M{"email": email}
+	update := bson.M{"$set": bson.M{"isactive": true}}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
 }
 
 func LoginUser(user models.User) (models.User, error) {

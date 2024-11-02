@@ -40,6 +40,56 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
+func ConfirmUser(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		http.Error(w, "Missing email", http.StatusBadRequest)
+		return
+	}
+
+	err := service.ConfirmUser(email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/html")
+
+	htmlResponse := `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Account Confirmation</title>
+            <style>
+                body {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f9;
+                }
+                .message {
+                    font-size: 2em;
+                    color: #4CAF50;
+                    text-align: center;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="message">
+                Account confirmed successfully!
+            </div>
+        </body>
+        </html>
+    `
+
+	w.Write([]byte(htmlResponse))
+}
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
