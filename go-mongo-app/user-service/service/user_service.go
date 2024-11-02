@@ -84,7 +84,30 @@ func isValidEmail(email string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return re.MatchString(email)
 }
-
+func EmailExists(email string) (bool, error) {
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	err := collection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+func UsernameExists(username string) (bool, error) {
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	err := collection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
 func RegisterUser(user models.User) (string, error) {
 	if err := validateUser(user); err != nil {
 		return "", err

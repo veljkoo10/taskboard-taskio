@@ -39,10 +39,12 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Handle("/users", enableCors(http.HandlerFunc(handlers.GetUsers))).Methods("GET")
-	r.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser))).Methods("POST")
-	r.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser))).Methods("POST")
-	r.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser))).Methods("GET")
-	r.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))).Methods("GET") // Route for GetUserByID
+	r.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser))).Methods("POST", "OPTIONS") // Added OPTIONS here
+	r.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser))).Methods("POST", "OPTIONS")       // Similarly for login
+	r.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser))).Methods("GET", "OPTIONS")    // And others as needed
+	r.Handle("/check-email", enableCors(http.HandlerFunc(handlers.CheckEmail))).Methods("GET", "OPTIONS")
+	r.Handle("/check-username", enableCors(http.HandlerFunc(handlers.CheckUsername))).Methods("GET", "OPTIONS")
+	r.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))).Methods("GET", "OPTIONS") // For GetUserByID
 
 	server := &http.Server{
 		Addr:         ":8080",
