@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"user-service/models"
 	"user-service/service"
+
+	"github.com/gorilla/mux"
 )
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +21,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("id") // Assuming the user ID is passed as a query parameter
+	vars := mux.Vars(r)
+	userID := vars["id"]
 
 	if userID == "" {
 		http.Error(w, "Missing user ID", http.StatusBadRequest)

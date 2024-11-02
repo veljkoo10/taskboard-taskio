@@ -2,16 +2,15 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-// User represents a user in the system.
 type User struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id"` // Include the ID field
-	Username string             `json:"username"`
-	Password string             `json:"password"`
-	Role     string             `json:"role"`
-	Name     string             `json:"name"`
-	Surname  string             `json:"surname"`
-	Email    string             `json:"email"`
-	IsActive bool               `json:"isActive"`
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id"`   // Include the ID field
+	Username string             `bson:"username" json:"username"`  // Username field
+	Password string             `bson:"password" json:"password"`  // Password field
+	Role     string             `bson:"role" json:"role"`          // Role field
+	Name     string             `bson:"name" json:"name"`          // Name field
+	Surname  string             `bson:"surname" json:"surname"`    // Surname field
+	Email    string             `bson:"email" json:"email"`        // Email field
+	IsActive bool               `bson:"is_active" json:"isActive"` // Active status field
 }
 
 // NewUser creates a new User instance.

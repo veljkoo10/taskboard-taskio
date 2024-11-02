@@ -6,9 +6,10 @@ import (
 	"os"
 	"time"
 	"user-service/bootstrap"
-
 	"user-service/db"
 	"user-service/handlers"
+
+	"github.com/gorilla/mux"
 )
 
 func enableCors(next http.Handler) http.Handler {
@@ -24,6 +25,7 @@ func enableCors(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func main() {
 	err := db.ConnectToMongo()
 	if err != nil {
@@ -32,20 +34,23 @@ func main() {
 	}
 	defer db.DisconnectMongo()
 
-	bootstrap.InsertInitialUsers()
 	bootstrap.ClearUsers()
+	bootstrap.InsertInitialUsers()
 
-	http.Handle("/users", enableCors(http.HandlerFunc(handlers.GetUsers)))
-	http.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser)))
-	http.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser)))
-	http.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser)))
-	http.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))) // New route for GetUserByID
+	r := mux.NewRouter()
+	r.Handle("/users", enableCors(http.HandlerFunc(handlers.GetUsers))).Methods("GET")
+	r.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser))).Methods("POST")
+	r.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser))).Methods("POST")
+	r.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser))).Methods("GET")
+	r.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))).Methods("GET") // Route for GetUserByID
 
 	server := &http.Server{
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
+		Handler:      r,
 	}
+
 	fmt.Println("User service started on port 8080")
 	if err := server.ListenAndServe(); err != nil {
 		fmt.Println("Error starting user service:", err)

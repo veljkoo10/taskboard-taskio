@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"project-service/db"
 	"project-service/models"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func GetAllProjects() ([]models.Project, error) {
@@ -80,21 +81,23 @@ func projectExists(title string) (bool, error) {
 
 // AddUserToProject dodaje korisnika na projekat nakon što proveri validacije
 func AddUserToProject(projectID string, userID string) error {
-	// Provera da li korisnik postoji
-	exists, err := userExists(userID)
+
+	// Check if the user exists in the users collection
+	userExists, err := userExists(userID)
 	if err != nil {
 		return err
 	}
-	if !exists {
-		return errors.New("user does not exist")
+	if !userExists {
+		return errors.New("user not found")
 	}
 
-	// Pronalaženje projekta prema ID-ju
+	// Convert projectID string to MongoDB ObjectID
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
-		return errors.New("invalid project ID")
+		return errors.New("invalid project ID format")
 	}
 
+	// Retrieve the project from the collection by its ID
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project
 	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
@@ -104,20 +107,17 @@ func AddUserToProject(projectID string, userID string) error {
 		return err
 	}
 
-	// Provera da li je dostignut maksimalni broj korisnika
-	userCount, err := countProjectUsers(projectID)
-	if err != nil {
-		return err
-	}
+	// Check if the number of users has reached the maximum allowed for the project
+	userCount := len(project.Users)
 	if userCount >= project.MaxPeople {
 		return errors.New("maximum number of users reached for this project")
 	}
 
-	// Dodavanje korisnika na projekat
+	// Add the user to the project's users array
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": projectObjectID},
-		bson.M{"$push": bson.M{"users": userID}},
+		bson.M{"$addToSet": bson.M{"users": userID}}, // Use $addToSet to prevent duplicate users
 	)
 	if err != nil {
 		return err
@@ -156,4 +156,22 @@ func countProjectUsers(projectID string) (int, error) {
 	}
 
 	return len(project.Users), nil
+}
+
+func GetProjectByID(projectID string) (*models.Project, error) {
+	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return nil, errors.New("invalid project ID")
+	}
+
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.New("project not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &project, nil
 }

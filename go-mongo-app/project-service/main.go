@@ -10,6 +10,8 @@ import (
 
 	"project-service/db"
 	"project-service/handlers"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -20,14 +22,17 @@ func main() {
 	}
 	defer db.Client.Disconnect(context.TODO())
 
-	bootstrap.InsertInitialProjects()
 	bootstrap.ClearProjects()
+	bootstrap.InsertInitialProjects()
 
-	http.HandleFunc("/projects", handlers.GetProjects)
-	http.HandleFunc("/projects/create", handlers.CreateProject)
-	http.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject)
+	router := mux.NewRouter()
+	router.HandleFunc("/projects", handlers.GetProjects).Methods("GET")
+	router.HandleFunc("/projects/create", handlers.CreateProject).Methods("POST")
+	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET")
+	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject).Methods("PUT")
 
 	server := &http.Server{
+		Handler:      router,
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,

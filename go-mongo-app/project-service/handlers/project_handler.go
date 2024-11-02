@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux" // dodajte ovu liniju
 	"net/http"
 	"project-service/models"
 	"project-service/service"
+
+	"github.com/gorilla/mux" // dodajte ovu liniju
 )
 
 func GetProjects(w http.ResponseWriter, r *http.Request) {
@@ -46,11 +47,25 @@ func AddUserToProject(w http.ResponseWriter, r *http.Request) {
 	projectID := vars["projectId"]
 	userID := vars["userId"]
 
-	if projectID == "" || userID == "" {
-		http.Error(w, "Project ID and User ID are required", http.StatusBadRequest)
+	if err := service.AddUserToProject(projectID, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("User successfully added to project"))
+}
+
+func GetProjectByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	projectID := vars["projectId"]
+
+	project, err := service.GetProjectByID(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(project)
 }

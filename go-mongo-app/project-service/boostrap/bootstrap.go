@@ -3,19 +3,25 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 	"os"
 	"project-service/db"
 	"project-service/models"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func InsertInitialProjects() {
+	// Check if the bootstrap is enabled
 	if os.Getenv("ENABLE_BOOTSTRAP") != "true" {
 		return
 	}
 
 	collection := db.Client.Database("testdb").Collection("projects")
 
+	// Clear existing projects before inserting new ones
+	ClearProjects()
+
+	// Insert initial projects if there are none
 	count, err := collection.CountDocuments(context.TODO(), bson.D{})
 	if err != nil {
 		fmt.Println("Error counting projects:", err)
@@ -23,7 +29,7 @@ func InsertInitialProjects() {
 	}
 
 	if count > 0 {
-		return
+		return // If projects already exist, don't insert again
 	}
 
 	var projects []interface{}
@@ -32,6 +38,8 @@ func InsertInitialProjects() {
 			Title:       fmt.Sprintf("Project %d", i),
 			Description: fmt.Sprintf("Description for project %d", i),
 			Owner:       fmt.Sprintf("Owner %d", i),
+			MinPeople:   2,
+			MaxPeople:   10,
 		}
 		projects = append(projects, project)
 	}
@@ -45,6 +53,7 @@ func InsertInitialProjects() {
 }
 
 func ClearProjects() {
+	// Skip clearing if bootstrap is enabled
 	if os.Getenv("ENABLE_BOOTSTRAP") == "true" {
 		return
 	}

@@ -14,4 +14,5 @@ WORKDIR /root/
 COPY --from=builder /app/app .
 RUN chmod +x ./app
 EXPOSE 8080
+ENV ENABLE_BOOTSTRAP=true
 CMD ["./app"]
