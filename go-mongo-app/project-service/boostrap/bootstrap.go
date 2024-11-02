@@ -40,6 +40,7 @@ func InsertInitialProjects() {
 			Owner:       fmt.Sprintf("Owner %d", i),
 			MinPeople:   2,
 			MaxPeople:   10,
+			Users:       []string{},
 		}
 		projects = append(projects, project)
 	}
@@ -53,11 +54,6 @@ func InsertInitialProjects() {
 }
 
 func ClearProjects() {
-	// Skip clearing if bootstrap is enabled
-	if os.Getenv("ENABLE_BOOTSTRAP") == "true" {
-		return
-	}
-
 	collection := db.Client.Database("testdb").Collection("projects")
 	_, err := collection.DeleteMany(context.TODO(), bson.D{})
 	if err != nil {

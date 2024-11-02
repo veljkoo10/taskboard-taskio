@@ -3,10 +3,11 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 	"os"
 	"user-service/db"
 	"user-service/models"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func InsertInitialUsers() {
@@ -49,9 +50,6 @@ func InsertInitialUsers() {
 }
 
 func ClearUsers() {
-	if os.Getenv("ENABLE_BOOTSTRAP") == "true" {
-		return
-	}
 
 	collection := db.Client.Database("testdb").Collection("users")
 	_, err := collection.DeleteMany(context.TODO(), bson.D{})

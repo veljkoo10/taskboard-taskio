@@ -12,6 +12,27 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// userExists proverava da li korisnik sa datim ID-jem postoji u bazi
+func userExists(userID string) (bool, error) {
+	userCollection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+
+	// Convert userID string to MongoDB ObjectID
+	userObjectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return false, errors.New("invalid user ID format")
+	}
+
+	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userObjectID}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return false, nil // User not found
+	} else if err != nil {
+		return false, err // Other errors
+	}
+
+	return true, nil // User exists
+}
+
 func GetAllProjects() ([]models.Project, error) {
 	collection := db.Client.Database("testdb").Collection("projects")
 	var projects []models.Project
@@ -124,21 +145,6 @@ func AddUserToProject(projectID string, userID string) error {
 	}
 
 	return nil
-}
-
-// userExists proverava da li korisnik sa datim ID-jem postoji u bazi
-func userExists(userID string) (bool, error) {
-	userCollection := db.Client.Database("testdb").Collection("users")
-	var user models.User
-
-	err := userCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user)
-	if err == mongo.ErrNoDocuments {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 // countProjectUsers vraća broj korisnika u projektu
