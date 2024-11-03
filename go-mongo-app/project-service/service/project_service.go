@@ -100,7 +100,7 @@ func projectExists(title string) (bool, error) {
 	return true, nil
 }
 
-// AddUserToProject dodaje korisnika na projekat nakon što proveri validacije
+// AddUserToProject adds a user to the project after validating conditions
 func AddUserToProject(projectID string, userID string) error {
 
 	// Check if the user exists in the users collection
@@ -132,6 +132,13 @@ func AddUserToProject(projectID string, userID string) error {
 	userCount := len(project.Users)
 	if userCount >= project.MaxPeople {
 		return errors.New("maximum number of users reached for this project")
+	}
+
+	// Check if the user is already in the project’s users list
+	for _, existingUserID := range project.Users {
+		if existingUserID == userID {
+			return errors.New("user is already added to this project")
+		}
 	}
 
 	// Add the user to the project's users array
@@ -180,4 +187,56 @@ func GetProjectByID(projectID string) (*models.Project, error) {
 	}
 
 	return &project, nil
+}
+
+// RemoveUserFromProject uklanja korisnika iz projekta nakon provere validacija
+func RemoveUserFromProject(projectID string, userID string) error {
+	// Provera da li korisnik postoji u kolekciji korisnika
+	userExists, err := userExists(userID)
+	if err != nil {
+		return err
+	}
+	if !userExists {
+		return errors.New("user not found")
+	}
+
+	// Konverzija projectID iz stringa u MongoDB ObjectID
+	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return errors.New("invalid project ID format")
+	}
+
+	// Preuzimanje projekta po ID-u
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
+	if err == mongo.ErrNoDocuments {
+		return errors.New("project not found")
+	} else if err != nil {
+		return err
+	}
+
+	// Provera da li je korisnik već deo liste korisnika u projektu
+	userFound := false
+	for _, existingUserID := range project.Users {
+		if existingUserID == userID {
+			userFound = true
+			break
+		}
+	}
+	if !userFound {
+		return errors.New("user is not a member of this project")
+	}
+
+	// Uklanjanje korisnika iz projekta koristeći $pull operator
+	_, err = collection.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": projectObjectID},
+		bson.M{"$pull": bson.M{"users": userID}}, // $pull uklanja korisnika iz liste
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

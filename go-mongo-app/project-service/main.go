@@ -30,6 +30,7 @@ func main() {
 	router.HandleFunc("/projects/create", handlers.CreateProject).Methods("POST")
 	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject).Methods("PUT")
+	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.RemoveUserFromProject).Methods("DELETE")
 
 	server := &http.Server{
 		Handler:      router,

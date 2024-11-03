@@ -69,3 +69,18 @@ func GetProjectByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(project)
 }
+
+// RemoveUserFromProject uklanja korisnika sa projekta nakon što proveri validacije
+func RemoveUserFromProject(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	projectID := vars["projectId"]
+	userID := vars["userId"]
+
+	if err := service.RemoveUserFromProject(projectID, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("User successfully removed from project"))
+}
