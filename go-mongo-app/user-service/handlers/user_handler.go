@@ -1,8 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
+	"time"
+	"user-service/db"
 	"user-service/models"
 	"user-service/service"
 
@@ -142,6 +147,129 @@ func CheckUsername(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
+}
+func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
+	var requestBody struct {
+		Email string `json:"email"`
+	}
+
+	// Decode the request body only for JSON
+	if r.Header.Get("Content-Type") == "application/json" {
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+			http.Error(w, "Invalid input", http.StatusBadRequest)
+			return
+		}
+	} else {
+		// If the request is from the web, get the email from the URL
+		requestBody.Email = r.URL.Query().Get("email")
+	}
+
+	if requestBody.Email == "" {
+		http.Error(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	response, err := service.ResetPassword(requestBody.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Find the user and their password
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = collection.FindOne(ctx, bson.M{"email": requestBody.Email}).Decode(&user)
+	if err != nil {
+		http.Error(w, "No user found with this email", http.StatusBadRequest)
+		return
+	}
+
+	// If the request is JSON, return a JSON response
+	if r.Header.Get("Content-Type") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+		jsonResponse := map[string]string{
+			"message":  response,
+			"password": user.Password,
+		}
+		json.NewEncoder(w).Encode(jsonResponse)
+	} else {
+		// For web requests, display HTML
+		w.Header().Set("Content-Type", "text/html")
+		htmlForm := `
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>Username Verification</title>
+		</head>
+		<body>
+			<h1>Enter your username</h1>
+			<form method="POST" action="/verify-username">
+				<input type="hidden" name="email" value="` + user.Email + `">
+				<label for="username">Username:</label>
+				<input type="text" id="username" name="username" required>
+				<button type="submit">Send</button>
+			</form>
+		</body>
+		</html>
+	`
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(htmlForm))
+
+	}
+}
+func HandleVerifyUsername(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	email := r.FormValue("email")
+	username := r.FormValue("username")
+
+	// Proveri da li je korisnik sa tim email-om i korisničkim imenom
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := collection.FindOne(ctx, bson.M{"email": email, "username": username}).Decode(&user)
+	if err != nil {
+		http.Error(w, "Nije vas username", http.StatusBadRequest)
+		return
+	}
+
+	// Prikaži lozinku
+	htmlResponse := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>Password Reset</title>
+	</head>
+	<body>
+		<h1>Password Reset Successful</h1>
+		<p>Your current password is: %s</p>
+	</body>
+	</html>
+`
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, htmlResponse, user.Password) // Ovdje ispisujemo lozinku
+}
+
+func CheckUserActive(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		http.Error(w, "Missing email", http.StatusBadRequest)
+		return
+	}
+
+	isActive, err := service.IsUserActive(email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"active": isActive})
+
 }
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User

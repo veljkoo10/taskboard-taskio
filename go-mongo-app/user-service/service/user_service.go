@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -168,7 +169,7 @@ func ConfirmUser(email string) error {
 	collection := db.Client.Database("testdb").Collection("users")
 
 	filter := bson.M{"email": email}
-	update := bson.M{"$set": bson.M{"isactive": true}}
+	update := bson.M{"$set": bson.M{"isActive": true}}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -184,7 +185,51 @@ func ConfirmUser(email string) error {
 
 	return nil
 }
+func IsUserActive(email string) (bool, error) {
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	err := collection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil // User does not exist
+		}
+		return false, err // An error occurred
+	}
+	return user.IsActive, nil // Return user's active status
+}
+func ResetPassword(email string) (string, error) {
+	// Proveri da li korisnik postoji
+	collection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		// Korisnik sa ovim emailom ne postoji
+		return "", fmt.Errorf("Korisnik sa ovim emailom ne postoji")
+	}
+
+	// Proveri da li je korisnik aktivan
+	if !user.IsActive {
+		return "", fmt.Errorf("Korisnik nije aktivan, ne možete resetovati lozinku")
+	}
+
+	// Poziv funkcije za slanje email-a
+	err = SendPasswordResetEmail(user.Email)
+	if err != nil {
+		return "", err
+	}
+
+	return "Email za resetovanje šifre je uspešno poslat. Proverite svoj email.", nil
+}
+func SendPasswordResetEmail(email string) error {
+
+	subject := "Resetovanje šifre"
+	body := "Kliknite na sledeći link za resetovanje šifre: http://localhost:8080/reset-password?email=" + email
+	err := notification.SendEmail(email, subject, body, emailConfig)
+	return err
+}
 func LoginUser(user models.User) (models.User, error) {
 	collection := db.Client.Database("testdb").Collection("users")
 

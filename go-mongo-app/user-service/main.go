@@ -45,6 +45,9 @@ func main() {
 	r.Handle("/check-email", enableCors(http.HandlerFunc(handlers.CheckEmail))).Methods("GET", "OPTIONS")
 	r.Handle("/check-username", enableCors(http.HandlerFunc(handlers.CheckUsername))).Methods("GET", "OPTIONS")
 	r.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))).Methods("GET", "OPTIONS") // For GetUserByID
+	r.Handle("/reset-password", enableCors(http.HandlerFunc(handlers.HandleResetPassword))).Methods("POST", "GET", "OPTIONS")
+	r.Handle("/verify-username", enableCors(http.HandlerFunc(handlers.HandleVerifyUsername))).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/api/check-user-active", enableCors(http.HandlerFunc(handlers.CheckUserActive))).Methods("GET", "OPTIONS")
 
 	server := &http.Server{
 		Addr:         ":8080",
