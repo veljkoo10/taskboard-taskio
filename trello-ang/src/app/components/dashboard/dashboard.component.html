@@ -1,0 +1,85 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
+  <div class="container-fluid">
+    <!-- Left elements -->
+    <div class="d-flex align-items-center">
+      <!-- Brand -->
+      <a class="navbar-brand me-2 mb-1 d-flex align-items-center">
+        <img [src]="logoPath" width="45" height="45" alt="Dumbbell Logo" loading="lazy" style="cursor: pointer;">
+        <h4 class="ms-2 mb-0" style="cursor: pointer;">Taskio</h4>
+      </a>
+
+      <!-- Request link (visible for ADMIN only) -->
+      <h4 class="nav-link custom-link add-project-link ms-2" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+        Add project
+      </h4>
+    </div>
+
+    <!-- Right elements -->
+    <div class="d-flex align-items-center position-relative">
+      <!-- Profile icon -->
+      <a class="nav-link custom-link" (click)="toggleProfileMenu()">
+        <img [src]="profilePath" alt="Profile Icon" width="40" height="40" style="cursor: pointer;">
+      </a>
+
+      <!-- Profile menu -->
+      <div class="profile-menu shadow-lg rounded" *ngIf="isProfileMenuOpen">
+        <a class="nav-link custom-link p-2">
+          Profile
+        </a>
+        <a class="nav-link custom-link p-2">
+          Notification
+        </a>
+        <a class="nav-link custom-link p-2">
+          Logout
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Modal za kreiranje projekta -->
+<div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addProjectModalLabel">Kreiraj projekat</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label for="projectTitle" class="form-label">Naslov:</label>
+            <input type="text" class="form-control" id="projectTitle" [(ngModel)]="project.title" name="title" required>
+          </div>
+          <div class="mb-3">
+            <label for="projectDescription" class="form-label">Opis:</label>
+            <textarea class="form-control" id="projectDescription" [(ngModel)]="project.description" name="description" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="projectOwner" class="form-label">Vlasnik:</label>
+            <input type="text" class="form-control" id="projectOwner" [(ngModel)]="project.owner" name="owner" required>
+          </div>
+          <div class="mb-3">
+            <label for="expectedEndDate" class="form-label">Očekivani datum završetka:</label>
+            <input type="date" class="form-control" id="expectedEndDate" [(ngModel)]="project.expectedEndDate" name="expectedEndDate" required>
+          </div>
+          <div class="row mb-3">
+            <div class="col">
+              <label for="minNumber" class="form-label">Minimalan broj:</label>
+              <input type="number" class="form-control" id="minNumber" [(ngModel)]="project.minNumber" name="minNumber" required>
+            </div>
+            <div class="col">
+              <label for="maxNumber" class="form-label">Maksimalan broj:</label>
+              <input type="number" class="form-control" id="maxNumber" [(ngModel)]="project.maxNumber" name="maxNumber" required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Otkazi</button>
+        <button type="button" class="btn btn-success" (click)="createProject()">Sačuvaj</button>
+      </div>
+    </div>
+  </div>
+</div>
+

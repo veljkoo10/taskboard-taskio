@@ -1,0 +1,81 @@
+.custom-link {
+  font-size: 1.5rem;
+  text-decoration: none;
+  color: black;
+}
+
+.navbar {
+  background-color: #216e4e !important;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.nav-link {
+  cursor: pointer;
+}
+
+.profile-menu {
+  position: absolute;
+  right: 10px;
+  top: 40px;
+  background-color: #216e4e;
+  border: 2px solid black;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.profile-menu a {
+  display: block;
+  padding: 10px;
+  color: black;
+  text-decoration: none;
+  text-align: center;
+}
+
+.profile-menu a:hover {
+  background-color: #1a593e;
+}
+.add-project-link {
+  margin-top: 11px;
+  color: black;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: background-color 0.3s, transform 0.2s;
+  cursor: pointer;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-block;
+}
+
+.add-project-link:hover {
+  transform: scale(1.05);
+}
+
+.add-project-link:active {
+  transform: scale(0.95);
+}
+
+.modal-content {
+  background-color: #f0f0f0;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+}
