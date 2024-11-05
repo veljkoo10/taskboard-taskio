@@ -91,7 +91,7 @@ func projectExists(title string) (bool, error) {
 	err := collection.FindOne(context.TODO(), bson.M{"title": title}).Decode(&project)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return false, nil // No project found
+			return false, nil
 		}
 		return false, err
 	}

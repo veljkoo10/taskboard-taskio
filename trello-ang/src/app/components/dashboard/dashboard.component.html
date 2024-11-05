@@ -1,3 +1,5 @@
+
+
 <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
   <div class="container-fluid">
     <!-- Left elements -->
@@ -66,12 +68,15 @@
           <div class="row mb-3">
             <div class="col">
               <label for="minNumber" class="form-label">Minimalan broj:</label>
-              <input type="number" class="form-control" id="minNumber" [(ngModel)]="project.min_people" name="min_people" required>
+              <input type="number" class="form-control" id="minNumber" [(ngModel)]="project.min_people" name="min_people" required min="1">
             </div>
             <div class="col">
               <label for="maxNumber" class="form-label">Maksimalan broj:</label>
-              <input type="number" class="form-control" id="maxNumber" [(ngModel)]="project.max_people" name="max_people" required>
+              <input type="number" class="form-control" id="maxNumber" [(ngModel)]="project.max_people" name="max_people" required min="2">
             </div>
+          </div>
+          <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+            {{ errorMessage }}
           </div>
         </form>
       </div>
@@ -82,3 +87,4 @@
     </div>
   </div>
 </div>
+

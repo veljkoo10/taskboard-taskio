@@ -7,14 +7,17 @@ import {Project} from "../model/project.model";
   providedIn: 'root'
 })
 export class ProjectService {
-  private baseUrl = 'http://localhost:8081/projects'; // Update to the correct port
+  private baseUrl = 'http://localhost:8081/projects';
 
   constructor(private http: HttpClient) {}
 
   createProject(project: Project): Observable<Project> {
-    return this.http.post<Project>(`${this.baseUrl}/create`, project); // This sends the POST request
+    return this.http.post<Project>(`${this.baseUrl}/create`, project);
   }
-  
+  checkProjectExists(title: string): Observable<boolean> {
+    return this.http.get<boolean>(`${this.baseUrl}/exists?title=${title}`);
+  }
+
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(this.baseUrl);
   }

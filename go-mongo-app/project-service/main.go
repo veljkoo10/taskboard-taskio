@@ -33,7 +33,6 @@ func main() {
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject).Methods("PUT")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.RemoveUserFromProject).Methods("DELETE")
 
-	// Set up CORS middleware
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
@@ -42,7 +41,7 @@ func main() {
 	})
 
 	server := &http.Server{
-		Handler:      c.Handler(router), // Wrap the router with the CORS handler
+		Handler:      c.Handler(router),
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
