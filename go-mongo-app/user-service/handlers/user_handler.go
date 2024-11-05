@@ -153,14 +153,12 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 	}
 
-	// Decode the request body only for JSON
 	if r.Header.Get("Content-Type") == "application/json" {
 		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 			http.Error(w, "Invalid input", http.StatusBadRequest)
 			return
 		}
 	} else {
-		// If the request is from the web, get the email from the URL
 		requestBody.Email = r.URL.Query().Get("email")
 	}
 
@@ -175,7 +173,6 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find the user and their password
 	collection := db.Client.Database("testdb").Collection("users")
 	var user models.User
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -187,7 +184,6 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If the request is JSON, return a JSON response
 	if r.Header.Get("Content-Type") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
 		jsonResponse := map[string]string{
@@ -196,7 +192,6 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(jsonResponse)
 	} else {
-		// For web requests, display HTML
 		w.Header().Set("Content-Type", "text/html")
 		htmlForm := `
 		<!DOCTYPE html>
@@ -225,7 +220,6 @@ func HandleVerifyUsername(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	username := r.FormValue("username")
 
-	// Proveri da li je korisnik sa tim email-om i korisničkim imenom
 	collection := db.Client.Database("testdb").Collection("users")
 	var user models.User
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -233,11 +227,10 @@ func HandleVerifyUsername(w http.ResponseWriter, r *http.Request) {
 
 	err := collection.FindOne(ctx, bson.M{"email": email, "username": username}).Decode(&user)
 	if err != nil {
-		http.Error(w, "Nije vas username", http.StatusBadRequest)
+		http.Error(w, "It's not your username", http.StatusBadRequest)
 		return
 	}
 
-	// Prikaži lozinku
 	htmlResponse := `
 	<!DOCTYPE html>
 	<html>
@@ -251,7 +244,7 @@ func HandleVerifyUsername(w http.ResponseWriter, r *http.Request) {
 	</html>
 `
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, htmlResponse, user.Password) // Ovdje ispisujemo lozinku
+	fmt.Fprintf(w, htmlResponse, user.Password)
 }
 
 func CheckUserActive(w http.ResponseWriter, r *http.Request) {

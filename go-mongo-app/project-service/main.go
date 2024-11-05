@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	bootstrap "project-service/boostrap"
 	"time"
 
+	bootstrap "project-service/boostrap"
 	"project-service/db"
 	"project-service/handlers"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -32,8 +33,16 @@ func main() {
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject).Methods("PUT")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.RemoveUserFromProject).Methods("DELETE")
 
+	// Set up CORS middleware
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:4200"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
 	server := &http.Server{
-		Handler:      router,
+		Handler:      c.Handler(router), // Wrap the router with the CORS handler
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,

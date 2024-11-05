@@ -3,8 +3,11 @@ module user-service
 go 1.20
 
 require (
+	github.com/gorilla/mux v1.8.1
 	go.mongodb.org/mongo-driver v1.17.1
 	golang.org/x/crypto v0.26.0
+	github.com/rs/cors  v1.11.1
+
 )
 
 require (

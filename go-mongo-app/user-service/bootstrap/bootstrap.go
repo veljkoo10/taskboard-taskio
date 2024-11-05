@@ -31,12 +31,12 @@ func InsertInitialUsers() {
 	for i := 1; i <= 10; i++ {
 		user := models.User{
 			Username: fmt.Sprintf("user%d", i),
-			Password: fmt.Sprintf("password%d", i), // Napomena: ovo ne bi trebalo biti šifrovano ovde
+			Password: fmt.Sprintf("password%d", i),
 			Role:     "user",
 			Name:     fmt.Sprintf("Name%d", i),
 			Surname:  fmt.Sprintf("Surname%d", i),
 			Email:    fmt.Sprintf("user%d@example.com", i),
-			IsActive: false, // Postavi IsActive na false
+			IsActive: false,
 		}
 		users = append(users, user)
 	}

@@ -44,7 +44,6 @@ func GetUsers() ([]models.User, error) {
 func GetUserByID(userID string) (models.User, error) {
 	collection := db.Client.Database("testdb").Collection("users")
 
-	// Convert string to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return models.User{}, errors.New("invalid user ID format")
@@ -131,8 +130,8 @@ func RegisterUser(user models.User) (string, error) {
 		return "", err
 	}
 
-	subject := "Hvala na registraciji"
-	body := "Vaša registracija je uspešna! Kliknite na sledeći link za aktivaciju naloga: http://localhost:8080/confirm?email=" + user.Email
+	subject := "Thanks for registering"
+	body := "Your registration is successful! Click the following link to activate your account: http://localhost:8080/confirm?email=" + user.Email
 	err = notification.SendEmail(user.Email, subject, body, emailConfig)
 	if err != nil {
 		return "Registration successful, but failed to send confirmation email", nil
@@ -193,12 +192,11 @@ func IsUserActive(email string) (bool, error) {
 		if err == mongo.ErrNoDocuments {
 			return false, nil // User does not exist
 		}
-		return false, err // An error occurred
+		return false, err
 	}
-	return user.IsActive, nil // Return user's active status
+	return user.IsActive, nil
 }
 func ResetPassword(email string) (string, error) {
-	// Proveri da li korisnik postoji
 	collection := db.Client.Database("testdb").Collection("users")
 	var user models.User
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -206,27 +204,24 @@ func ResetPassword(email string) (string, error) {
 
 	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
-		// Korisnik sa ovim emailom ne postoji
-		return "", fmt.Errorf("Korisnik sa ovim emailom ne postoji")
+		return "", fmt.Errorf("The user with this email does not exist")
 	}
 
-	// Proveri da li je korisnik aktivan
 	if !user.IsActive {
-		return "", fmt.Errorf("Korisnik nije aktivan, ne možete resetovati lozinku")
+		return "", fmt.Errorf("The user is not active, you cannot reset the password")
 	}
 
-	// Poziv funkcije za slanje email-a
 	err = SendPasswordResetEmail(user.Email)
 	if err != nil {
 		return "", err
 	}
 
-	return "Email za resetovanje šifre je uspešno poslat. Proverite svoj email.", nil
+	return "The password reset email has been successfully sent. Check your email.", nil
 }
 func SendPasswordResetEmail(email string) error {
 
-	subject := "Resetovanje šifre"
-	body := "Kliknite na sledeći link za resetovanje šifre: http://localhost:8080/reset-password?email=" + email
+	subject := "Password reset"
+	body := "Click the following link to reset your password: http://localhost:8080/reset-password?email=" + email
 	err := notification.SendEmail(email, subject, body, emailConfig)
 	return err
 }

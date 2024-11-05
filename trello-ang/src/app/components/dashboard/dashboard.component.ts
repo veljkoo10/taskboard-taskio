@@ -28,13 +28,32 @@ export class DashboardComponent {
       this.isProfileMenuOpen = false;
     }
   }
-
   createProject(): void {
-    this.projectService.createProject(this.project).subscribe(response => {
-      console.log('Project created:', response);
-      this.project = new Project(); // reset project
-    }, error => {
-      console.error('Error creating project:', error);
-    });
+    // Prepare the project object to match the backend structure
+    const projectPayload = {
+      title: this.project.title,
+      description: this.project.description,
+      owner: this.project.owner,
+      expected_end_date: this.project.expected_end_date, // Use the updated property name
+      min_people: this.project.min_people,               // Use the updated property name
+      max_people: this.project.max_people,               // Use the updated property name
+      users: this.project.users                           // Assuming this is an array
+    };
+  
+    this.projectService.createProject(projectPayload).subscribe(
+      response => {
+        console.log('Project created successfully:', response);
+        // Clear the form after successful project creation
+        this.project = new Project();
+        // Close the modal
+        let modal = document.getElementById('addProjectModal');
+        if (modal) modal.click();
+      },
+      error => {
+        console.error('Error creating project:', error);
+      }
+    );
   }
+  
+
 }

@@ -41,7 +41,6 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(createdProject)
 }
 
-// AddUserToProject dodaje korisnika na projekat nakon što proveri validacije
 func AddUserToProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
@@ -70,7 +69,6 @@ func GetProjectByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(project)
 }
 
-// RemoveUserFromProject uklanja korisnika sa projekta nakon što proveri validacije
 func RemoveUserFromProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]

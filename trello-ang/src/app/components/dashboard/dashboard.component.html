@@ -3,7 +3,7 @@
     <!-- Left elements -->
     <div class="d-flex align-items-center">
       <!-- Brand -->
-      <a class="navbar-brand me-2 mb-1 d-flex align-items-center">
+      <a class="navbar-brand me-2 mb-1 d-flex align-items-center" href="#">
         <img [src]="logoPath" width="45" height="45" alt="Dumbbell Logo" loading="lazy" style="cursor: pointer;">
         <h4 class="ms-2 mb-0" style="cursor: pointer;">Taskio</h4>
       </a>
@@ -37,7 +37,7 @@
   </div>
 </nav>
 
-<!-- Modal za kreiranje projekta -->
+<!-- Modal for creating a project -->
 <div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -61,16 +61,16 @@
           </div>
           <div class="mb-3">
             <label for="expectedEndDate" class="form-label">Očekivani datum završetka:</label>
-            <input type="date" class="form-control" id="expectedEndDate" [(ngModel)]="project.expectedEndDate" name="expectedEndDate" required>
+            <input type="date" class="form-control" id="expectedEndDate" [(ngModel)]="project.expected_end_date" name="expected_end_date" required>
           </div>
           <div class="row mb-3">
             <div class="col">
               <label for="minNumber" class="form-label">Minimalan broj:</label>
-              <input type="number" class="form-control" id="minNumber" [(ngModel)]="project.minNumber" name="minNumber" required>
+              <input type="number" class="form-control" id="minNumber" [(ngModel)]="project.min_people" name="min_people" required>
             </div>
             <div class="col">
               <label for="maxNumber" class="form-label">Maksimalan broj:</label>
-              <input type="number" class="form-control" id="maxNumber" [(ngModel)]="project.maxNumber" name="maxNumber" required>
+              <input type="number" class="form-control" id="maxNumber" [(ngModel)]="project.max_people" name="max_people" required>
             </div>
           </div>
         </form>
@@ -82,4 +82,3 @@
     </div>
   </div>
 </div>
-

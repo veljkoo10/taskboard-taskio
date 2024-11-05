@@ -7,20 +7,17 @@ import {Project} from "../model/project.model";
   providedIn: 'root'
 })
 export class ProjectService {
-  private baseUrl = 'http://localhost:8080/projects';
+  private baseUrl = 'http://localhost:8081/projects'; // Update to the correct port
 
   constructor(private http: HttpClient) {}
 
   createProject(project: Project): Observable<Project> {
-    return this.http.post<Project>(`${this.baseUrl}/create`, project, {
-      headers: {
-        'Content-Type': 'application/json'}
-    });
+    return this.http.post<Project>(`${this.baseUrl}/create`, project); // This sends the POST request
   }
-
-
+  
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(this.baseUrl);
   }
 }
+
 

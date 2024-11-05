@@ -11,17 +11,14 @@ import (
 )
 
 func InsertInitialProjects() {
-	// Check if the bootstrap is enabled
 	if os.Getenv("ENABLE_BOOTSTRAP") != "true" {
 		return
 	}
 
 	collection := db.Client.Database("testdb").Collection("projects")
 
-	// Clear existing projects before inserting new ones
 	ClearProjects()
 
-	// Insert initial projects if there are none
 	count, err := collection.CountDocuments(context.TODO(), bson.D{})
 	if err != nil {
 		fmt.Println("Error counting projects:", err)

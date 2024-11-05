@@ -10,21 +10,8 @@ import (
 	"user-service/handlers"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
-
-func enableCors(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
 
 func main() {
 	err := db.ConnectToMongo()
@@ -37,23 +24,31 @@ func main() {
 	bootstrap.ClearUsers()
 	bootstrap.InsertInitialUsers()
 
-	r := mux.NewRouter()
-	r.Handle("/users", enableCors(http.HandlerFunc(handlers.GetUsers))).Methods("GET")
-	r.Handle("/register", enableCors(http.HandlerFunc(handlers.RegisterUser))).Methods("POST", "OPTIONS") // Added OPTIONS here
-	r.Handle("/login", enableCors(http.HandlerFunc(handlers.LoginUser))).Methods("POST", "OPTIONS")       // Similarly for login
-	r.Handle("/confirm", enableCors(http.HandlerFunc(handlers.ConfirmUser))).Methods("GET", "OPTIONS")    // And others as needed
-	r.Handle("/check-email", enableCors(http.HandlerFunc(handlers.CheckEmail))).Methods("GET", "OPTIONS")
-	r.Handle("/check-username", enableCors(http.HandlerFunc(handlers.CheckUsername))).Methods("GET", "OPTIONS")
-	r.Handle("/users/{id}", enableCors(http.HandlerFunc(handlers.GetUserByID))).Methods("GET", "OPTIONS") // For GetUserByID
-	r.Handle("/reset-password", enableCors(http.HandlerFunc(handlers.HandleResetPassword))).Methods("POST", "GET", "OPTIONS")
-	r.Handle("/verify-username", enableCors(http.HandlerFunc(handlers.HandleVerifyUsername))).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/api/check-user-active", enableCors(http.HandlerFunc(handlers.CheckUserActive))).Methods("GET", "OPTIONS")
+	router := mux.NewRouter()
+	router.HandleFunc("/users", handlers.GetUsers).Methods("GET")
+	router.HandleFunc("/register", handlers.RegisterUser).Methods("POST", "OPTIONS")
+	router.HandleFunc("/login", handlers.LoginUser).Methods("POST", "OPTIONS")
+	router.HandleFunc("/confirm", handlers.ConfirmUser).Methods("GET", "OPTIONS")
+	router.HandleFunc("/check-email", handlers.CheckEmail).Methods("GET", "OPTIONS")
+	router.HandleFunc("/check-username", handlers.CheckUsername).Methods("GET", "OPTIONS")
+	router.HandleFunc("/users/{id}", handlers.GetUserByID).Methods("GET", "OPTIONS")
+	router.HandleFunc("/reset-password", handlers.HandleResetPassword).Methods("POST", "GET", "OPTIONS")
+	router.HandleFunc("/verify-username", handlers.HandleVerifyUsername).Methods("GET", "POST", "OPTIONS")
+	router.HandleFunc("/api/check-user-active", handlers.CheckUserActive).Methods("GET", "OPTIONS")
+
+	// Set up CORS middleware
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:4200"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
 
 	server := &http.Server{
+		Handler:      c.Handler(router), // Wrap the router with the CORS handler
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
-		Handler:      r,
 	}
 
 	fmt.Println("User service started on port 8080")
