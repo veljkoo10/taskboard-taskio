@@ -44,6 +44,15 @@ export class AuthService {
       );
   }
 
-
+// Metoda za dobijanje korisničkog profila prema ID-u
+ getUserById(userId: string): Observable<any> {
+  const url = `${this.baseUrl}/users/${userId}`;  // Putanja na backendu
+  return this.http.get<any>(url).pipe(
+    catchError(error => {
+      console.error('Error fetching user profile:', error);
+      return throwError(error); // Vraćanje greške
+    })
+  );
+}
 
 }

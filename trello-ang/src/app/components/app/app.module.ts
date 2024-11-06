@@ -8,6 +8,8 @@ import { FormsModule } from '@angular/forms';
 import { RegisterComponent } from '../register/register.component';
 import { DashboardComponent } from '../dashboard/dashboard.component';
 import { ProjectDetailsComponent } from '../project-details/project-details.component';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
+
 
 @NgModule({
   declarations: [
@@ -15,13 +17,14 @@ import { ProjectDetailsComponent } from '../project-details/project-details.comp
     LoginComponent,
     DashboardComponent,
     ProjectDetailsComponent,
+    UserProfileComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     HttpClientModule,
     FormsModule,
-    RegisterComponent
+    RegisterComponent,
   ],
   bootstrap: [AppComponent]
 })

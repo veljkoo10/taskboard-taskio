@@ -1,0 +1,71 @@
+<div class="container">
+  <h2>User Profile</h2>
+
+  <!-- Prikazivanje greške ako dođe do greške pri učitavanju -->
+  <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+    {{ errorMessage }}
+  </div>
+
+  <div class="profile-wrapper">
+    <!-- Sekcija sa korisničkim podacima -->
+    <div class="user-info">
+      <div *ngIf="user">
+        <!-- Prikaz korisničkog imena -->
+        <div class="form-group">
+          <label for="username">Username</label>
+          <p>{{ user.username }}</p>
+        </div>
+
+        <!-- Prikaz imena i prezimena -->
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <p>{{ user.name }} {{ user.surname }}</p>
+        </div>
+
+        <!-- Prikaz email adrese -->
+        <div class="form-group">
+          <label for="email">Email</label>
+          <p>{{ user.email }}</p>
+        </div>
+
+        <!-- Prikaz uloge -->
+        <div class="form-group">
+          <label for="role">Role</label>
+          <p>{{ user.role }}</p>
+        </div>
+
+        <!-- Prikaz aktivacije korisnika -->
+        <div class="form-group">
+          <label for="isActive">Active</label>
+          <p>{{ user.isActive ? 'Yes' : 'No' }}</p>
+        </div>
+      </div>
+
+      <!-- Ako podaci nisu učitani -->
+      <div *ngIf="!user && !errorMessage">
+        <p>Loading user profile...</p>
+      </div>
+    </div>
+
+    <!-- Sekcija za formu za promenu lozinke -->
+    <div class="change-password-form">
+      <hr />
+      <h3>Change Password</h3>
+      
+      <div class="form-group">
+        <label for="oldPassword">Old Password</label>
+        <p>**********</p> <!-- Prikaz starog passworda, statički -->
+      </div>
+
+      <div class="form-group">
+        <label for="newPassword">New Password</label>
+        <p>**********</p> <!-- Prikaz novog passworda, statički -->
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm New Password</label>
+        <p>**********</p> <!-- Prikaz potvrde nove lozinke, statički -->
+      </div>
+    </div>
+  </div>
+</div>
