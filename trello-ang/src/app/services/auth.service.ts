@@ -6,10 +6,10 @@ import {catchError, Observable, throwError} from 'rxjs';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly baseUrl = 'http://localhost/taskio'; // Base URL za backend
-  private readonly registerUrl = `${this.baseUrl}/register`; // Backend URL za registraciju
-  private readonly checkEmailUrl = `${this.baseUrl}/check-email`; // URL za proveru emaila
-  private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`; // URL za reset lozinke
+  private readonly baseUrl = 'http://localhost/taskio';
+  private readonly registerUrl = `${this.baseUrl}/register`;
+  private readonly checkEmailUrl = `${this.baseUrl}/check-email`;
+  private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;
 
   constructor(private http: HttpClient) {}
 

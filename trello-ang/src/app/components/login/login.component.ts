@@ -19,35 +19,32 @@ export class LoginComponent {
     return email.endsWith('@gmail.com');
   }
   checkEmailAndResetPassword() {
-    if (!this.resetEmail) { // Proverava da li je polje prazno
-      this.resetMessage = 'Email mora biti popunjen.';
+    if (!this.resetEmail) {
+      this.resetMessage = 'Email must be filled out.';
       return;
     }
     if (!this.isEmailValid(this.resetEmail)) {
-      this.resetMessage = 'Email mora biti u formatu @gmail.com';
+      this.resetMessage = 'Email must be in @gmail.com format';
       return;
     }
 
-    // Provera da li je email aktivan
     this.authService.checkUserActive(this.resetEmail).subscribe(
       (response) => {
         if (response.active) {
-          // Ako je email aktivan, šaljemo zahtev za reset lozinke
           this.authService.requestPasswordReset(this.resetEmail).subscribe(
             () => {
-              this.resetMessage = 'Link za resetovanje lozinke je poslat na vašu email adresu.';
+              this.resetMessage = 'A password reset link has been sent to your email address.';
             },
             (error) => {
-              this.resetMessage = 'Došlo je do greške prilikom slanja linka za reset lozinke. Pokušajte ponovo.';
+              this.resetMessage = 'There was an error sending the password reset link. Try again.';
             }
           );
         } else {
-          // Ako email nije aktivan, prikazujemo poruku
-          this.resetMessage = 'Email nije aktivan.';
+          this.resetMessage = 'Email is not active.';
         }
       },
       (error) => {
-        this.resetMessage = 'Došlo je do greške prilikom provere statusa korisnika.';
+        this.resetMessage = 'An error occurred while checking the user\'s status.';
       }
     );
   }

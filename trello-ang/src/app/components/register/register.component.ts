@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { User } from '../../model/user.model';
 import { FormsModule } from "@angular/forms";
 import { AuthService } from "../../services/auth.service";
-import {filter, map, switchMap} from "rxjs";
+import { filter, map, switchMap } from "rxjs";
 
 @Component({
   selector: 'app-register',
@@ -22,11 +22,13 @@ export class RegisterComponent {
   backgroundIcon = 'assets/Login-rafiki.svg';
   usernameIcon = 'assets/id-card.png';
   user: User = new User('', '', '', '', '', '');
+  passwordError: string = '';
 
   constructor(private router: Router, private authService: AuthService) {}
 
   navigateToLogin() {
-    this.router.navigate(['/login']);  }
+    this.router.navigate(['/login']);
+  }
 
   isFormValid(): boolean {
     return (
@@ -35,12 +37,40 @@ export class RegisterComponent {
       this.user.surname.trim() !== '' &&
       this.user.email.trim() !== '' &&
       this.user.password.trim() !== '' &&
-      this.user.role.trim() !== ''
+      this.user.role.trim() !== '' &&
+      this.isPasswordValid(this.user.password)
     );
   }
 
   validateEmail(email: string): boolean {
     return email.endsWith('@gmail.com');
+  }
+
+  isPasswordValid(password: string): boolean {
+    this.passwordError = '';
+
+    if (password.length < 8) {
+      this.passwordError = 'Password must have at least 8 characters.';
+      return false;
+    }
+    if (!/[A-Z]/.test(password)) {
+      this.passwordError = 'Password must have at least one capital letter.';
+      return false;
+    }
+    if (!/[a-z]/.test(password)) {
+      this.passwordError = 'Password must have at least one lowercase letter.';
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      this.passwordError = 'The password must have at least one number.';
+      return false;
+    }
+    if (!/[!@#~$%^&*(),.?":{}|<>]/.test(password)) {
+      this.passwordError = 'Password must have at least one special character.';
+      return false;
+    }
+
+    return true;
   }
 
   checkEmailExists() {
@@ -51,18 +81,22 @@ export class RegisterComponent {
 
   register() {
     if (!this.isFormValid()) {
-      alert('Sva polja moraju biti popunjena!');
+      if (this.passwordError) {
+        alert(this.passwordError);
+      } else {
+        alert('All fields must be filled!');
+      }
       return;
     }
     if (!this.validateEmail(this.user.email)) {
-      alert('Email mora biti u formatu @gmail.com!');
+      alert('Email must be in @gmail.com format!');
       return;
     }
 
     this.checkEmailExists().pipe(
       map(exists => {
         if (exists) {
-          alert('Email već postoji! Pokušajte sa drugim emailom.');
+          alert('Email already exists! Please try another email.');
           return false;
         }
         return true;
@@ -72,30 +106,29 @@ export class RegisterComponent {
         return this.authService.checkUsernameExists(this.user.username).pipe(
           map(usernameExists => {
             if (usernameExists.exists) {
-              alert('Korisničko ime već postoji! Pokušajte sa drugim korisničkim imenom.');
+              alert('Username already exists! Please try another username.');
               return false;
             }
             return true;
           })
         );
       }),
-      filter(exists => exists) // Filtrira da nastavi samo ako je korisničko ime novo
+      filter(exists => exists)
     ).subscribe(shouldRegister => {
       if (shouldRegister) {
         this.authService.register(this.user).subscribe({
           next: (response) => {
             console.log('Registration successful:', response);
-            alert('Uspešno ste registrovani! Proverite svoj email radi potvrde naloga.');
+            alert('You are successfully registered! Check your email to confirm your account.');
             this.user = new User('', '', '', '', '', '');
             this.navigateToLogin();
           },
           error: (error) => {
             console.error('Registration failed:', error);
-            alert('Podaci nisu tačni.');
+            alert('The data is not correct.');
           }
         });
       }
     });
   }
-
 }

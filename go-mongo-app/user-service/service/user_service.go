@@ -83,12 +83,10 @@ func validateUser(user models.User) error {
 	return nil
 }
 func isPasswordValid(password string) bool {
-	// Proverava dužinu lozinke
 	if len(password) < 8 {
 		return false
 	}
 
-	// Proverava prisustvo barem jednog velikog slova, malog slova, broja i specijalnog karaktera
 	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
 	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
 	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)

@@ -18,7 +18,9 @@ export class ProjectService {
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(this.baseUrl);
   }
-
+  checkProjectByTitle(title: string): Observable<boolean> {
+    return this.http.get<boolean>(`${this.baseUrl}/title/${title}`);
+  }
 }
 
 

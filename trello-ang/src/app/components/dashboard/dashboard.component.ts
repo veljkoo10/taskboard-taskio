@@ -1,15 +1,15 @@
-import {Component, HostListener, OnInit} from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { ProjectService } from '../../services/project.service';
 import { Project } from '../../model/project.model';
-import {Router} from "@angular/router";
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit{
+export class DashboardComponent implements OnInit {
   logoPath: string = 'assets/trello4.png';
   profilePath: string = 'assets/user3.png';
   isProfileMenuOpen: boolean = false;
@@ -19,17 +19,21 @@ export class DashboardComponent implements OnInit{
   projects: Project[] = [];
   selectedProject!: Project | null;
 
-  constructor(private projectService: ProjectService,private router: Router ) {}
+  constructor(private projectService: ProjectService, private router: Router) {}
+
   ngOnInit() {
     this.loadProjects();
   }
+
   selectProject(project: Project) {
     this.selectedProject = project;
   }
+
   goToDashboard(): void {
     this.selectedProject = null;
     this.router.navigate(['/dashboard']);
   }
+
   loadProjects() {
     this.projectService.getProjects().subscribe(
       (data: Project[]) => {
@@ -40,6 +44,7 @@ export class DashboardComponent implements OnInit{
       }
     );
   }
+
   toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }
@@ -61,8 +66,23 @@ export class DashboardComponent implements OnInit{
       return;
     }
 
+    if (this.project.min_people < 1) {
+      this.errorMessage = 'Minimum number of people must be at least 1.';
+      return;
+    }
+
+    if (this.project.max_people < 2) {
+      this.errorMessage = 'Maximum number of people must be at least 2.';
+      return;
+    }
+
     if (this.project.max_people < this.project.min_people) {
       this.errorMessage = 'The maximum number of people must be greater than or equal to the minimum number!';
+      return;
+    }
+
+    if (this.project.users.length > this.project.max_people) {
+      this.errorMessage = `You can have a maximum of ${this.project.max_people} users!`;
       return;
     }
 
@@ -75,30 +95,43 @@ export class DashboardComponent implements OnInit{
 
     this.errorMessage = '';
 
-    const projectPayload = {
-      title: this.project.title,
-      description: this.project.description,
-      owner: this.project.owner,
-      expected_end_date: this.project.expected_end_date,
-      min_people: this.project.min_people,
-      max_people: this.project.max_people,
-      users: this.project.users
-    };
+    // Pre nego što kreiramo projekat, proverite da li projekat sa istim nazivom već postoji
+    this.projectService.checkProjectByTitle(this.project.title).subscribe(
+      (exists: boolean) => {
+        if (exists) {
+          this.errorMessage = 'A project with this title already exists.';
+        } else {
+          const projectPayload = {
+            title: this.project.title,
+            description: this.project.description,
+            owner: this.project.owner,
+            expected_end_date: this.project.expected_end_date,
+            min_people: this.project.min_people,
+            max_people: this.project.max_people,
+            users: this.project.users
+          };
 
-    this.projectService.createProject(projectPayload).subscribe(
-      response => {
-        console.log('Project created successfully:', response);
-        this.project = new Project();
-        this.successMessage = 'The project was successfully created!';
-        this.loadProjects()
-        const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
-        if (closeModalButton) {
-          (closeModalButton as HTMLElement).click();
+          this.projectService.createProject(projectPayload).subscribe(
+            response => {
+              console.log('Project created successfully:', response);
+              this.project = new Project();
+              this.successMessage = 'The project was successfully created!';
+              this.loadProjects();
+              const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
+              if (closeModalButton) {
+                (closeModalButton as HTMLElement).click();
+              }
+            },
+            error => {
+              console.error('Error creating project:', error);
+              this.errorMessage = 'There was an error creating the project.';
+            }
+          );
         }
       },
-      error => {
-        console.error('Error creating project:', error);
-        this.errorMessage = 'A project with this name already exists.';
+      (error) => {
+        console.error('Error checking project title:', error);
+        this.errorMessage = 'A project with this title already exists.';
       }
     );
   }
