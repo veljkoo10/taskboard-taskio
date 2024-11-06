@@ -87,26 +87,24 @@ func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 		Title string `json:"title"`
 	}
 
-	// Dekodiranje JSON zahteva
+	// Decode the request body
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Pozivanje funkcije za proveru postojanja projekta
+	// Check if project exists by title
 	exists, err := service.GetProjectByTitle(requestBody.Title)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Ako projekat postoji, odgovoriti sa statusom 200
 	if exists {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusOK) // OK response
 		w.Write([]byte("Project exists"))
 	} else {
-		// Ako ne postoji, odgovoriti sa statusom 404
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound) // Not Found response
 		w.Write([]byte("Project not found"))
 	}
 }

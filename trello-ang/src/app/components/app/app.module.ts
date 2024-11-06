@@ -14,7 +14,7 @@ import { ProjectDetailsComponent } from '../project-details/project-details.comp
     AppComponent,
     LoginComponent,
     DashboardComponent,
-    ProjectDetailsComponent
+    ProjectDetailsComponent,
   ],
   imports: [
     BrowserModule,

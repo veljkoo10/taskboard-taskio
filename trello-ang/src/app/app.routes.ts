@@ -10,5 +10,7 @@ export const appRoutes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: '**', redirectTo: '/login' },
-  {path:'',component: ProjectDetailsComponent}
+  {path:'',component: ProjectDetailsComponent},
+  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+
 ];

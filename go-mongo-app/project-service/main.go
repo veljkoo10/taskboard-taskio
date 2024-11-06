@@ -32,7 +32,7 @@ func main() {
 	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject).Methods("PUT")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.RemoveUserFromProject).Methods("DELETE")
-	router.HandleFunc("/projects/title/{title}", handlers.HandleCheckProjectByTitle).Methods("GET")
+	router.HandleFunc("/projects/title", handlers.HandleCheckProjectByTitle).Methods("POST")
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},

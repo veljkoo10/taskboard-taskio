@@ -95,12 +95,11 @@ export class DashboardComponent implements OnInit {
 
     this.errorMessage = '';
 
-    // Pre nego što kreiramo projekat, proverite da li projekat sa istim nazivom već postoji
     this.projectService.checkProjectByTitle(this.project.title).subscribe(
-      (exists: boolean) => {
-        if (exists) {
+      (response: string) => {
+        if (response === 'Project exists') {
           this.errorMessage = 'A project with this title already exists.';
-        } else {
+        } else if (response === 'Project not found') {
           const projectPayload = {
             title: this.project.title,
             description: this.project.description,
@@ -131,8 +130,10 @@ export class DashboardComponent implements OnInit {
       },
       (error) => {
         console.error('Error checking project title:', error);
-        this.errorMessage = 'A project with this title already exists.';
+        this.errorMessage = 'There was an error checking the project title.';
       }
     );
   }
+
+
 }
