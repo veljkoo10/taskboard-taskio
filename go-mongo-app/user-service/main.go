@@ -35,6 +35,7 @@ func main() {
 	router.HandleFunc("/reset-password", handlers.HandleResetPassword).Methods("POST", "GET", "OPTIONS")
 	router.HandleFunc("/verify-username", handlers.HandleVerifyUsername).Methods("GET", "POST", "OPTIONS")
 	router.HandleFunc("/api/check-user-active", handlers.CheckUserActive).Methods("GET", "OPTIONS")
+	router.HandleFunc("/users/{id}/change-password", handlers.ChangePassword).Methods("POST", "OPTIONS")
 
 	// Set up CORS middleware
 	c := cors.New(cors.Options{
