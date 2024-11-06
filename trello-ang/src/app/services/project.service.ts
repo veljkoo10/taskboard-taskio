@@ -7,7 +7,7 @@ import {Project} from "../model/project.model";
   providedIn: 'root'
 })
 export class ProjectService {
-  private baseUrl = 'http://localhost:8081/projects';
+  private baseUrl = 'http://localhost/taskio/projects';
 
   constructor(private http: HttpClient) {}
 
