@@ -82,3 +82,31 @@ func RemoveUserFromProject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("User successfully removed from project"))
 }
+func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
+	var requestBody struct {
+		Title string `json:"title"`
+	}
+
+	// Dekodiranje JSON zahteva
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Pozivanje funkcije za proveru postojanja projekta
+	exists, err := service.GetProjectByTitle(requestBody.Title)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ako projekat postoji, odgovoriti sa statusom 200
+	if exists {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Project exists"))
+	} else {
+		// Ako ne postoji, odgovoriti sa statusom 404
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Project not found"))
+	}
+}

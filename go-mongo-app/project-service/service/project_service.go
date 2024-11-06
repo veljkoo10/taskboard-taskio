@@ -224,3 +224,18 @@ func RemoveUserFromProject(projectID string, userID string) error {
 
 	return nil
 }
+func GetProjectByTitle(title string) (bool, error) {
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+
+	filter := bson.M{"title": bson.M{"$regex": primitive.Regex{Pattern: "^" + title + "$", Options: "i"}}}
+	err := collection.FindOne(context.TODO(), filter).Decode(&project)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil // Ako projekat nije pronađen
+		}
+		return false, err
+	}
+
+	return true, nil // Ako je projekat pronađen
+}
