@@ -1,11 +1,9 @@
-
-
 <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
   <div class="container-fluid">
     <!-- Left elements -->
     <div class="d-flex align-items-center">
       <!-- Brand -->
-      <a class="navbar-brand me-2 mb-1 d-flex align-items-center" href="#">
+      <a class="navbar-brand me-2 mb-1 d-flex align-items-center" (click)="goToDashboard()">
         <img [src]="logoPath" width="45" height="45" alt="Dumbbell Logo" loading="lazy" style="cursor: pointer;">
         <h4 class="ms-2 mb-0" style="cursor: pointer;">Taskio</h4>
       </a>
@@ -38,6 +36,20 @@
     </div>
   </div>
 </nav>
+
+<div class="sidebar">
+  <ul class="project-list">
+    <li *ngFor="let project of projects" (click)="selectProject(project)">
+      {{ project.title }}
+    </li>
+  </ul>
+</div>
+
+<div class="project-details-container">
+  <app-project-details *ngIf="selectedProject" [project]="selectedProject"></app-project-details>
+</div>
+
+
 
 <!-- Modal for creating a project -->
 <div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" aria-hidden="true">

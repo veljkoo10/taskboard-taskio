@@ -1,22 +1,45 @@
-import { Component, HostListener } from '@angular/core';
-import {NgForm} from "@angular/forms";
-import {ProjectService} from "../../services/project.service";
-import {Project} from "../../model/project.model";
+import {Component, HostListener, OnInit} from '@angular/core';
+import { NgForm } from '@angular/forms';
+import { ProjectService } from '../../services/project.service';
+import { Project } from '../../model/project.model';
+import {Router} from "@angular/router";
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit{
   logoPath: string = 'assets/trello4.png';
   profilePath: string = 'assets/user3.png';
   isProfileMenuOpen: boolean = false;
   project: Project = new Project();
   successMessage: string = '';
   errorMessage: string = '';
-  constructor(private projectService: ProjectService) {}
+  projects: Project[] = [];
+  selectedProject!: Project | null;
 
+  constructor(private projectService: ProjectService,private router: Router ) {}
+  ngOnInit() {
+    this.loadProjects();
+  }
+  selectProject(project: Project) {
+    this.selectedProject = project;
+  }
+  goToDashboard(): void {
+    this.selectedProject = null;
+    this.router.navigate(['/dashboard']);
+  }
+  loadProjects() {
+    this.projectService.getProjects().subscribe(
+      (data: Project[]) => {
+        this.projects = data;
+      },
+      (error) => {
+        console.error('Error fetching projects', error);
+      }
+    );
+  }
   toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }
@@ -30,21 +53,26 @@ export class DashboardComponent {
       this.isProfileMenuOpen = false;
     }
   }
+
   createProject(): void {
-    // Provera da li su sva polja popunjena
     if (!this.project.title || !this.project.description || !this.project.owner ||
       !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
-      this.errorMessage = 'Sva polja moraju biti popunjena!';
+      this.errorMessage = 'All fields must be filled!';
       return;
     }
 
-    // Provera da maksimalan broj bude veći ili jednak minimalnom broju
     if (this.project.max_people < this.project.min_people) {
-      this.errorMessage = 'Maksimalan broj ljudi mora biti veći ili jednak minimalnom broju!';
+      this.errorMessage = 'The maximum number of people must be greater than or equal to the minimum number!';
       return;
     }
 
-    // Resetovanje poruke o grešci
+    const currentDate = new Date();
+    const expectedEndDate = new Date(this.project.expected_end_date);
+    if (expectedEndDate <= currentDate) {
+      this.errorMessage = 'The project completion date must be after today\'s date!';
+      return;
+    }
+
     this.errorMessage = '';
 
     const projectPayload = {
@@ -61,8 +89,8 @@ export class DashboardComponent {
       response => {
         console.log('Project created successfully:', response);
         this.project = new Project();
-        this.successMessage = 'Projekat je uspešno kreiran!';
-
+        this.successMessage = 'The project was successfully created!';
+        this.loadProjects()
         const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
         if (closeModalButton) {
           (closeModalButton as HTMLElement).click();
@@ -70,10 +98,8 @@ export class DashboardComponent {
       },
       error => {
         console.error('Error creating project:', error);
-        this.errorMessage = 'Došlo je do greške prilikom kreiranja projekta.';
+        this.errorMessage = 'A project with this name already exists.';
       }
     );
   }
-
-
 }

@@ -14,13 +14,11 @@ export class ProjectService {
   createProject(project: Project): Observable<Project> {
     return this.http.post<Project>(`${this.baseUrl}/create`, project);
   }
-  checkProjectExists(title: string): Observable<boolean> {
-    return this.http.get<boolean>(`${this.baseUrl}/exists?title=${title}`);
-  }
 
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(this.baseUrl);
   }
+
 }
 
 

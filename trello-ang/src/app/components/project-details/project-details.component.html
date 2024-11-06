@@ -1,0 +1,23 @@
+<div class="project-details-container" *ngIf="project">
+  <div class="project-header">
+    <div class="action-buttons">
+      <button class="btn btn-primary">Dodaj korisnika</button>
+      <button class="btn btn-danger">Ukloni korisnika</button>
+      <button class="btn btn-success">Kreiraj task</button>
+    </div>
+
+    <h2 class="project-title">Naziv projekta: {{ project.title }}</h2>
+  </div>
+
+  <div class="task-status">
+    <div class="status-item to-do">
+      <p>To do</p>
+    </div>
+    <div class="status-item work-in-progress">
+      <p>Work in Progress</p>
+    </div>
+    <div class="status-item done">
+      <p>Done</p>
+    </div>
+  </div>
+</div>

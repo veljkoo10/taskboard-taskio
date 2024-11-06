@@ -105,3 +105,68 @@
 .btn-success:hover {
   background-color: #218838;
 }
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100vh;
+  background-color: #2a8a68;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  overflow-y: scroll;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar {
+  scrollbar-width: none;
+}
+
+.navbar {
+  background-color: #216e4e !important;
+  padding-left: 10px;
+  padding-right: 10px;
+  z-index: 20;
+}
+
+.navbar .navbar-light {
+  color: #fff;
+}
+
+.navbar .navbar-nav .nav-link {
+  color: #fff;
+}
+
+.navbar .navbar-nav .nav-link:hover {
+  color: #ddd;
+}
+
+body {
+  margin-left: 300px;
+}
+.project-list {
+  margin-top: 50px;
+  list-style-type: none;
+  padding: 0;
+  text-align: center;
+  max-height: calc(100vh - 50px);
+}
+
+.project-list li {
+  font-size: 1.25rem;
+  padding: 10px;
+  color: black;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.3s;
+  text-transform: capitalize;
+
+}
+
+.project-list li:hover {
+  transform: scale(1.1);
+}
