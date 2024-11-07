@@ -104,7 +104,7 @@ func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK) // OK response
 		w.Write([]byte("Project exists"))
 	} else {
-		w.WriteHeader(http.StatusNotFound) // Not Found response
+		w.WriteHeader(http.StatusOK) // Not Found response
 		w.Write([]byte("Project not found"))
 	}
 }
