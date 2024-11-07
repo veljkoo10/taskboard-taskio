@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"time"
@@ -266,19 +267,54 @@ func CheckUserActive(w http.ResponseWriter, r *http.Request) {
 }
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
+	// Decode the user's login input (username/email and password)
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Attempt to authenticate the user
 	authUser, err := service.LoginUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
+	// Check if the user is active
+	isActive, err := service.IsUserActive(authUser.Email) // Assume the email is unique and provided in the login request
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If the user is not active, return an error
+	if !isActive {
+		http.Error(w, "User account is inactive", http.StatusForbidden)
+		return
+	}
+
+	// Prepare claims for the access token
+	claims := service.UserClaims{
+		ID:       authUser.ID,       // User's ID
+		Role:     authUser.Role,     // User's role
+		IsActive: authUser.IsActive, // Whether the user is active
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(), // Token expires in 15 minutes
+		},
+	}
+
+	// Generate the access token
+	accessToken, err := service.NewAccessToken(claims)
+	if err != nil {
+		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with the generated access token
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(authUser)
+	json.NewEncoder(w).Encode(map[string]string{
+		"access_token": accessToken,
+	})
 }
 
 func ChangePassword(w http.ResponseWriter, r *http.Request) {
