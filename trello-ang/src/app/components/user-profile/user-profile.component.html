@@ -17,38 +17,82 @@
   <!-- Profile Settings Section -->
   <div class="form-section">
     <h2>Profile Settings</h2>
-    <form>
+    <form *ngIf="user"> 
         <label for="name">First Name:</label>
-      <input type="text" id="name"  placeholder="Name" readonly>
+      <input type="text" id="name"  value= {{user.name}} readonly>
 
       <label for="surname">Last Name:</label>
-      <input type="text" id="surname"  placeholder="Last Name" readonly>
+      <input type="text" id="surname"  value= {{user.surname}} readonly>
 
       <label for="email">Email:</label>
-      <input type="email" id="email"  placeholder="Email" readonly>
+      <input type="email" id="email"  value= {{user.email}} readonly>
 
       <label for="role">Role:</label>
-      <input type="text" id="role"  placeholder="Role" readonly>
+      <input type="text" id="role"  value= {{user.role}} readonly>
 
     </form>
   </div>
 
-  <!-- Change Password Section -->
-  <div class="form-section">
-    <h2>Change Password</h2>
-    <form>
-      <label for="old-password">Old password:</label>
-      <input type="password" id="old-password" placeholder="Old password">
+  <form (ngSubmit)="onSubmitChangePassword()">
+    <div class="form-group">
+      <label for="oldPassword">Old Password</label>
+      <input
+        type="password"
+        id="oldPassword"
+        name="oldPassword"
+        [(ngModel)]="oldPassword"
+        required
+        class="form-control"
+      />
+    </div>
+  
+    <div class="form-group">
+      <label for="newPassword">New Password</label>
+      <input
+        type="password"
+        id="newPassword"
+        name="newPassword"
+        [(ngModel)]="newPassword"
+        required
+        class="form-control"
+      />
+    </div>
+  
+    <div class="form-group">
+      <label for="confirmPassword">Confirm New Password</label>
+      <input
+        type="password"
+        id="confirmPassword"
+        name="confirmPassword"
+        [(ngModel)]="confirmPassword"
+        required
+        class="form-control"
+      />
+    </div>
+    <br>
+    <button style="background-color: #216e4e;" type="submit" class="btn btn-primary">Change Password</button>
+  </form>
 
-      <label for="new-password">New password:</label>
-      <input type="password" id="new-password" placeholder="New password">
-
-      <label for="confirm-password">Confirm password:</label>
-      <input type="password" id="confirm-password" placeholder="Confirm password">
-      <button type="submit">Update password</button>
-
-    </form>
+<!-- Modal for Success Message -->
+<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': successMessage }" style="display: block;" *ngIf="successMessage">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Success</h5>
+        <button style="display: none;" type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>{{ successMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button style="background-color: green;" type="button" class="btn btn-primary" (click)="closeModalAndRefresh()">OK</button>
+      </div>
+    </div>
   </div>
+</div>
+
 </div>
 
 </body>

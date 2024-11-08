@@ -28,10 +28,11 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(string)
+	vars := mux.Vars(r)
+	userID := vars["id"]
 
 	if userID == "" {
-		http.Error(w, "User ID not found in the request context", http.StatusUnauthorized)
+		http.Error(w, "Missing user ID", http.StatusBadRequest)
 		return
 	}
 
@@ -245,7 +246,8 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Uspešan odgovor
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Lozinka je uspešno ažurirana"))
+	w.Write([]byte("Password changed successfully"))
+
 }
 
 func CheckUserActive(w http.ResponseWriter, r *http.Request) {

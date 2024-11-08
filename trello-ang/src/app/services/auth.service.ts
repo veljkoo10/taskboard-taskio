@@ -10,15 +10,18 @@ export class AuthService {
   private readonly registerUrl = `${this.baseUrl}/register`;
   private readonly loginUrl = `${this.baseUrl}/login`;
   private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;
+  private readonly profileUrl = `${this.baseUrl}/profile`; 
 
   constructor(private http: HttpClient) {}
 
+  // Registracija korisnika
   register(user: any): Observable<any> {
     return this.http.post<any>(this.registerUrl, user, {
       headers: new HttpHeaders({'Content-Type': 'application/json'})
     });
   }
 
+  // Funkcija za prijavu korisnika i čuvanje tokena
   login(credentials: { username: string, password: string }): Observable<any> {
     return this.http.post<any>(this.loginUrl, credentials, {
       headers: new HttpHeaders({
@@ -31,6 +34,13 @@ export class AuthService {
       })
     );
   }
+
+  // Čuvanje tokena u localStorage
+  saveToken(token: string): void {
+    localStorage.setItem('access_token', token);
+  }
+
+  // Resetovanje lozinke
   resetPassword(email: string): Observable<any> {
     return this.http.post<any>(this.resetPasswordUrl, { email }, {
       headers: new HttpHeaders({'Content-Type': 'application/json'})
@@ -42,8 +52,14 @@ export class AuthService {
     );
   }
 
-  logout(){
-    localStorage.clear()
+  // Odlazak korisnika (logout)
+  logout(): void {
+    localStorage.removeItem('access_token');
   }
+  
 
+  // Provera da li je korisnik prijavljen
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem('authToken');
+  }
 }

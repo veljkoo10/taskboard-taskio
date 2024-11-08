@@ -264,26 +264,31 @@ func LoginUser(user models.User) (models.User, error) {
 }
 
 func ChangePassword(userID, oldPassword, newPassword string) error {
+	// Dohvati korisnika iz baze prema ID-u
 	user, err := GetUserByID(userID)
 	if err != nil {
-		return errors.New("user not found")
+		return errors.New("user not found") // Korisnik nije pronađen
 	}
 
-	if user.Password != oldPassword {
-		return errors.New("incorrect old password")
+	// Poredi unetu staru lozinku sa hashovanom lozinkom u bazi
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
+	if err != nil {
+		return errors.New("incorrect old password") // Stara lozinka nije tačna
 	}
 
+	// Hashiraj novu lozinku
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return errors.New("could not hash the new password")
+		return errors.New("could not hash the new password") // Problem sa generisanjem hash-a
 	}
 
+	// Ažuriraj lozinku u bazi podataka
 	collection := db.Client.Database("testdb").Collection("users")
 	update := bson.M{"$set": bson.M{"password": hashedPassword}}
 	_, err = collection.UpdateOne(context.TODO(), bson.M{"_id": user.ID}, update)
 	if err != nil {
-		return errors.New("failed to update password")
+		return errors.New("failed to update password") // Greška prilikom ažuriranja lozinke
 	}
 
-	return nil
+	return nil // Uspešno promenjena lozinka
 }

@@ -37,4 +37,24 @@ export class UserService {
         })
       );
   }
+
+  getUserById(userId: string): Observable<any> {
+    const url = `${this.baseUrl}/users/${userId}`;
+    return this.http.get<any>(url).pipe(
+      catchError(error => {
+        console.error('Error fetching user profile:', error);
+        return throwError(error);
+      })
+    );
+  }
+
+  // Metoda za slanje zahteva za promenu lozinke
+  changePassword(userId: string, changePasswordData: { oldPassword: string, newPassword: string }): Observable<any> {
+    const url = `${this.baseUrl}/users/${userId}/change-password`;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+
+    return this.http.post<any>(url, changePasswordData, { headers });
+  }
 }

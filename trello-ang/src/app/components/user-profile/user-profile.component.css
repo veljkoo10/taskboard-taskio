@@ -103,3 +103,44 @@ label {
 .form-section button:hover {
   background-color: #216e4e;
 }
+
+/* CSS za modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+}
+
+.modal-dialog {
+  margin: 10% auto;
+  max-width: 500px;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.modal-header {
+  font-size: 1.25rem;
+  margin-bottom: 10px;
+}
+
+.modal-body {
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-footer button {
+  margin-left: 10px;
+}

@@ -22,7 +22,9 @@
     "lib": [
       "ES2022",
       "dom"
-    ]
+    ],
+    "esModuleInterop": true,                // Dodato
+    "allowSyntheticDefaultImports": true     // Dodato
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
