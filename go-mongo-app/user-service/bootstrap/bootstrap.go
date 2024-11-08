@@ -3,11 +3,11 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/crypto/bcrypt"
 	"os"
 	"user-service/db"
 	"user-service/models"
-
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func InsertInitialUsers() {
@@ -29,15 +29,24 @@ func InsertInitialUsers() {
 
 	var users []interface{}
 	for i := 1; i <= 10; i++ {
+		password := fmt.Sprintf("password%d", i)
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			fmt.Println("Error hashing password:", err)
+			return
+		}
+
 		user := models.User{
 			Username: fmt.Sprintf("user%d", i),
-			Password: fmt.Sprintf("password%d", i),
+			Password: string(hashedPassword),
 			Role:     "user",
 			Name:     fmt.Sprintf("Name%d", i),
 			Surname:  fmt.Sprintf("Surname%d", i),
 			Email:    fmt.Sprintf("user%d@example.com", i),
-			IsActive: false,
+			IsActive: true,
 		}
+
 		users = append(users, user)
 	}
 
@@ -50,8 +59,8 @@ func InsertInitialUsers() {
 }
 
 func ClearUsers() {
-
 	collection := db.Client.Database("testdb").Collection("users")
+
 	_, err := collection.DeleteMany(context.TODO(), bson.D{})
 	if err != nil {
 		fmt.Println("Error clearing users:", err)

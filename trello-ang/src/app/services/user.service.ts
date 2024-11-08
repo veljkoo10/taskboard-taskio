@@ -37,14 +37,4 @@ export class UserService {
         })
       );
   }
-
-  getUserById(userId: string): Observable<any> {
-    const url = `${this.baseUrl}/users/${userId}`;
-    return this.http.get<any>(url).pipe(
-      catchError(error => {
-        console.error('Error fetching user profile:', error);
-        return throwError(error);
-      })
-    );
-  }
 }

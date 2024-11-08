@@ -10,7 +10,6 @@ export class AuthService {
   private readonly registerUrl = `${this.baseUrl}/register`;
   private readonly loginUrl = `${this.baseUrl}/login`;
   private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;
-   private readonly profileUrl = `${this.baseUrl}/profile`; 
 
   constructor(private http: HttpClient) {}
 
@@ -32,7 +31,7 @@ export class AuthService {
       })
     );
   }
-  resetPassword(email: string): Observable<any> { // Nova metoda za reset lozinke
+  resetPassword(email: string): Observable<any> {
     return this.http.post<any>(this.resetPasswordUrl, { email }, {
       headers: new HttpHeaders({'Content-Type': 'application/json'})
     }).pipe(
@@ -42,26 +41,9 @@ export class AuthService {
       })
     );
   }
-  
+
   logout(){
     localStorage.clear()
   }
 
-
-
-  getProfileData(): Observable<any> {
-    const token = localStorage.getItem('authToken');  // Preuzmi token iz localStorage
-
-    if (!token) {
-      throw new Error('User not authenticated');
-    }
-
-    // Kreiraj header sa tokenom
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
-
-    // Pozovi API za korisničke podatke
-    return this.http.get<any>(this.profileUrl, { headers });
-  }
 }

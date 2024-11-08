@@ -28,11 +28,10 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["id"]
+	userID := r.Context().Value("userID").(string)
 
 	if userID == "" {
-		http.Error(w, "Missing user ID", http.StatusBadRequest)
+		http.Error(w, "User ID not found in the request context", http.StatusUnauthorized)
 		return
 	}
 
