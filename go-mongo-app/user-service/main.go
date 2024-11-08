@@ -33,7 +33,7 @@ func main() {
 	router.HandleFunc("/check-username", handlers.CheckUsername).Methods("GET", "OPTIONS")
 	router.HandleFunc("/users/{id}", handlers.GetUserByID).Methods("GET", "OPTIONS")
 	router.HandleFunc("/reset-password", handlers.HandleResetPassword).Methods("POST", "GET", "OPTIONS")
-	router.HandleFunc("/verify-username", handlers.HandleVerifyUsername).Methods("GET", "POST", "OPTIONS")
+	router.HandleFunc("/verify-password", handlers.HandleVerifyPassword).Methods("GET", "POST", "OPTIONS")
 	router.HandleFunc("/api/check-user-active", handlers.CheckUserActive).Methods("GET", "OPTIONS")
 	router.HandleFunc("/users/{id}/change-password", handlers.ChangePassword).Methods("POST", "OPTIONS")
 

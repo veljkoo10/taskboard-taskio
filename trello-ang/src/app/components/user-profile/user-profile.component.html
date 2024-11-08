@@ -18,17 +18,17 @@
   <div class="form-section">
     <h2>Profile Settings</h2>
     <form>
-      <label for="name">First Name:</label>
-      <input type="text" id="name" placeholder="Name" readonly>
+        <label for="name">First Name:</label>
+      <input type="text" id="name" [value]="userProfile.name" placeholder="Name" readonly>
 
       <label for="surname">Last Name:</label>
-      <input type="text" id="surname" placeholder="Last Name" readonly>
+      <input type="text" id="surname" [value]="userProfile.surname" placeholder="Last Name" readonly>
 
       <label for="email">Email:</label>
-      <input type="email" id="email" placeholder="Email" readonly>
+      <input type="email" id="email" [value]="userProfile.email" placeholder="Email" readonly>
 
       <label for="role">Role:</label>
-      <input type="text" id="role" placeholder="Role" readonly>
+      <input type="text" id="role" [value]="userProfile.role" placeholder="Role" readonly>
 
     </form>
   </div>

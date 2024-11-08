@@ -3,9 +3,9 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"time"
 	"user-service/db"
@@ -155,12 +155,14 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 	}
 
+	// Decode the request body for JSON requests
 	if r.Header.Get("Content-Type") == "application/json" {
 		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 			http.Error(w, "Invalid input", http.StatusBadRequest)
 			return
 		}
 	} else {
+		// For web requests, get email from URL
 		requestBody.Email = r.URL.Query().Get("email")
 	}
 
@@ -169,84 +171,82 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Call your service to send a reset email link
 	response, err := service.ResetPassword(requestBody.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	collection := db.Client.Database("testdb").Collection("users")
-	var user models.User
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = collection.FindOne(ctx, bson.M{"email": requestBody.Email}).Decode(&user)
-	if err != nil {
-		http.Error(w, "No user found with this email", http.StatusBadRequest)
-		return
-	}
-
+	// Return a response without exposing any sensitive data
 	if r.Header.Get("Content-Type") == "application/json" {
-		w.Header().Set("Content-Type", "application/json")
 		jsonResponse := map[string]string{
-			"message":  response,
-			"password": user.Password,
+			"message": response,
 		}
 		json.NewEncoder(w).Encode(jsonResponse)
 	} else {
-		w.Header().Set("Content-Type", "text/html")
+		// Display HTML form for password reset
 		htmlForm := `
 		<!DOCTYPE html>
 		<html>
 		<head>
-			<title>Username Verification</title>
+			<title>Reset Password</title>
 		</head>
 		<body>
-			<h1>Enter your username</h1>
-			<form method="POST" action="/verify-username">
-				<input type="hidden" name="email" value="` + user.Email + `">
-				<label for="username">Username:</label>
-				<input type="text" id="username" name="username" required>
-				<button type="submit">Send</button>
+			<h1>Reset Your Password</h1>
+			<form method="POST" action="/verify-password">
+				<input type="hidden" name="email" value="` + requestBody.Email + `">
+				<label for="newPassword">New Password:</label>
+				<input type="password" id="newPassword" name="newPassword" required>
+				<br>
+				<label for="confirmPassword">Confirm Password:</label>
+				<input type="password" id="confirmPassword" name="confirmPassword" required>
+				<br>
+				<button type="submit">Submit</button>
 			</form>
 		</body>
 		</html>
-	`
+		`
+
+		// Set the Content-Type header to HTML and write the HTML form
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(htmlForm))
-
 	}
 }
-func HandleVerifyUsername(w http.ResponseWriter, r *http.Request) {
+func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
+	// Parsiranje forme
 	r.ParseForm()
 	email := r.FormValue("email")
-	username := r.FormValue("username")
+	newPassword := r.FormValue("newPassword")
+	confirmPassword := r.FormValue("confirmPassword")
 
-	collection := db.Client.Database("testdb").Collection("users")
-	var user models.User
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err := collection.FindOne(ctx, bson.M{"email": email, "username": username}).Decode(&user)
-	if err != nil {
-		http.Error(w, "It's not your username", http.StatusBadRequest)
+	// Proveri da li su lozinke iste
+	if newPassword != confirmPassword {
+		http.Error(w, "Lozinke se ne podudaraju", http.StatusBadRequest)
 		return
 	}
 
-	htmlResponse := `
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>Password Reset</title>
-	</head>
-	<body>
-		<h1>Password Reset Successful</h1>
-		<p>Your current password is: %s</p>
-	</body>
-	</html>
-`
+	// Hash lozinke
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Greška prilikom heširanja lozinke", http.StatusInternalServerError)
+		return
+	}
+
+	// Ažuriraj lozinku u bazi
+	collection := db.Client.Database("testdb").Collection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err = collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{"$set": bson.M{"password": string(hashedPassword)}})
+	if err != nil {
+		http.Error(w, "Greška prilikom ažuriranja lozinke", http.StatusInternalServerError)
+		return
+	}
+
+	// Uspešan odgovor
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, htmlResponse, user.Password)
+	w.Write([]byte("Lozinka je uspešno ažurirana"))
 }
 
 func CheckUserActive(w http.ResponseWriter, r *http.Request) {
