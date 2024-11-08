@@ -7,5 +7,5 @@ import { Project } from '../../model/project.model';
   styleUrls: ['./project-details.component.css']
 })
 export class ProjectDetailsComponent {
-  @Input() project!: Project;
+  @Input() project: Project | null = null;
 }

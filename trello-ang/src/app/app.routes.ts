@@ -8,12 +8,11 @@ import {UserProfileComponent} from "./components/user-profile/user-profile.compo
 
 export const appRoutes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
-  { path: 'users/:id/profile', component: UserProfileComponent },  // Ruta za prikazivanje korisničkog profila
+  { path: 'profile', component: UserProfileComponent },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: '**', redirectTo: '/login' },
   {path:'',component: ProjectDetailsComponent},
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
 
 ];

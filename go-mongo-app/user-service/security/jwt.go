@@ -1,4 +1,4 @@
-package service
+package security
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 	"os"
 )
 
-// User predstavlja korisnika u aplikaciji
 type User struct {
 	ID       primitive.ObjectID `json:"id"`
 	Username string             `json:"username"`
@@ -15,26 +14,19 @@ type User struct {
 	IsActive bool               `json:"isActive"`
 }
 
-// UserClaims sadrži podatke koji će biti upisani u JWT token
 type UserClaims struct {
-	ID       primitive.ObjectID `json:"id"`       // ID korisnika
-	Role     string             `json:"role"`     // Rola korisnika
-	IsActive bool               `json:"isActive"` // Da li je korisnik aktivan
+	ID       primitive.ObjectID `json:"id"`
+	Role     string             `json:"role"`
+	IsActive bool               `json:"isActive"`
 	jwt.StandardClaims
 }
 
-// NewAccessToken kreira JWT token sa podacima o korisniku
-func NewAccessToken(claims UserClaims) (string, error) { // Prima UserClaims kao argument
-	// Kreira token sa UserClaims
+func NewAccessToken(claims UserClaims) (string, error) {
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Potpisuje token koristeći tajni ključ
 	return accessToken.SignedString([]byte(os.Getenv("TOKEN_SECRET")))
 }
 
-// ParseAccessToken parsira JWT token i vraća UserClaims
 func ParseAccessToken(accessToken string) (*UserClaims, error) {
-	// Parsira token i vraća UserClaims iz njega
 	parsedAccessToken, err := jwt.ParseWithClaims(accessToken, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("TOKEN_SECRET")), nil
 	})
@@ -43,7 +35,6 @@ func ParseAccessToken(accessToken string) (*UserClaims, error) {
 		return nil, err
 	}
 
-	// Vraća parsed claims kao UserClaims
 	claims, ok := parsedAccessToken.Claims.(*UserClaims)
 	if !ok {
 		return nil, fmt.Errorf("nevalidni token")

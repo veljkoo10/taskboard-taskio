@@ -3,7 +3,10 @@
   text-decoration: none;
   color: black;
 }
-
+* {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+}
 .navbar {
   background-color: #216e4e !important;
   padding-left: 10px;

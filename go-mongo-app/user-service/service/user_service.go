@@ -249,39 +249,35 @@ func LoginUser(user models.User) (models.User, error) {
 	var dbUser models.User
 	err := collection.FindOne(ctx, bson.M{"username": user.Username}).Decode(&dbUser)
 	if err == mongo.ErrNoDocuments {
-		return models.User{}, errors.New("user not found")
-	} else if err != nil {
+		return models.User{}, fmt.Errorf("Invalid username or password")
+	}
+	if err != nil {
 		return models.User{}, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
 	if err != nil {
-		return models.User{}, errors.New("invalid password")
+		return models.User{}, fmt.Errorf("Invalid username or password")
 	}
 
 	return dbUser, nil
 }
 
-// ChangePassword menja korisničku lozinku nakon validacije stare lozinke.
 func ChangePassword(userID, oldPassword, newPassword string) error {
-	// Pronađi korisnika po ID-u
 	user, err := GetUserByID(userID)
 	if err != nil {
 		return errors.New("user not found")
 	}
 
-	// Proveri da li je uneta stara lozinka ispravna
 	if user.Password != oldPassword {
 		return errors.New("incorrect old password")
 	}
 
-	// Hesiraj novu lozinku
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.New("could not hash the new password")
 	}
 
-	// Ažuriraj lozinku u bazi
 	collection := db.Client.Database("testdb").Collection("users")
 	update := bson.M{"$set": bson.M{"password": hashedPassword}}
 	_, err = collection.UpdateOne(context.TODO(), bson.M{"_id": user.ID}, update)

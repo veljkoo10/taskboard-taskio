@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import {Router} from "@angular/router";
 import {AuthService} from "../../services/auth.service";
+import { User } from '../../model/user.model';
+import {UserService} from "../../services/user.service";
 
 @Component({
   selector: 'app-login',
@@ -11,7 +13,33 @@ export class LoginComponent {
   imagePath: string = 'assets/loginSlika.svg';
   resetEmail: string = '';
   resetMessage: string = '';
-  constructor(private router: Router,private authService: AuthService) {}
+  username: string = '';
+  password: string = '';
+  loginError: string = '';
+  user: User = new User('', '', '', '', '', '');
+  constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
+
+  login() {
+    if (this.username && this.password) {
+      const userCredentials = { username: this.username, password: this.password };
+
+      this.authService.login(userCredentials).subscribe(
+        (response) => {
+          const { access_token, role } = response;
+          localStorage.setItem('access_token', access_token);
+          localStorage.setItem('role', role);
+          this.router.navigate(['/dashboard']);
+        },
+        (error) => {
+          this.loginError = 'Invalid username or password. Please try again.';
+        }
+      );
+    } else {
+      this.loginError = 'Please enter both username and password.';
+    }
+  }
+
+
   navigateToRegister() {
     this.router.navigate(['/register']);
   }
@@ -28,10 +56,10 @@ export class LoginComponent {
       return;
     }
 
-    this.authService.checkUserActive(this.resetEmail).subscribe(
+    this.userService.checkUserActive(this.resetEmail).subscribe(
       (response) => {
         if (response.active) {
-          this.authService.requestPasswordReset(this.resetEmail).subscribe(
+          this.userService.requestPasswordReset(this.resetEmail).subscribe(
             () => {
               this.resetMessage = 'A password reset link has been sent to your email address.';
             },

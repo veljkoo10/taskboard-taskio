@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import {catchError, Observable, throwError} from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -8,8 +8,7 @@ import {catchError, Observable, throwError} from 'rxjs';
 export class AuthService {
   private readonly baseUrl = 'http://localhost/taskio';
   private readonly registerUrl = `${this.baseUrl}/register`;
-  private readonly checkEmailUrl = `${this.baseUrl}/check-email`;
-  private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;
+  private readonly loginUrl = `${this.baseUrl}/login`;
 
   constructor(private http: HttpClient) {}
 
@@ -19,40 +18,20 @@ export class AuthService {
     });
   }
 
-  checkUsernameExists(username: string): Observable<{ exists: boolean }> {
-    return this.http.get<{ exists: boolean }>(`${this.baseUrl}/check-username?username=${username}`);
-  }
-
-  checkEmailExists(email: string): Observable<{ exists: boolean }> {
-    return this.http.get<{ exists: boolean }>(`${this.checkEmailUrl}?email=${email}`);
-  }
-
-  requestPasswordReset(email: string): Observable<any> {
-    return this.http.post<any>(this.resetPasswordUrl, { email }, {
+  login(credentials: { username: string, password: string }): Observable<any> {
+    return this.http.post<any>(this.loginUrl, credentials, {
       headers: new HttpHeaders({
         'Content-Type': 'application/json'
       })
-    });
-  }
-  checkUserActive(email: string): Observable<{ active: boolean }> {
-    return this.http.get<{ active: boolean }>(`${this.baseUrl}/api/check-user-active?email=${email}`)
-      .pipe(
-        catchError(error => {
-          console.error('Error checking user active status:', error);
-          return throwError(error);
-        })
-      );
+    }).pipe(
+      catchError(error => {
+        console.error('Login error:', error);
+        return throwError('Login failed. Please try again.');
+      })
+    );
   }
 
-// Metoda za dobijanje korisničkog profila prema ID-u
- getUserById(userId: string): Observable<any> {
-  const url = `${this.baseUrl}/users/${userId}`;  // Putanja na backendu
-  return this.http.get<any>(url).pipe(
-    catchError(error => {
-      console.error('Error fetching user profile:', error);
-      return throwError(error); // Vraćanje greške
-    })
-  );
-}
-
+  logout(){
+    localStorage.clear()
+  }
 }

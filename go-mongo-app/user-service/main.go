@@ -37,7 +37,6 @@ func main() {
 	router.HandleFunc("/api/check-user-active", handlers.CheckUserActive).Methods("GET", "OPTIONS")
 	router.HandleFunc("/users/{id}/change-password", handlers.ChangePassword).Methods("POST", "OPTIONS")
 
-	// Set up CORS middleware
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
@@ -46,7 +45,7 @@ func main() {
 	})
 
 	server := &http.Server{
-		Handler:      c.Handler(router), // Wrap the router with the CORS handler
+		Handler:      c.Handler(router),
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,

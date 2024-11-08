@@ -1,116 +1,105 @@
-/* Osnovna pozadina i tekst */
-.container {
-  background-color: #ffffff; /* Bela pozadina */
-  color: #2e7d32; /* Zeleni tekst */
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  max-width: 1000px; /* Povećajte širinu kontejnera */
-  margin: 30px auto;
-}
-
-/* Naslovi i oznake */
-h2, h3 {
-  color: #2e7d32; /* Zeleni naslov */
-  font-family: 'Arial', sans-serif;
-  margin-bottom: 20px;
-}
-
-/* Razdvajanje sekcija sa korisničkim podacima i formom */
-.profile-wrapper {
+body {
+  font-family: Arial, sans-serif;
   display: flex;
-  justify-content: space-between;
-  gap: 30px; /* Razmak između sekcija */
+  justify-content: center;
+  align-items: flex-start; /* Align items from the top */
+  height: calc(100vh - 75px); /* Full height minus the navbar height */
+  background-color: #f4f6f9;
+  margin: 0;
 }
 
-/* Sekcija sa korisničkim podacima */
-.user-info {
-  flex: 0 0 60%; /* Koristi 60% prostora */
-}
-
-/* Sekcija sa formom za promenu lozinke */
-.change-password-form {
-  flex: 0 0 35%; /* Koristi 35% prostora */
-  background-color: #f1f8e9; /* Svetlo zeleni background za formu */
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Form grupne oznake */
-.form-group {
-  margin-bottom: 20px;
-}
-
-/* Oznake (label) */
-label {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #388e3c; /* Tamno zeleni tekst za oznake */
-}
-
-/* Prikazivanje podataka */
-p {
-  font-size: 1rem;
-  color: #388e3c; /* Tamno zeleni tekst za podatke */
-  margin-top: 5px;
-}
-
-/* Prikaz greške */
-.alert {
-  background-color: #f44336; /* Crvena boja za grešku */
-  color: white;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-}
-
-/* Loading stanje */
-p {
-  color: #888; /* Siva boja za loading tekst */
-  font-style: italic;
-  text-align: center;
-}
-
-/* Stilizovanje formi */
-input[type='password'] {
-  font-size: 1rem;
-  padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #2e7d32;
-  background-color: #f1f8e9;
-  color: #388e3c;
+.container {
+  display: flex;
+  gap: 40px;
+  max-width: 900px;
   width: 100%;
+  background-color: #fff;
+  padding: 40px; /* Keep padding for spacing */
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 120px; /* Increased margin-top to push the container further down */
 }
 
-/* Dugme za promenu lozinke */
-button[type='submit'] {
-  background-color: #2e7d32; /* Zeleni dugme */
-  color: white;
-  padding: 10px 15px;
+.profile-picture {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Keep image vertically centered */
+  text-align: center;
+  margin-top: -20px; /* Lift the image slightly higher */
+}
+
+.profile-picture img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.form-section {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align form content to the top */
+}
+
+.form-section h2 {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.5em; /* Increased the font size of the header */
+  text-align: center;
+  border-bottom: 2px solid #ddd; /* Added line below the header */
+  padding-bottom: 5px; /* Adds space between the text and the line */
+}
+
+.form-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Reduced the gap between form elements */
+  width: 80%;
+  margin: 0 auto;
+}
+
+label {
+  font-size: 1em;
+  color: #333;
+  margin-bottom: 3px; /* Reduced the margin between label and input */
+  display: block;
+}
+
+.form-section input[type="text"],
+.form-section input[type="password"],
+.form-section input[type="email"] {
+  padding: 10px; /* Reduced padding to reduce the space */
+  border: 1px solid #ddd;
   border-radius: 5px;
-  font-size: 1.1rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  transition: border-color 0.3s;
+}
+
+.form-section input[type="text"]:focus,
+.form-section input[type="password"]:focus,
+.form-section input[type="email"]:focus {
+  border-color: #2a8a68;
+  outline: none;
+}
+
+.form-section button {
+  padding: 12px;
+  background-color: #2a8a68;
+  color: #fff;
   border: none;
+  border-radius: 5px;
   cursor: pointer;
+  transition: background-color 0.3s;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
-button[type='submit']:disabled {
-  background-color: #c8e6c9; /* Svetlo zeleni za onemogućeno dugme */
-}
-
-/* Razmak između sekcija */
-hr {
-  border: 1px solid #2e7d32;
-  margin: 20px 0;
-}
-
-/* Za veće ekrane: Prilagoditi veličinu panele */
-@media (max-width: 768px) {
-  .profile-wrapper {
-    flex-direction: column; /* Na manjim ekranima, sekcije će biti jedan ispod drugog */
-  }
-
-  .user-info, .change-password-form {
-    flex: 0 0 100%; /* Oba dela uzimaju 100% prostora */
-  }
+.form-section button:hover {
+  background-color: #216e4e;
 }

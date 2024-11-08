@@ -4,6 +4,7 @@ import { User } from '../../model/user.model';
 import { FormsModule } from "@angular/forms";
 import { AuthService } from "../../services/auth.service";
 import { filter, map, switchMap } from "rxjs";
+import {UserService} from "../../services/user.service";
 
 @Component({
   selector: 'app-register',
@@ -24,7 +25,7 @@ export class RegisterComponent {
   user: User = new User('', '', '', '', '', '');
   passwordError: string = '';
 
-  constructor(private router: Router, private authService: AuthService) {}
+  constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
 
   navigateToLogin() {
     this.router.navigate(['/login']);
@@ -74,7 +75,7 @@ export class RegisterComponent {
   }
 
   checkEmailExists() {
-    return this.authService.checkEmailExists(this.user.email).pipe(
+    return this.userService.checkEmailExists(this.user.email).pipe(
       map(response => response.exists)
     );
   }
@@ -103,7 +104,7 @@ export class RegisterComponent {
       }),
       switchMap(emailExists => {
         if (!emailExists) return [false];
-        return this.authService.checkUsernameExists(this.user.username).pipe(
+        return this.userService.checkUsernameExists(this.user.username).pipe(
           map(usernameExists => {
             if (usernameExists.exists) {
               alert('Username already exists! Please try another username.');
