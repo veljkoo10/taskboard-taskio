@@ -49,7 +49,12 @@
               <div class="btn-container">
                 <button type="button" class="custom-btn" (click)="login()">Sign in</button>
               </div>
-
+              <div class="text-center mt-4">
+                <p class="text-muted">
+                    Forgot your password? 
+                    <a href="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-muted">Reset it here</a>.
+                </p>
+            </div> 
               <div class="divider d-flex align-items-center my-4">
                 <p class="text-center fw-bold mx-3 mb-0 text-muted">OR</p>
               </div>
@@ -65,12 +70,7 @@
                 <button type="submit" class="custom-btn">Login</button>
               </div>
             </form>
-            <div class="text-center mt-4">
-              <p class="text-muted">
-                  Forgot your password? 
-                  <a href="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-muted">Reset it here</a>.
-              </p>
-          </div> 
+          
             <!-- Registration section -->
             <div class="text-center mt-4">
               <p class="text-muted">Don't have an account? <a (click)="navigateToRegister()" class="text-muted">Register here</a>.</p>

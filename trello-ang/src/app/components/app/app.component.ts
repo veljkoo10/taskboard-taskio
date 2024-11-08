@@ -22,10 +22,14 @@ export class AppComponent {
   isLoggedIn() {
     return localStorage.getItem('access_token') != null;
   }
-  goToDashboard(): void {
-    this.selectedProject = null;
-    this.router.navigate(['/dashboard']);
+  goToDashboard() {
+    if (window.location.pathname === '/dashboard') {
+      location.reload();  // Ako si već na dashboard stranici, osveži
+    } else {
+      this.router.navigate(['/dashboard']);  // Inače, navigiraj na dashboard
+    }
   }
+  
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;
