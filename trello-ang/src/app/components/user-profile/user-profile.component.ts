@@ -21,6 +21,7 @@ export class UserProfileComponent implements OnInit {
   // Poruke za uspeh i grešku
   errorMessage: string = '';
   successMessage: string = '';
+  passwordError: string = '';
 
   constructor(private authService: AuthService, private userService: UserService) {}
 
@@ -66,12 +67,43 @@ export class UserProfileComponent implements OnInit {
     return null;
   }
 
+  isPasswordValid(password: string): boolean {
+    this.passwordError = '';
+
+    if (password.length < 8) {
+      this.passwordError = 'Password must have at least 8 characters.';
+      return false;
+    }
+    if (!/[A-Z]/.test(password)) {
+      this.passwordError = 'Password must have at least one capital letter.';
+      return false;
+    }
+    if (!/[a-z]/.test(password)) {
+      this.passwordError = 'Password must have at least one lowercase letter.';
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      this.passwordError = 'The password must have at least one number.';
+      return false;
+    }
+    if (!/[!@#~$%^&*(),.?":{}|<>]/.test(password)) {
+      this.passwordError = 'Password must have at least one special character.';
+      return false;
+    }
+
+    return true;
+  }
+
+
   // Funkcija za slanje zahteva za promenu lozinke
   onSubmitChangePassword(): void {
     if (this.newPassword !== this.confirmPassword) {
       this.errorMessage = 'New password and confirm password do not match.';
+      alert(this.errorMessage)
       return;
     }
+
+    if(this.isPasswordValid(this.newPassword)){
 
     const userId = this.user.id;
     const passwordData = {
@@ -93,5 +125,9 @@ export class UserProfileComponent implements OnInit {
         this.successMessage = ''; // Resetovanje uspeha ako je greška
       }
     });
+  }
+  if (this.passwordError) {
+    alert(this.passwordError);
+  }
   }
 }
