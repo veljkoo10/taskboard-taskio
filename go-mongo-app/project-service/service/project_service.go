@@ -2,7 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"project-service/db"
 	"project-service/models"
 	"time"
@@ -13,22 +17,48 @@ import (
 )
 
 func userExists(userID string) (bool, error) {
-	userCollection := db.Client.Database("testdb").Collection("users")
-	var user models.User
+	// Prepare the URL for the request
+	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
+	fmt.Println("Requesting URL:", url) // Debug log
 
-	userObjectID, err := primitive.ObjectIDFromHex(userID)
+	// Make the GET request
+	resp, err := http.Get(url)
 	if err != nil {
-		return false, errors.New("invalid user ID format")
+		return false, fmt.Errorf("failed to check if user exists: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Log the response status code
+	fmt.Println("Response Status Code:", resp.StatusCode) // Debug log
+
+	// Read the response body (use io.ReadAll for Go 1.16+)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userObjectID}).Decode(&user)
-	if err == mongo.ErrNoDocuments {
-		return false, nil
-	} else if err != nil {
-		return false, err // Other errors
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("received non-OK response: %s", body)
 	}
 
-	return true, nil
+	// Debug: print the body of the response to check its content
+	fmt.Println("Response Body:", string(body))
+
+	// Parse the response body to get the 'exists' field
+	var result map[string]bool
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse response body: %v", err)
+	}
+
+	// Ensure that the response contains the "exists" field
+	exists, ok := result["exists"]
+	if !ok {
+		return false, fmt.Errorf("response missing 'exists' field")
+	}
+
+	return exists, nil
 }
 
 func GetAllProjects() ([]models.Project, error) {

@@ -25,6 +25,18 @@ services:
     networks:
       - app-network
 
+  task-service:
+    build: ./task-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/testdb
+      - ENABLE_BOOTSTRAP=true
+    networks:
+      - app-network
+
   mongo:
     image: mongo:latest
     ports:
@@ -41,6 +53,7 @@ services:
     depends_on:
       - user-service
       - project-service
+      - task-service
     networks:
       - app-network
 

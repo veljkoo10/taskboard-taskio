@@ -36,6 +36,7 @@ func main() {
 	router.HandleFunc("/verify-password", handlers.HandleVerifyPassword).Methods("GET", "POST", "OPTIONS")
 	router.HandleFunc("/api/check-user-active", handlers.CheckUserActive).Methods("GET", "OPTIONS")
 	router.HandleFunc("/users/{id}/change-password", handlers.ChangePassword).Methods("POST", "OPTIONS")
+	router.HandleFunc("/users/{id}/exists", handlers.CheckUserExists).Methods("GET", "OPTIONS")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

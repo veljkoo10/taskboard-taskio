@@ -3,9 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"github.com/golang-jwt/jwt"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"time"
 	"user-service/db"
@@ -13,8 +10,32 @@ import (
 	"user-service/security"
 	"user-service/service"
 
+	"github.com/golang-jwt/jwt"
+	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/gorilla/mux"
 )
+
+func CheckUserExists(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+
+	if userID == "" {
+		http.Error(w, "Missing user ID", http.StatusBadRequest)
+		return
+	}
+
+	exists, err := service.UserExists(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return result as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
+}
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := service.GetUsers()

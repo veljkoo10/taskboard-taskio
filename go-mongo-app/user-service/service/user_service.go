@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"time"
 	"user-service/db"
 	"user-service/models"
 	"user-service/notification"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var emailConfig = notification.EmailConfig{
@@ -20,6 +21,25 @@ var emailConfig = notification.EmailConfig{
 	Password: "znnbgxgvshvythfq",
 	SMTPHost: "smtp.gmail.com",
 	SMTPPort: "587",
+}
+
+func UserExists(userID string) (bool, error) {
+	userCollection := db.Client.Database("testdb").Collection("users")
+	var user models.User
+
+	userObjectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return false, errors.New("invalid user ID format")
+	}
+
+	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userObjectID}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	} else if err != nil {
+		return false, err // Other errors
+	}
+
+	return true, nil
 }
 
 func GetUsers() ([]models.User, error) {
