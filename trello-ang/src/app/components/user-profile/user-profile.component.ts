@@ -120,7 +120,7 @@ export class UserProfileComponent implements OnInit {
         //location.reload();
       },
       error: (error) => {
-        this.errorMessage = 'Failed to change password. Please try again.';
+        this.errorMessage = 'Wrong old password.';
         alert(this.errorMessage)
         this.successMessage = ''; // Resetovanje uspeha ako je greška
       }

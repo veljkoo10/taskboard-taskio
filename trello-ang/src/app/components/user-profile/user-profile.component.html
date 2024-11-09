@@ -9,7 +9,7 @@
 <body>
 
 <div class="container">
-  
+
   <div class="profile-picture">
     <img [src]="userIcon" alt="Profile Picture">
   </div>
@@ -17,7 +17,7 @@
   <!-- Profile Settings Section -->
   <div class="form-section">
     <h2>Profile Settings</h2>
-    <form *ngIf="user"> 
+    <form *ngIf="user">
         <label for="name">First Name:</label>
       <input type="text" id="name"  value= {{user.name}} readonly>
 
@@ -45,7 +45,7 @@
         class="form-control"
       />
     </div>
-  
+
     <div class="form-group">
       <label for="newPassword">New Password</label>
       <input
@@ -57,7 +57,7 @@
         class="form-control"
       />
     </div>
-  
+
     <div class="form-group">
       <label for="confirmPassword">Confirm New Password</label>
       <input
@@ -70,7 +70,7 @@
       />
     </div>
     <br>
-    <button style="background-color: #216e4e;" type="submit" class="btn btn-primary">Change Password</button>
+    <button style="background-color: #216e4e;" type="submit" class="btn ">Change Password</button>
   </form>
 
 <!-- Modal for Success Message -->
