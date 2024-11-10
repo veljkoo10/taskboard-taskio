@@ -14,5 +14,5 @@ export const appRoutes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: '**', redirectTo: '/login' },
   {path:'',component: ProjectDetailsComponent},
-
+  
 ];

@@ -153,50 +153,54 @@ func GetTasks() ([]models.Task, error) {
 	return tasks, nil
 }
 
-// CreateTask stvara novi Task sa početnim statusom "pending" i praznom listom korisnika.
-func CreateTask(projectID string) (*models.Task, error) {
-	// Proveri validnost projectID
+// CreateTask creates a new Task with the provided name, description, initial status "pending", and an empty user list.
+func CreateTask(projectID, name, description string) (*models.Task, error) {
+	// Validate projectID format
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return nil, errors.New("invalid project ID format")
 	}
 
-	// Kreiraj novi task sa početnim vrednostima
+	// Create a new task with the given name and description
 	task := models.Task{
-		ID:        primitive.NewObjectID(),
-		Status:    "pending",
-		Users:     []string{}, // Prazna lista korisnika
-		ProjectID: projectObjectID.Hex(),
+		ID:          primitive.NewObjectID(),
+		Name:        name,
+		Description: description,
+		Status:      "pending",
+		Users:       []string{}, // Empty list of users
+		ProjectID:   projectObjectID.Hex(),
 	}
 
-	// Povezivanje sa Mongo kolekcijom i čuvanje zadatka
+	// Connect to MongoDB collection and insert the task
 	collection := db.Client.Database("testdb").Collection("tasks")
 	_, err = collection.InsertOne(context.TODO(), task)
 	if err != nil {
 		return nil, err
 	}
 
-	// JSON payload koji ćemo poslati ka project-service
+	// JSON payload to send to project-service
 	payload := map[string]string{
-		"task_id":    task.ID.Hex(),
-		"project_id": projectObjectID.Hex(),
+		"task_id":     task.ID.Hex(),
+		"project_id":  projectObjectID.Hex(),
+		"name":        name,
+		"description": description,
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	// Definisanje URL-a za slanje zahteva ka project-service sa dinamičkom putanjom
+	// Define the URL for the request to project-service
 	projectServiceURL := fmt.Sprintf("http://project-service:8080/projects/%s/tasks/%s", projectObjectID.Hex(), task.ID.Hex())
 
-	// Kreiranje HTTP PUT zahteva
+	// Create the HTTP PUT request
 	req, err := http.NewRequest("PUT", projectServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// Slanje zahteva ka project-service
+	// Send the request to project-service
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -204,14 +208,15 @@ func CreateTask(projectID string) (*models.Task, error) {
 	}
 	defer resp.Body.Close()
 
-	// Provera odgovora - ukoliko project-service nije uspeo da ažurira projekat
+	// Verify that project-service successfully updated the project
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to update project with new task ID")
+		return nil, errors.New("failed to update project with new task details")
 	}
 
-	// Vraćanje novog task-a
+	// Return the created task
 	return &task, nil
 }
+
 func AddUserToTask(taskID string, userID string) error {
 
 	userExists, err := userExists(userID)

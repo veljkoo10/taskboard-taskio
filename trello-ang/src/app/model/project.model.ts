@@ -16,4 +16,6 @@ export class Project {
     this.max_people = 0;
     this.users = []; 
   }
+
+  
 }

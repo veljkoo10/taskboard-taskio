@@ -18,9 +18,9 @@ func GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// CreateTaskHandler je HTTP handler koji obrađuje POST zahteve za kreiranje novog Task-a.
+// CreateTaskHandler is the HTTP handler that processes POST requests to create a new Task.
 func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	// Parsiraj project_id iz URL-a koristeći mux varijable
+	// Parse project_id from URL using mux variables
 	vars := mux.Vars(r)
 	projectID, ok := vars["project_id"]
 	if !ok {
@@ -28,14 +28,25 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Kreiraj task koristeći servis
-	task, err := service.CreateTask(projectID)
+	// Parse the request body to get name and description
+	var taskInput struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&taskInput); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Create the task using the service, passing projectID, name, and description
+	task, err := service.CreateTask(projectID, taskInput.Name, taskInput.Description)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Pošalji kreirani task kao JSON odgovor
+	// Send the created task as JSON response
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(task); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
