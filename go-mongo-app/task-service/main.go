@@ -26,7 +26,8 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/tasks", handlers.GetTasks).Methods("GET")
 	router.HandleFunc("/tasks/create/{project_id}", handlers.CreateTaskHandler).Methods("POST")
-
+	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.AddUserToTask).Methods("PUT")
+	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.RemoveUserFromTask).Methods("DELETE")
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},

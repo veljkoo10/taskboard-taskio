@@ -42,3 +42,30 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func AddUserToTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID := vars["taskId"]
+	userID := vars["userId"]
+
+	if err := service.AddUserToTask(taskID, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("User successfully added to task"))
+}
+func RemoveUserFromTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID := vars["taskId"]
+	userID := vars["userId"]
+
+	if err := service.RemoveUserFromTask(taskID, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("User successfully removed from task"))
+}

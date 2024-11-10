@@ -29,7 +29,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/projects", handlers.GetProjects).Methods("GET")
 	router.HandleFunc("/projects/create", handlers.CreateProject).Methods("POST")
-	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET")
+	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET", "OPTIONS")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.AddUserToProject).Methods("PUT")
 	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.RemoveUserFromProject).Methods("DELETE")
 	router.HandleFunc("/projects/title", handlers.HandleCheckProjectByTitle).Methods("POST")
