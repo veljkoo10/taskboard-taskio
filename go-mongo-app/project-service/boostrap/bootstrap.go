@@ -38,6 +38,7 @@ func InsertInitialProjects() {
 			MinPeople:   2,
 			MaxPeople:   10,
 			Users:       []string{},
+			Tasks:       []string{},
 		}
 		projects = append(projects, project)
 	}

@@ -11,4 +11,5 @@ type Project struct {
 	MinPeople       int                `bson:"min_people" json:"min_people"`
 	MaxPeople       int                `bson:"max_people" json:"max_people"`
 	Users           []string           `bson:"users" json:"users"`
+	Tasks           []string           `bson:"tasks" json:"tasks"`
 }

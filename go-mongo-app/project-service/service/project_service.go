@@ -269,3 +269,40 @@ func GetProjectByTitle(title string) (bool, error) {
 
 	return true, nil // Ako je projekat pronađen
 }
+
+// AddTaskToProject - Dodavanje task-a u projekat
+func AddTaskToProject(projectID string, taskID string) error {
+	// Konvertovanje projectID u ObjectID
+	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return errors.New("invalid project ID format")
+	}
+
+	// Konvertovanje taskID u ObjectID
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return errors.New("invalid task ID format")
+	}
+
+	// Pretraga projekta u bazi
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
+	if err == mongo.ErrNoDocuments {
+		return errors.New("project not found")
+	} else if err != nil {
+		return err
+	}
+
+	// Dodavanje task-a u listu tasks
+	_, err = collection.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": projectObjectID},
+		bson.M{"$addToSet": bson.M{"tasks": taskObjectID.Hex()}}, // Dodavanje taskID u listu tasks
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

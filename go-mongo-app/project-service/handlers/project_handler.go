@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"project-service/models"
 	"project-service/service"
@@ -107,4 +108,23 @@ func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK) // Not Found response
 		w.Write([]byte("Project not found"))
 	}
+}
+
+// AddTaskToProjectHandler - Handler za dodavanje task-a u projekat
+func AddTaskToProjectHandler(w http.ResponseWriter, r *http.Request) {
+	// Preuzimanje projectID i taskID iz URL parametara
+	vars := mux.Vars(r) // Koristi mux.Vars() za preuzimanje parametara iz URL-a
+	projectID := vars["projectID"]
+	taskID := vars["taskID"]
+
+	// Ažuriranje projekta sa novim task-om
+	err := service.AddTaskToProject(projectID, taskID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to add task to project: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Uspešan odgovor
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Task successfully added to project"))
 }
