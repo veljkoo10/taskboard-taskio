@@ -22,15 +22,27 @@ func GetProjects(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateProject(w http.ResponseWriter, r *http.Request) {
-	var project models.Project
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	vars := mux.Vars(r)
+	managerID := vars["managerId"]
+
+	var project models.Project
 	if err := json.NewDecoder(r.Body).Decode(&project); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if managerID == "" {
+		http.Error(w, "Manager ID is required", http.StatusBadRequest)
+		return
+	}
+
+	project.ManagerID = managerID
+	project.Users = append(project.Users, managerID)
 
 	createdProject, err := service.CreateProject(project)
 	if err != nil {

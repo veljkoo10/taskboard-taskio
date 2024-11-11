@@ -16,7 +16,7 @@ export class ProjectDetailsComponent {
   taskDescription: string = '';
   isCreateTaskFormVisible: boolean = false;
   pendingTasks: string[] = [];  // Lista imena zadataka koji su pending
-  
+
   constructor(private projectService: ProjectService) {}
 
   // Metoda koja se poziva prilikom inicijalizacije komponente
@@ -39,7 +39,7 @@ export class ProjectDetailsComponent {
     this.isCreateTaskFormVisible = true;
     document.querySelector('#mm')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
   }
-  
+
 
   // Ova metoda zatvara modal
   cancelCreateTask() {
@@ -70,7 +70,7 @@ export class ProjectDetailsComponent {
     );
   }
 }
-  
+
 }
 
 

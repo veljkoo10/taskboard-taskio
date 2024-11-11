@@ -42,34 +42,30 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="addProjectModalLabel">Kreiraj projekat</h5>
+        <h5 class="modal-title" id="addProjectModalLabel">Create a project</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form>
           <div class="mb-3">
-            <label for="projectTitle" class="form-label">Naslov:</label>
+            <label for="projectTitle" class="form-label">Title:</label>
             <input type="text" class="form-control" id="projectTitle" [(ngModel)]="project.title" name="title" required>
           </div>
           <div class="mb-3">
-            <label for="projectDescription" class="form-label">Opis:</label>
+            <label for="projectDescription" class="form-label">Description:</label>
             <textarea class="form-control" id="projectDescription" [(ngModel)]="project.description" name="description" rows="3" required></textarea>
           </div>
           <div class="mb-3">
-            <label for="projectOwner" class="form-label">Vlasnik:</label>
-            <input type="text" class="form-control" id="projectOwner" [(ngModel)]="project.owner" name="owner" required>
-          </div>
-          <div class="mb-3">
-            <label for="expectedEndDate" class="form-label">Očekivani datum završetka:</label>
+            <label for="expectedEndDate" class="form-label">Expected completion date:</label>
             <input type="date" class="form-control" id="expectedEndDate" [(ngModel)]="project.expected_end_date" name="expected_end_date" required>
           </div>
           <div class="row mb-3">
             <div class="col">
-              <label for="minNumber" class="form-label">Minimalan broj:</label>
+              <label for="minNumber" class="form-label">Minimum number:</label>
               <input type="number" class="form-control" id="minNumber" [(ngModel)]="project.min_people" name="min_people" required min="1">
             </div>
             <div class="col">
-              <label for="maxNumber" class="form-label">Maksimalan broj:</label>
+              <label for="maxNumber" class="form-label">Maximum number:</label>
               <input type="number" class="form-control" id="maxNumber" [(ngModel)]="project.max_people" name="max_people" required min="2">
             </div>
           </div>
@@ -79,8 +75,8 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Otkazi</button>
-        <button type="button" class="btn btn-success">Sačuvaj</button>
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="createProject()">Save</button>
       </div>
     </div>
   </div>

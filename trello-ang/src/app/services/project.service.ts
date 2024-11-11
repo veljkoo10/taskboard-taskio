@@ -13,8 +13,8 @@ export class ProjectService {
 
   constructor(private http: HttpClient) {}
 
-  createProject(project: Project): Observable<Project> {
-    return this.http.post<Project>(`${this.baseUrl}/create`, project);
+  createProject(managerId: string, project: Project): Observable<Project> {
+    return this.http.post<Project>(`${this.baseUrl}/create/${managerId}`, project);
   }
 
   getProjects(): Observable<Project[]> {

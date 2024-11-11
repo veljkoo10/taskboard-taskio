@@ -331,6 +331,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token": accessToken,
 		"role":         authUser.Role,
+		"user_id":      authUser.ID,
 	})
 }
 

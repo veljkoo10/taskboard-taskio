@@ -9,16 +9,14 @@ import { UserService } from 'src/app/services/user.service';
   styleUrls: ['./user-profile.component.css']
 })
 export class UserProfileComponent implements OnInit {
-  userIcon = 'assets/user.png'; // Placeholder za ikonu korisnika
-  user: any; // Korisnički podaci
-  userId: string = ''; // ID korisnika koji dobijamo iz tokena
+  userIcon = 'assets/user.png';
+  user: any;
+  userId: string = '';
 
-  // Dodajte promenljive za lozinke
   oldPassword: string = '';
   newPassword: string = '';
   confirmPassword: string = '';
 
-  // Poruke za uspeh i grešku
   errorMessage: string = '';
   successMessage: string = '';
   passwordError: string = '';
@@ -30,7 +28,6 @@ export class UserProfileComponent implements OnInit {
     if (this.user && this.user.id) {
       console.log("User ID from token:", this.user.id);
 
-      // Poziv funkcije za dobijanje korisničkog profila
       this.userService.getUserById(this.user.id).subscribe({
         next: (data) => {
           this.user = data; // Sačuvaj podatke dobijene sa servera
@@ -47,17 +44,13 @@ export class UserProfileComponent implements OnInit {
     window.location.reload();
   }
 
-  // Funkcija koja uzima korisničke informacije iz JWT tokena
   getUserInfoFromToken(): any {
     const token = localStorage.getItem('access_token');
     console.log("Token:", token);
     if (token) {
       try {
-        // Podela tokena na tri dela
         const payloadBase64 = token.split('.')[1];
-        // Dekodiranje Base64 stringa u JSON
         const payloadJson = atob(payloadBase64);
-        // Parsiranje JSON stringa u objekat
         return JSON.parse(payloadJson);
       } catch (error) {
         console.error('Invalid token format:', error);
@@ -95,39 +88,43 @@ export class UserProfileComponent implements OnInit {
   }
 
 
-  // Funkcija za slanje zahteva za promenu lozinke
   onSubmitChangePassword(): void {
-    if (this.newPassword !== this.confirmPassword) {
-      this.errorMessage = 'New password and confirm password do not match.';
-      alert(this.errorMessage)
+    if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {
+      this.errorMessage = 'All fields must be filled out.';
+      alert(this.errorMessage);
       return;
     }
 
-    if(this.isPasswordValid(this.newPassword)){
+    if (this.newPassword !== this.confirmPassword) {
+      this.errorMessage = 'New password and confirm password do not match.';
+      alert(this.errorMessage);
+      return;
+    }
 
-    const userId = this.user.id;
-    const passwordData = {
-      oldPassword: this.oldPassword,
-      newPassword: this.newPassword,
-      confirmPassword: this.confirmPassword
-    };
+    if (this.isPasswordValid(this.newPassword)) {
+      const userId = this.user.id;
+      const passwordData = {
+        oldPassword: this.oldPassword,
+        newPassword: this.newPassword,
+        confirmPassword: this.confirmPassword
+      };
 
-    this.userService.changePassword(userId, passwordData).subscribe({
-      next: (response) => {
-        this.successMessage = 'Password changed successfully!';
-        console.log('Uspeo')
-        this.errorMessage = ''; // Resetovanje greške ako je uspešno
-        //location.reload();
-      },
-      error: (error) => {
-        this.errorMessage = 'Wrong old password.';
-        alert(this.errorMessage)
-        this.successMessage = ''; // Resetovanje uspeha ako je greška
-      }
-    });
+      this.userService.changePassword(userId, passwordData).subscribe({
+        next: (response) => {
+          this.successMessage = 'Password changed successfully!';
+          console.log('Success');
+          this.errorMessage = '';
+        },
+        error: (error) => {
+          this.errorMessage = 'Wrong old password.';
+          alert(this.errorMessage);
+          this.successMessage = '';
+        }
+      });
+    }
+    if (this.passwordError) {
+      alert(this.passwordError);
+    }
   }
-  if (this.passwordError) {
-    alert(this.passwordError);
-  }
-  }
+
 }

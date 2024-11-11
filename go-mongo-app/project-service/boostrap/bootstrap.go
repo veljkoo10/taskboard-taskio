@@ -34,7 +34,6 @@ func InsertInitialProjects() {
 		project := models.Project{
 			Title:       fmt.Sprintf("Project %d", i),
 			Description: fmt.Sprintf("Description for project %d", i),
-			Owner:       fmt.Sprintf("Owner %d", i),
 			MinPeople:   2,
 			MaxPeople:   10,
 			Users:       []string{},

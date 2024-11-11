@@ -41,7 +41,7 @@ body {
 }
 
 .project-details-container {
-  margin-left: 250px; /* Initially set to match sidebar width */
+  margin-left: 250px;
   padding: 20px;
   flex-grow: 1;
   box-sizing: border-box;
@@ -91,6 +91,7 @@ body {
   flex-wrap: wrap;
 }
 
+/* Default styling for status-item class */
 .status-item {
   padding: 20px;
   border-radius: 5px;
@@ -102,11 +103,13 @@ body {
   box-sizing: border-box;
 }
 
+/* Uniform styling for p elements in all status-item divs */
 .status-item p {
   margin: 0;
   font-size: 1.2rem;
   font-weight: bold;
 }
+
 
 /* Media Queries for Responsiveness */
 @media (max-width: 1200px) {
@@ -247,61 +250,61 @@ body {
   font-size: 20px;
 }
 
-/* Stil za kontener statusa zadataka */
+/* Style for status-item with a Pending task */
 .status-item.to-do {
   margin-top: 20px;
-  background-color: #f8f9fa;  /* Svetla pozadina */
+  background-color: #f8f9fa;  /* Light background */
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease; /* Dodavanje animacije za proširivanje */
-  height: auto; /* Visina će automatski rasti u zavisnosti od sadržaja */
-  overflow: visible; /* Omogućavamo da sadržaj (lista) raste */
+  transition: all 0.3s ease; /* Add animation for expanding */
+  height: auto; /* Height will grow with content */
+  overflow: visible; /* Allow content (list) to expand */
 }
 
-/* Unutrašnji tekst za status "Pending" */
+/* Inside text for Pending status */
 .status-item.to-do p {
   font-size: 18px;
   font-weight: bold;
-  color: black; /* Plava boja za naslov "Pending" */
+  color: black; /* Black text for "Pending" title */
   margin-bottom: 10px;
 }
 
-/* Stil za listu taskova */
-.status-item.to-do ul {
-  list-style-type: none; /* Uklanja standardne tačke sa liste */
-  padding-left: 0; /* Uklanja marginu sa leve strane */
+/* Task list styling */
+.status-item ul {
+  list-style-type: none; /* Remove standard list bullets */
+  padding-left: 0; /* Remove left padding */
   margin-top: 10px;
-  transition: all 0.3s ease; /* Dodajemo animaciju kada se lista širi */
-  max-height: none; /* Uklanjamo max-height kako bi lista slobodno rasla */
-  overflow-y: visible; /* Omogućava da se sadržaj prikazuje bez skrolovanja */
+  font-size: 18px; /* Increase font size */
+  color: #333; /* Dark color for text */
 }
 
-/* Stil za li elemente - zadaci */
-.status-item.to-do li {
-  background-color: #fff; /* Bela pozadina za svaki task */
-  border: 1px solid #ddd; /* Siva ivica oko svakog taska */
+/* Style for each task item */
+.status-item li {
+  background-color: #f9f9f9; /* Light background for each task */
+  border: 1px solid #ccc; /* Light grey border */
   padding: 10px;
   margin-bottom: 8px;
-  border-radius: 4px;
-  font-size: 16px;
-  color: #333; /* Tamna boja za tekst */
-  transition: background-color 0.3s ease; /* Dodajemo laganu animaciju na hover */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease; /* Hover animation */
 }
 
-/* Stilizovanje hover efekta na li elementima */
-.status-item.to-do li:hover {
-  background-color: #e9ecef; /* Svetlija pozadina kada se prelazi mišem */
-  cursor: pointer; /* Promena kursora na ruku */
+/* Icon before each task item */
+.status-item li .task-icon {
+  margin-right: 10px; /* Space between icon and text */
+  color: #f39c12; /* Yellow color for the pending icon */
+  font-size: 20px; /* Increase icon size */
 }
 
-/* Stilizovanje ikone koja se pojavljuje pre imena taska */
-.status-item.to-do li::before {
-  content: "📋 "; /* Ikona koja podseća na listu */
-  color: #28a745; /* Zeleni znak koji označava pending status */
+/* Hover effect for task items */
+.status-item li:hover {
+  background-color: #e6f7ff; /* Light blue background on hover */
+  cursor: pointer;
 }
 
-/* Prazna lista stilizovana kao italik */
+/* If the list is empty, show a message in italics */
 .status-item.to-do ul:empty {
   font-style: italic;
   color: #aaa;

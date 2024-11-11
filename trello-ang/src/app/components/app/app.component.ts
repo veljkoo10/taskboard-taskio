@@ -29,7 +29,7 @@ export class AppComponent {
       this.router.navigate(['/dashboard']);  // Inače, navigiraj na dashboard
     }
   }
-  
+
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;
@@ -54,7 +54,7 @@ export class AppComponent {
     }
   }
   createProject(): void {
-    if (!this.project.title || !this.project.description || !this.project.owner ||
+    if (!this.project.title || !this.project.description ||
       !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
       this.errorMessage = 'All fields must be filled!';
       return;
@@ -89,6 +89,13 @@ export class AppComponent {
 
     this.errorMessage = '';
 
+    const managerId = localStorage.getItem('user_id');
+
+    if (!managerId) {
+      this.errorMessage = 'Manager ID is missing. Please log in again.';
+      return;
+    }
+
     this.projectService.checkProjectByTitle(this.project.title).subscribe(
       (response: string) => {
         if (response === 'Project exists') {
@@ -97,19 +104,23 @@ export class AppComponent {
           const projectPayload = {
             title: this.project.title,
             description: this.project.description,
-            owner: this.project.owner,
             expected_end_date: this.project.expected_end_date,
             min_people: this.project.min_people,
             max_people: this.project.max_people,
-            users: this.project.users
+            users: this.project.users,
+            manager_id: managerId
           };
 
-          this.projectService.createProject(projectPayload).subscribe(
+          this.projectService.createProject(managerId, projectPayload).subscribe(
             response => {
               console.log('Project created successfully:', response);
               this.project = new Project();
               this.successMessage = 'The project was successfully created!';
+
+              this.projects.push(response);
+
               this.loadProjects();
+
               const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
               if (closeModalButton) {
                 (closeModalButton as HTMLElement).click();

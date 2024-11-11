@@ -22,7 +22,7 @@ export class RegisterComponent {
   settingIcon = 'assets/setting.png';
   backgroundIcon = 'assets/Login-rafiki.svg';
   usernameIcon = 'assets/id-card.png';
-  user: User = new User('', '', '', '', '', '');
+  user: User = new User('', '', '', '', '', '','');
   passwordError: string = '';
 
   constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
@@ -121,7 +121,7 @@ export class RegisterComponent {
           next: (response) => {
             console.log('Registration successful:', response);
             alert('You are successfully registered! Check your email to confirm your account.');
-            this.user = new User('', '', '', '', '', '');
+            this.user = new User('', '', '', '', '', '','');
             this.navigateToLogin();
           },
           error: (error) => {

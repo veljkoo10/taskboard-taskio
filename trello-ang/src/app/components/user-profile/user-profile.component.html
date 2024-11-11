@@ -34,6 +34,8 @@
   </div>
 
   <form (ngSubmit)="onSubmitChangePassword()">
+    <h3 class="form-header">Change Password</h3> <!-- Updated heading with class -->
+
     <div class="form-group">
       <label for="oldPassword">Old Password</label>
       <input
@@ -70,10 +72,11 @@
       />
     </div>
     <br>
-    <button style="background-color: #216e4e;" type="submit" class="btn ">Change Password</button>
+    <button style="background-color: #216e4e;" type="submit" class="btn btn-success">Change Password</button>
   </form>
 
-<!-- Modal for Success Message -->
+
+  <!-- Modal for Success Message -->
 <div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': successMessage }" style="display: block;" *ngIf="successMessage">
   <div class="modal-dialog" role="document">
     <div class="modal-content">

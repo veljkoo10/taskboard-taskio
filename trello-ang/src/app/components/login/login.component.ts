@@ -16,7 +16,7 @@ export class LoginComponent {
   username: string = '';
   password: string = '';
   loginError: string = '';
-  user: User = new User('', '', '', '', '', '');
+  user: User = new User('', '', '', '', '', '','');
   constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
 
   login() {
@@ -25,9 +25,10 @@ export class LoginComponent {
 
       this.authService.login(userCredentials).subscribe(
         (response) => {
-          const { access_token, role } = response;
+          const { access_token, role,user_id } = response;
           localStorage.setItem('access_token', access_token);
           localStorage.setItem('role', role);
+          localStorage.setItem('user_id',user_id.toString());
           this.router.navigate(['/dashboard']);
         },
         (error) => {

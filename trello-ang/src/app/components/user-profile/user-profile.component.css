@@ -43,6 +43,30 @@ body {
   flex-direction: column;
   justify-content: flex-start; /* Align form content to the top */
 }
+.form-header {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.5em; /* Matches the font size of Profile Settings */
+  text-align: center;
+  border-bottom: 2px solid #ddd; /* Line below the header */
+  padding-bottom: 5px; /* Space between text and line */
+}
+button.btn {
+  background-color: #2a8a68; /* Zelena boja */
+  color: black; /* Crn tekst */
+  border: none;
+  border-radius: 5px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+button.btn:hover {
+  background-color: #1c573b; /* Malo tamnija zelena za hover */
+}
 
 .form-section h2 {
   color: #333;
@@ -63,7 +87,7 @@ body {
 
 label {
   font-size: 1em;
-  color: #333;
+  color: black;
   margin-bottom: 3px; /* Reduced the margin between label and input */
   display: block;
 }
