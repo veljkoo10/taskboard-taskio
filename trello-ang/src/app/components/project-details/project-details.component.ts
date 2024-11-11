@@ -4,6 +4,7 @@ import { ViewChild, AfterViewInit } from '@angular/core';
 import { Modal } from 'bootstrap';
 import {DashboardComponent} from '../dashboard/dashboard.component'
 import { ProjectService } from 'src/app/services/project.service';
+import { SimpleChanges } from '@angular/core';
 
 @Component({
   selector: 'app-project-details',
@@ -19,17 +20,28 @@ export class ProjectDetailsComponent {
 
   constructor(private projectService: ProjectService) {}
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['project'] && changes['project'].currentValue) {
+      this.pendingTasks = []; // Resetujemo listu pre nego što učitamo nove podatke
+      this.loadPendingTasks(); // Učitavamo pending taskove za novi projekat
+    }
+  }
   // Metoda koja se poziva prilikom inicijalizacije komponente
   ngOnInit() {
     this.loadPendingTasks();  // Pozivamo metodu za učitavanje pending taskova
   }
 
-  // Metoda za učitavanje pending taskova
   loadPendingTasks() {
-    this.projectService.getTasks().subscribe(tasks => {
-      // Filtriramo zadatke koji imaju status 'pending'
-      this.pendingTasks = tasks.filter(task => task.status === 'pending').map(task => task.name);
-    });
+    const project = this.project as any; 
+    this.pendingTasks = []; // Resetujemo listu pending taskova pre svakog učitavanja
+    if (this.project) {
+      const projectIdStr = String(project.id);
+      this.projectService.getTasks().subscribe(tasks => {
+        this.pendingTasks = tasks
+          .filter(task => task.status === 'pending' && String(task.project_id) === projectIdStr)
+          .map(task => task.name);
+      });
+    }
   }
 
   // Ova metoda prikazuje modal
