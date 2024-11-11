@@ -54,18 +54,26 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(createdProject)
 }
 
-func AddUserToProject(w http.ResponseWriter, r *http.Request) {
+func AddUsersToProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
-	userID := vars["userId"]
 
-	if err := service.AddUserToProject(projectID, userID); err != nil {
+	var requestBody struct {
+		UserIDs []string `json:"userIds"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	if err := service.AddUsersToProject(projectID, requestBody.UserIDs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("User successfully added to project"))
+	w.Write([]byte("Users successfully added to project"))
 }
 
 func GetProjectByID(w http.ResponseWriter, r *http.Request) {
@@ -100,13 +108,11 @@ func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 		Title string `json:"title"`
 	}
 
-	// Decode the request body
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Check if project exists by title
 	exists, err := service.GetProjectByTitle(requestBody.Title)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -114,29 +120,25 @@ func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exists {
-		w.WriteHeader(http.StatusOK) // OK response
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Project exists"))
 	} else {
-		w.WriteHeader(http.StatusOK) // Not Found response
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Project not found"))
 	}
 }
 
-// AddTaskToProjectHandler - Handler za dodavanje task-a u projekat
 func AddTaskToProjectHandler(w http.ResponseWriter, r *http.Request) {
-	// Preuzimanje projectID i taskID iz URL parametara
-	vars := mux.Vars(r) // Koristi mux.Vars() za preuzimanje parametara iz URL-a
+	vars := mux.Vars(r)
 	projectID := vars["projectID"]
 	taskID := vars["taskID"]
 
-	// Ažuriranje projekta sa novim task-om
 	err := service.AddTaskToProject(projectID, taskID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task to project: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Uspešan odgovor
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Task successfully added to project"))
 }

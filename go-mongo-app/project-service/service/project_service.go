@@ -17,42 +17,34 @@ import (
 )
 
 func userExists(userID string) (bool, error) {
-	// Prepare the URL for the request
 	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
 	fmt.Println("Requesting URL:", url) // Debug log
 
-	// Make the GET request
 	resp, err := http.Get(url)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Log the response status code
 	fmt.Println("Response Status Code:", resp.StatusCode) // Debug log
 
-	// Read the response body (use io.ReadAll for Go 1.16+)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("received non-OK response: %s", body)
 	}
 
-	// Debug: print the body of the response to check its content
 	fmt.Println("Response Body:", string(body))
 
-	// Parse the response body to get the 'exists' field
 	var result map[string]bool
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse response body: %v", err)
 	}
 
-	// Ensure that the response contains the "exists" field
 	exists, ok := result["exists"]
 	if !ok {
 		return false, fmt.Errorf("response missing 'exists' field")
@@ -128,14 +120,15 @@ func projectExists(title string) (bool, error) {
 	return true, nil
 }
 
-func AddUserToProject(projectID string, userID string) error {
-
-	userExists, err := userExists(userID)
-	if err != nil {
-		return err
-	}
-	if !userExists {
-		return errors.New("user not found")
+func AddUsersToProject(projectID string, userIDs []string) error {
+	for _, userID := range userIDs {
+		userExists, err := userExists(userID)
+		if err != nil {
+			return err
+		}
+		if !userExists {
+			return fmt.Errorf("user %s not found", userID)
+		}
 	}
 
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
@@ -152,24 +145,25 @@ func AddUserToProject(projectID string, userID string) error {
 		return err
 	}
 
-	userCount := len(project.Users)
-	if userCount >= project.MaxPeople {
-		return errors.New("maximum number of users reached for this project")
+	if len(project.Users)+len(userIDs) > project.MaxPeople {
+		return errors.New("adding these users exceeds the max number of users for this project")
 	}
 
-	for _, existingUserID := range project.Users {
-		if existingUserID == userID {
-			return errors.New("user is already added to this project")
+	for _, userID := range userIDs {
+		for _, existingUserID := range project.Users {
+			if existingUserID == userID {
+				return fmt.Errorf("user %s is already a member of this project", userID)
+			}
 		}
-	}
 
-	_, err = collection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": projectObjectID},
-		bson.M{"$addToSet": bson.M{"users": userID}},
-	)
-	if err != nil {
-		return err
+		_, err := collection.UpdateOne(
+			context.TODO(),
+			bson.M{"_id": projectObjectID},
+			bson.M{"$addToSet": bson.M{"users": userID}},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to add user %s to project: %v", userID, err)
+		}
 	}
 
 	return nil
@@ -267,24 +261,20 @@ func GetProjectByTitle(title string) (bool, error) {
 		return false, err
 	}
 
-	return true, nil // Ako je projekat pronađen
+	return true, nil
 }
 
-// AddTaskToProject - Dodavanje task-a u projekat
 func AddTaskToProject(projectID string, taskID string) error {
-	// Konvertovanje projectID u ObjectID
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return errors.New("invalid project ID format")
 	}
 
-	// Konvertovanje taskID u ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return errors.New("invalid task ID format")
 	}
 
-	// Pretraga projekta u bazi
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project
 	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
@@ -294,11 +284,10 @@ func AddTaskToProject(projectID string, taskID string) error {
 		return err
 	}
 
-	// Dodavanje task-a u listu tasks
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": projectObjectID},
-		bson.M{"$addToSet": bson.M{"tasks": taskObjectID.Hex()}}, // Dodavanje taskID u listu tasks
+		bson.M{"$addToSet": bson.M{"tasks": taskObjectID.Hex()}},
 	)
 	if err != nil {
 		return err

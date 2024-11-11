@@ -314,3 +314,41 @@ body {
   line-height: 1.5;
 }
 
+/* Styling for user list */
+.user-list {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 10px;
+}
+
+/* Style for each user item */
+.user-list li {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 8px;
+  background-color: #f9f9f9; /* Light background for each user */
+  border: 1px solid #ddd; /* Light grey border */
+  border-radius: 8px;
+  transition: background-color 0.3s ease; /* Hover animation */
+}
+
+/* Style for checkbox */
+.user-list li input[type="checkbox"] {
+  margin-right: 10px; /* Space between checkbox and user name */
+  transform: scale(1.2); /* Make checkbox slightly larger */
+}
+
+/* Hover effect for user items */
+.user-list li:hover {
+  background-color: #e6f7ff; /* Light blue background on hover */
+  cursor: pointer;
+}
+
+/* If no users are available, show a message */
+.user-list:empty {
+  font-style: italic;
+  color: #aaa;
+  text-align: center;
+  padding: 20px;
+}

@@ -20,7 +20,7 @@ export class DashboardComponent implements OnInit {
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService) {}
 
   ngOnInit() {
-    this.loadProjects();  // Load projects on initialization
+    this.loadProjects();
   }
 
   selectProject(project: Project) {

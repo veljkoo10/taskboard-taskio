@@ -1,79 +1,111 @@
 <div class="project-details-container" *ngIf="project">
-  <div class="project-header">
-    <div class="action-buttons">
-      <button class="btn btn-primary">Add user</button>
-      <button class="btn btn-danger">Delete user</button>
-      <button class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
+    <div class="project-header">
+      <div class="action-buttons">
+        <button class="btn btn-primary"(click)="showAddMemberToProject()">Add user</button>
+        <button class="btn btn-danger" >Delete user</button>
+        <button class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
+      </div>
+
+      <h2 class="project-title">Project Name: {{ project.title }}</h2>
     </div>
 
-    <h2 class="project-title">Project Name: {{ project.title }}</h2>
-  </div>
-
-  <!-- Task status section -->
-  <div class="task-status">
-    <div class="status-item to-do">
-      <p>Pending</p>
-      <ul>
-        <!-- Display all pending tasks with an icon -->
-        <li *ngFor="let task of pendingTasks">
-          <span class="task-icon">⏳</span>
-          {{ task }}
-        </li>
-      </ul>
+    <!-- Task status section -->
+    <div class="task-status">
+      <div class="status-item to-do">
+        <p>Pending</p>
+        <ul>
+          <!-- Display all pending tasks with an icon -->
+          <li *ngFor="let task of pendingTasks">
+            <span class="task-icon">⏳</span>
+            {{ task }}
+          </li>
+        </ul>
+      </div>
+      <div class="status-item">
+        <p>Work in Progress</p>
+      </div>
+      <div class="status-item">
+        <p>Done</p>
+      </div>
     </div>
-    <div class="status-item">
-      <p>Work in Progress</p>
-    </div>
-    <div class="status-item">
-      <p>Done</p>
-    </div>
-  </div>
 
-  <!-- Modal Background -->
-  <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
+    <!-- Modal Background -->
+    <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
 
-  <!-- Modal -->
-  <div id="mm" class="modal" *ngIf="isCreateTaskFormVisible">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Create New Task</h5>
-          <button type="button" class="btn-close" (click)="cancelCreateTask()"></button>
-        </div>
-        <div class="modal-body">
-          <form #taskForm="ngForm">
-            <div class="form-group">
-              <label for="taskName">Task name:</label>
-              <input
-                type="text"
-                id="taskName"
-                class="form-control"
-                name="name"
-                placeholder="Enter name"
-                [(ngModel)]="taskName"
-                required
-              />
-            </div>
+    <!-- Modal -->
+    <div id="mm" class="modal" *ngIf="isCreateTaskFormVisible">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Create New Task</h5>
+            <button type="button" class="btn-close" (click)="cancelCreateTask()"></button>
+          </div>
+          <div class="modal-body">
+            <form #taskForm="ngForm">
+              <div class="form-group">
+                <label for="taskName">Task name:</label>
+                <input
+                  type="text"
+                  id="taskName"
+                  class="form-control"
+                  name="name"
+                  placeholder="Enter name"
+                  [(ngModel)]="taskName"
+                  required
+                />
+              </div>
 
-            <div class="form-group">
-              <label for="taskDescription">Task description:</label>
-              <textarea
-                id="taskDescription"
-                class="form-control"
-                name="description"
-                rows="4"
-                placeholder="Enter description"
-                [(ngModel)]="taskDescription"
-                required
-              ></textarea>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="cancelCreateTask()">Cancel</button>
-          <button type="button" class="btn btn-success" (click)="createTask()">Create Task</button>
+              <div class="form-group">
+                <label for="taskDescription">Task description:</label>
+                <textarea
+                  id="taskDescription"
+                  class="form-control"
+                  name="description"
+                  rows="4"
+                  placeholder="Enter description"
+                  [(ngModel)]="taskDescription"
+                  required
+                ></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="cancelCreateTask()">Cancel</button>
+            <button type="button" class="btn btn-success" (click)="createTask()">Create Task</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
+<!-- Modal -->
+<div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add New Member</h3>
+        <button type="button" class="btn-close" (click)="cancelAddMember()"></button>
+      </div>
+      <div class="modal-body">
+        <h4>Select a user to add to the project:</h4>
+        <!-- Lista korisnika sa dugmetom za dodavanje u projekat -->
+        <ul class="user-list">
+          <li *ngFor="let user of users">
+            <label>
+              <input type="checkbox" (change)="toggleUserSelection(user)" />
+              {{ user.username | titlecase }}
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cancelAddMember()">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="addSelectedUsersToProject()">Add Selected Users</button>
+      </div>
+    </div>
+  </div>
 </div>
+
+
+
+
+

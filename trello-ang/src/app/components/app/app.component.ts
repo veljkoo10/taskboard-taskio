@@ -24,9 +24,9 @@ export class AppComponent {
   }
   goToDashboard() {
     if (window.location.pathname === '/dashboard') {
-      location.reload();  // Ako si već na dashboard stranici, osveži
+      location.reload();
     } else {
-      this.router.navigate(['/dashboard']);  // Inače, navigiraj na dashboard
+      this.router.navigate(['/dashboard']);
     }
   }
 
@@ -118,7 +118,7 @@ export class AppComponent {
               this.successMessage = 'The project was successfully created!';
 
               this.projects.push(response);
-
+              window.location.reload()
               this.loadProjects();
 
               const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');

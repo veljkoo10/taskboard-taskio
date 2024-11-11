@@ -25,6 +25,7 @@ func main() {
 	bootstrap.InsertInitialUsers()
 
 	router := mux.NewRouter()
+	router.HandleFunc("/users/active", handlers.GetActiveUsers).Methods("GET")
 	router.HandleFunc("/users", handlers.GetUsers).Methods("GET")
 	router.HandleFunc("/register", handlers.RegisterUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/login", handlers.LoginUser).Methods("POST", "OPTIONS")

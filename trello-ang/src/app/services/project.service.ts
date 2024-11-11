@@ -31,7 +31,10 @@ export class ProjectService {
   getTasks(): Observable<any[]> {
     return this.http.get<any[]>(this.taskUrl);
   }
-
+  addMemberToProject(projectId: string, userIds: string[]): Observable<any> {
+    const url = `${this.baseUrl}/${projectId}/users`;  // Endpoint za dodavanje korisnika u projekat
+    return this.http.put<any>(url, { userIds },{ responseType: 'text' as 'json' });  // Koristi `PUT` i šalje listu korisnika
+  }
 
 }
 

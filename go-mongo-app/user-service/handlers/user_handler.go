@@ -17,6 +17,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func GetActiveUsers(w http.ResponseWriter, r *http.Request) {
+	activeUsers, err := service.GetActiveUsers()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(activeUsers)
+}
 func CheckUserExists(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]

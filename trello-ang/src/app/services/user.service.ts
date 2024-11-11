@@ -48,7 +48,16 @@ export class UserService {
     );
   }
 
-  // Metoda za slanje zahteva za promenu lozinke
+  getUsers(): Observable<any[]> {
+    const url = `${this.baseUrl}/users`;
+    return this.http.get<any[]>(url).pipe(
+      catchError(error => {
+        console.error('Error fetching users:', error);
+        return throwError(error);
+      })
+    );
+  }
+
   changePassword(userId: string, changePasswordData: { oldPassword: string, newPassword: string }): Observable<any> {
     const url = `${this.baseUrl}/users/${userId}/change-password`;
     const headers = new HttpHeaders({
@@ -56,5 +65,8 @@ export class UserService {
     });
 
     return this.http.post<any>(url, changePasswordData, { headers });
+  }
+  getActiveUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/users/active`);
   }
 }
