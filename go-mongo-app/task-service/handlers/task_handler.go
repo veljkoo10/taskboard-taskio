@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"net/http"
 	"task-service/service"
+
+	"github.com/gorilla/mux"
 )
 
 func GetTasks(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +19,6 @@ func GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// CreateTaskHandler is the HTTP handler that processes POST requests to create a new Task.
 func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse project_id from URL using mux variables
 	vars := mux.Vars(r)
@@ -37,6 +37,21 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	if err := decoder.Decode(&taskInput); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
+	}
+
+	// Fetch all tasks for the given project to check for duplicate names
+	tasks, err := service.GetTasksByProjectID(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Check if a task with the same name already exists
+	for _, task := range tasks {
+		if task.Name == taskInput.Name {
+			http.Error(w, "A task with this name already exists in the project", http.StatusConflict)
+			return
+		}
 	}
 
 	// Create the task using the service, passing projectID, name, and description

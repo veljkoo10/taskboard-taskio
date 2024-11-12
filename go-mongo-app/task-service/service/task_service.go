@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 	"task-service/db"
 	"task-service/models"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func userExists(userID string) (bool, error) {
@@ -147,6 +148,33 @@ func GetTasks() ([]models.Task, error) {
 	}
 
 	if err = cursor.All(ctx, &tasks); err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+// GetTasksByProjectID returns tasks for a specific project.
+func GetTasksByProjectID(projectID string) ([]models.Task, error) {
+	collection := db.Client.Database("testdb").Collection("tasks")
+	var tasks []models.Task
+
+	// Convert the projectID to an ObjectID
+	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return nil, errors.New("invalid project ID format")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Query the database for tasks that match the projectID
+	cursor, err := collection.Find(ctx, bson.M{"project_id": projectObjectID.Hex()})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cursor.All(ctx, &tasks); err != nil {
 		return nil, err
 	}
 
