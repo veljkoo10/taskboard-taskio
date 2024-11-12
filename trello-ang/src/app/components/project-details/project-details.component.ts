@@ -36,14 +36,13 @@ export class ProjectDetailsComponent {
 
   loadPendingTasks() {
     const project = this.project as any;
-    this.pendingTasks = [];  // Resetovanje liste
-  
+    this.pendingTasks = [];
     if (this.project) {
       const projectIdStr = String(project.id);
       this.projectService.getTasks().subscribe(tasks => {
-        // Filtriramo samo zadatke koji pripadaju trenutnom projektu i imaju status 'pending'
-        this.pendingTasks = tasks.filter(task => task.status === 'pending' && String(task.project_id) === projectIdStr);
-        console.log(this.pendingTasks); // Proverite sadržaj lista zadataka
+        this.pendingTasks = tasks
+          .filter(task => task.status === 'pending' && String(task.project_id) === projectIdStr)
+          .map(task => task.name);
       });
     }
   }
@@ -163,15 +162,13 @@ export class ProjectDetailsComponent {
     }
   }
 
-  // Metoda koja prikazuje modal sa detaljima zadatka
   showTaskDetails(task: any) {
-    console.log("Selected task:", task); // Provera podataka
+    console.log("Selected task:", task);
     this.selectedTask = task;
     document.querySelector('#taskModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
     this.isTaskDetailsVisible = true;
   }
 
-  // Zatvaranje modala sa detaljima zadatka
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
     this.selectedTask = null;

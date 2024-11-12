@@ -9,25 +9,25 @@
       <h2 class="project-title">Project Name: {{ project.title }}</h2>
     </div>
 
-    <!-- Task status section -->
-    <div class="task-status">
-      <div class="status-item to-do">
-        <p>Pending</p>
-        <ul>
-          <!-- Display all pending tasks with an icon -->
-          <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
-            <span class="task-icon">⏳</span>
-            {{ task }}
-          </li>
-        </ul>
-      </div>
-      <div class="status-item">
-        <p>Work in Progress</p>
-      </div>
-      <div class="status-item">
-        <p>Done</p>
-      </div>
+  <!-- Task status section -->
+  <div class="task-status">
+    <div class="status-item to-do">
+      <p>Pending</p>
+      <ul>
+        <!-- Display all pending tasks with an icon -->
+        <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
+          <span class="task-icon">⏳</span >
+          {{ task }}
+        </li>
+      </ul>
     </div>
+    <div class="status-item">
+      <p>Work in Progress</p>
+    </div>
+    <div class="status-item">
+      <p>Done</p>
+    </div>
+  </div>
 
     <!-- Modal Background -->
     <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
