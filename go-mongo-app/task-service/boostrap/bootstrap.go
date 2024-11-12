@@ -29,6 +29,7 @@ func InsertInitialTasks() {
 	var tasks []interface{}
 	for i := 1; i <= 10; i++ {
 		task := models.Task{
+			Name:   fmt.Sprintf("Ime%d", i),
 			Status: fmt.Sprintf("OK%d", i),
 		}
 		tasks = append(tasks, task)
