@@ -36,6 +36,8 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	project.Tasks = []string{}
+
 	if managerID == "" {
 		http.Error(w, "Manager ID is required", http.StatusBadRequest)
 		return
