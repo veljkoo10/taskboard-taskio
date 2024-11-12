@@ -15,7 +15,7 @@
         <p>Pending</p>
         <ul>
           <!-- Display all pending tasks with an icon -->
-          <li *ngFor="let task of pendingTasks">
+          <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
             <span class="task-icon">⏳</span>
             {{ task }}
           </li>
@@ -100,6 +100,31 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cancelAddMember()">Cancel</button>
         <button type="button" class="btn btn-success" (click)="addSelectedUsersToProject()">Add Selected Users</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Task Details Modal -->
+<div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
+
+<div id="taskModal" class="modal" *ngIf="isTaskDetailsVisible">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Task Details</h5>
+        <button style="background-color: red" type="button" class="btn-close" (click)="closeTaskDetails()"></button>
+      </div>
+      <div class="modal-body">
+        <h6>Task Name: {{ selectedTask?.name }}</h6>
+        <p>Description: {{ selectedTask?.description }}</p>
+        <p>Status: {{ selectedTask?.status | titlecase }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary">Add User</button>
+        <button class="btn btn-danger">Delete Task</button>
+        <button class="btn btn-warning">Change Status</button>
       </div>
     </div>
   </div>
