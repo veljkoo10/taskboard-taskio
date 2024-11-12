@@ -4,6 +4,7 @@ import { ProjectService } from 'src/app/services/project.service';
 import { UserService } from 'src/app/services/user.service';
 import { ChangeDetectorRef } from '@angular/core';
 
+
 @Component({
   selector: 'app-project-details',
   templateUrl: './project-details.component.html',
@@ -152,21 +153,28 @@ export class ProjectDetailsComponent {
       this.projectService.createTask(project.id, newTask).subscribe(
         (response) => {
           console.log('Task successfully created:', response);
+
+          // Dodajte novi zadatak u pendingTasks
+          this.pendingTasks.push(response.name);
+
+          // Resetujte formu
           this.cancelCreateTask();
-          window.location.reload();
         },
         (error) => {
           console.error('Error creating task:', error);
         }
       );
     }
-  }
+}
+
 
   showTaskDetails(task: any) {
     console.log("Selected task:", task);
     this.selectedTask = task;
     document.querySelector('#taskModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
     this.isTaskDetailsVisible = true;
+    this.cdRef.detectChanges();
+
   }
 
   closeTaskDetails() {

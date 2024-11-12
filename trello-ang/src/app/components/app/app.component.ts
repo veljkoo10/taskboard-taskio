@@ -1,8 +1,9 @@
-import {Component, HostListener} from '@angular/core';
+import {Component, HostListener, ChangeDetectorRef, ApplicationRef} from '@angular/core';
 import {ProjectService} from "../../services/project.service";
 import {Router} from "@angular/router";
 import {AuthService} from "../../services/auth.service";
 import {Project} from "../../model/project.model";
+import {DashboardComponent} from "../dashboard/dashboard.component"
 
 @Component({
   selector: 'app-root',
@@ -18,7 +19,7 @@ export class AppComponent {
   projects: Project[] = [];
   successMessage: string = '';
   errorMessage: string = '';
-  constructor(private projectService: ProjectService, private router: Router, private authService: AuthService) {}
+  constructor(private projectService: ProjectService, private router: Router, private authService: AuthService, private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
   isLoggedIn() {
     return localStorage.getItem('access_token') != null;
   }
@@ -53,9 +54,11 @@ export class AppComponent {
       this.isProfileMenuOpen = false;
     }
   }
+
+   // Metoda za kreiranje projekta
   createProject(): void {
     if (!this.project.title || !this.project.description ||
-      !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
+        !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
       this.errorMessage = 'All fields must be filled!';
       return;
     }
@@ -112,21 +115,23 @@ export class AppComponent {
           };
 
           this.projectService.createProject(managerId, projectPayload).subscribe(
-            response => {
+            (response: Project) => {
               console.log('Project created successfully:', response);
+
+              // Resetovanje forme i dodavanje novog projekta u listu
               this.project = new Project();
               this.successMessage = 'The project was successfully created!';
-
               this.projects.push(response);
-              window.location.reload()
-              this.loadProjects();
 
+              
+
+              // Zatvori modal (ako je primenljivo)
               const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
               if (closeModalButton) {
                 (closeModalButton as HTMLElement).click();
               }
             },
-            error => {
+            (error) => {
               console.error('Error creating project:', error);
               this.errorMessage = 'There was an error creating the project.';
             }
@@ -139,6 +144,14 @@ export class AppComponent {
       }
     );
   }
+
+  selectProject(project: Project): void {
+    this.selectedProject = project;
+    console.log('Selected project:', this.selectedProject);
+  }
+
+  
+
   loadProjects() {
     this.projectService.getProjects().subscribe(
       (data: Project[]) => {

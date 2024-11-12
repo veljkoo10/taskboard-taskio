@@ -23,10 +23,11 @@ export class DashboardComponent implements OnInit {
     this.loadProjects();
   }
 
-  selectProject(project: Project) {
+  selectProject(project: Project): void {
     this.selectedProject = project;
     console.log('Selected project:', this.selectedProject);
   }
+  
 
 
   loadProjects() {

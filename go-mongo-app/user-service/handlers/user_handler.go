@@ -219,24 +219,92 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		// Display HTML form for password reset
 		htmlForm := `
 		<!DOCTYPE html>
-		<html>
-		<head>
-			<title>Reset Password</title>
-		</head>
-		<body>
-			<h1>Reset Your Password</h1>
-			<form method="POST" action="/verify-password">
-				<input type="hidden" name="email" value="` + requestBody.Email + `">
-				<label for="newPassword">New Password:</label>
-				<input type="password" id="newPassword" name="newPassword" required>
-				<br>
-				<label for="confirmPassword">Confirm Password:</label>
-				<input type="password" id="confirmPassword" name="confirmPassword" required>
-				<br>
-				<button type="submit">Submit</button>
-			</form>
-		</body>
-		</html>
+<html>
+<head>
+	<title>Reset Password</title>
+	<style>
+		/* Opšti stilovi */
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #ffffff;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			margin: 0;
+		}
+
+		/* Stil za glavni kontejner */
+		.container {
+			text-align: center;
+			width: 100%;
+			max-width: 400px;
+			padding: 20px;
+			background-color: #f9f9f9;
+			border: 1px solid #e0e0e0;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		h1 {
+			color: #2e7d32; /* Tamno zelena */
+			font-size: 24px;
+			margin-bottom: 20px;
+		}
+
+		form {
+			margin-top: 10px;
+		}
+
+		label {
+			display: block;
+			font-size: 14px;
+			margin-bottom: 6px;
+			color: #4caf50;
+		}
+
+		input[type="password"] {
+			width: 100%;
+			padding: 10px;
+			margin-bottom: 20px;
+			border: 1px solid #cccccc;
+			border-radius: 4px;
+			box-sizing: border-box;
+			font-size: 16px;
+		}
+
+		button {
+			width: 100%;
+			padding: 12px;
+			background-color: #4caf50; /* Svetlija zelena */
+			color: #ffffff;
+			border: none;
+			border-radius: 4px;
+			font-size: 16px;
+			cursor: pointer;
+			transition: background-color 0.3s;
+		}
+
+		button:hover {
+			background-color: #388e3c; /* Tamnija zelena */
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>Reset Your Password</h1>
+		<form method="POST" action="/verify-password">
+			<input type="hidden" name="email" value="` + requestBody.Email + `">
+			<label for="newPassword">New Password:</label>
+			<input type="password" id="newPassword" name="newPassword" required>
+			<label for="confirmPassword">Confirm Password:</label>
+			<input type="password" id="confirmPassword" name="confirmPassword" required>
+			<button type="submit">Submit</button>
+		</form>
+	</div>
+</body>
+</html>
+
 		`
 
 		// Set the Content-Type header to HTML and write the HTML form
@@ -275,10 +343,62 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Uspešan odgovor
+	// HTML odgovor za uspešan reset lozinke
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Password changed successfully"))
-
+	w.Write([]byte(`
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>Reset Password Success</title>
+			<style>
+				body {
+					font-family: Arial, sans-serif;
+					background-color: #ffffff;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					height: 100vh;
+					margin: 0;
+				}
+				.container {
+					text-align: center;
+					width: 100%;
+					max-width: 400px;
+					padding: 20px;
+					background-color: #f9f9f9;
+					border: 1px solid #e0e0e0;
+					border-radius: 8px;
+					box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+				}
+				h1 {
+					color: #2e7d32;
+					font-size: 24px;
+					margin-bottom: 20px;
+				}
+				p {
+					color: #333;
+					font-size: 16px;
+					margin-bottom: 20px;
+				}
+				a {
+					color: #4caf50;
+					text-decoration: none;
+					font-weight: bold;
+				}
+				a:hover {
+					text-decoration: underline;
+				}
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<h1>Password Reset Successful</h1>
+				<p>Your password has been successfully reset. You can now <a href="http://localhost:4200/login">log in</a> with your new password.</p>
+			</div>
+		</body>
+		</html>
+	`))
 }
 
 func CheckUserActive(w http.ResponseWriter, r *http.Request) {
