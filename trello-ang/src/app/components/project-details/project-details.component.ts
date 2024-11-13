@@ -173,9 +173,9 @@ export class ProjectDetailsComponent {
   showTaskDetails(task: any) {
     console.log("Selected task:", task);
     this.selectedTask = task;
-    document.querySelector('#taskModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
     this.isTaskDetailsVisible = true;
     this.cdRef.detectChanges();
+    document.querySelector('#taskModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top:20px");
 
   }
 
