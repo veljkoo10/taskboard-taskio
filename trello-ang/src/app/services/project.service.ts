@@ -49,9 +49,15 @@ export class ProjectService {
   }
 
   addMemberToProject(projectId: string, userIds: string[]): Observable<any> {
-    const url = `${this.baseUrl}/${projectId}/users`;
+    const url = `${this.baseUrl}/${projectId}/add-users`;
     return this.http.put<any>(url, { userIds }, { responseType: 'text' as 'json' });
   }
+
+  removeMemberToProject(projectId: string, userIds: string[]): Observable<any> {
+    const url = `${this.baseUrl}/${projectId}/remove-users`;
+    return this.http.put<any>(url, { userIds }, { responseType: 'text' as 'json' });
+  }
+
   get projectCreated$() {
     return this.projectCreated.asObservable();
   }

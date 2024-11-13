@@ -221,15 +221,7 @@ func GetProjectByID(projectID string) (*models.Project, error) {
 	return &project, nil
 }
 
-func RemoveUserFromProject(projectID string, userID string) error {
-	userExists, err := userExists(userID)
-	if err != nil {
-		return err
-	}
-	if !userExists {
-		return errors.New("user not found")
-	}
-
+func RemoveUsersFromProject(projectID string, userIDs []string) error {
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return errors.New("invalid project ID format")
@@ -244,28 +236,33 @@ func RemoveUserFromProject(projectID string, userID string) error {
 		return err
 	}
 
-	userFound := false
-	for _, existingUserID := range project.Users {
-		if existingUserID == userID {
-			userFound = true
-			break
+	// Check if all users exist in the project
+	for _, userID := range userIDs {
+		userFound := false
+		for _, existingUserID := range project.Users {
+			if existingUserID == userID {
+				userFound = true
+				break
+			}
+		}
+		if !userFound {
+			return fmt.Errorf("user %s is not a member of this project", userID)
 		}
 	}
-	if !userFound {
-		return errors.New("user is not a member of this project")
-	}
 
+	// Remove users from the project
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": projectObjectID},
-		bson.M{"$pull": bson.M{"users": userID}},
+		bson.M{"$pull": bson.M{"users": bson.M{"$in": userIDs}}},
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to remove users from project: %v", err)
 	}
 
 	return nil
 }
+
 func GetProjectByTitle(title string) (bool, error) {
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project

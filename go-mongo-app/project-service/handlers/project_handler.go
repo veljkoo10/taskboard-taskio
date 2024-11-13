@@ -107,19 +107,29 @@ func GetProjectByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(project)
 }
 
-func RemoveUserFromProject(w http.ResponseWriter, r *http.Request) {
+func RemoveUsersFromProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
-	userID := vars["userId"]
 
-	if err := service.RemoveUserFromProject(projectID, userID); err != nil {
+	var requestBody struct {
+		UserIDs []string `json:"userIds"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Call service to remove users from the project
+	if err := service.RemoveUsersFromProject(projectID, requestBody.UserIDs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("User successfully removed from project"))
+	w.Write([]byte("Users successfully removed from project"))
 }
+
 func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		Title string `json:"title"`

@@ -31,8 +31,8 @@ func main() {
 	router.HandleFunc("/projects", handlers.GetProjects).Methods("GET")
 	router.HandleFunc("/projects/create/{managerId}", handlers.CreateProject).Methods("POST")
 	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET", "OPTIONS")
-	router.HandleFunc("/projects/{projectId}/users", handlers.AddUsersToProject).Methods("PUT")
-	router.HandleFunc("/projects/{projectId}/users/{userId}", handlers.RemoveUserFromProject).Methods("DELETE")
+	router.HandleFunc("/projects/{projectId}/add-users", handlers.AddUsersToProject).Methods("PUT")
+	router.HandleFunc("/projects/{projectId}/remove-users", handlers.RemoveUsersFromProject).Methods("PUT")
 	router.HandleFunc("/projects/title", handlers.HandleCheckProjectByTitle).Methods("POST")
 	router.HandleFunc("/projects/{projectID}/tasks/{taskID}", handlers.AddTaskToProjectHandler).Methods("PUT", "OPTIONS")
 
