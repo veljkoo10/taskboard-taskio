@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
+import {Observable, Subject} from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Project } from "../model/project.model";
 import { Task } from "../model/task.model";
@@ -11,9 +11,16 @@ import { Task } from "../model/task.model";
 export class ProjectService {
   private baseUrl = 'http://localhost/taskio/projects';
   private taskUrl = 'http://localhost:8082/tasks';
+  private projectCreated = new Subject<Project>();
 
   constructor(private http: HttpClient) {}
+  getProjectsByUser(userId: string, token: string): Observable<Project[]> {
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
 
+    return this.http.get<Project[]>(`${this.baseUrl}/user/${userId}`, { headers });
+  }
   createProject(managerId: string, project: Project): Observable<Project> {
     return this.http.post<Project>(`${this.baseUrl}/create/${managerId}`, project);
   }
@@ -32,7 +39,7 @@ export class ProjectService {
         if (error.status === 409) {
           alert('Task name must be unique!');
         }
-        throw error;  // rethrow the error to propagate it
+        throw error;
       })
     );
   }
@@ -42,7 +49,14 @@ export class ProjectService {
   }
 
   addMemberToProject(projectId: string, userIds: string[]): Observable<any> {
-    const url = `${this.baseUrl}/${projectId}/users`;  // Endpoint for adding users to the project
+    const url = `${this.baseUrl}/${projectId}/users`;
     return this.http.put<any>(url, { userIds }, { responseType: 'text' as 'json' });
+  }
+  get projectCreated$() {
+    return this.projectCreated.asObservable();
+  }
+
+  notifyProjectCreated(project: Project) {
+    this.projectCreated.next(project);
   }
 }

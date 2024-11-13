@@ -123,7 +123,8 @@ export class AppComponent {
               this.successMessage = 'The project was successfully created!';
               this.projects.push(response);
 
-              
+              this.projectService.notifyProjectCreated(response);
+
 
               // Zatvori modal (ako je primenljivo)
               const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
@@ -150,7 +151,7 @@ export class AppComponent {
     console.log('Selected project:', this.selectedProject);
   }
 
-  
+
 
   loadProjects() {
     this.projectService.getProjects().subscribe(

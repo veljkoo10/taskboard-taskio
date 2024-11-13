@@ -7,9 +7,24 @@ import (
 	"project-service/models"
 	"project-service/service"
 
-	"github.com/gorilla/mux" // dodajte ovu liniju
+	"github.com/gorilla/mux"
 )
 
+func GetProjectsByUserID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userId"]
+
+	// Call the service function to get projects by user ID
+	projects, err := service.GetProjectsByUserID(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set the response header and send the projects as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(projects)
+}
 func GetProjects(w http.ResponseWriter, r *http.Request) {
 	projects, err := service.GetAllProjects()
 	if err != nil {

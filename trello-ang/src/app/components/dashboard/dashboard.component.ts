@@ -21,24 +21,35 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.loadProjects();
+
+    this.projectService.projectCreated$.subscribe(() => {
+      this.loadProjects();
+    });
   }
 
   selectProject(project: Project): void {
     this.selectedProject = project;
     console.log('Selected project:', this.selectedProject);
   }
-  
+
 
 
   loadProjects() {
-    this.projectService.getProjects().subscribe(
-      (data: Project[]) => {
-        this.projects = data;
-      },
-      (error) => {
-        console.error('Error fetching projects', error);
-      }
-    );
+    const userId = localStorage.getItem('user_id');
+    const token = localStorage.getItem('access_token');
+
+    if (userId && token) {
+      this.projectService.getProjectsByUser(userId, token).subscribe(
+        (data: Project[]) => {
+          this.projects = data;
+        },
+        (error) => {
+          console.error('Error fetching projects', error);
+        }
+      );
+    } else {
+      console.error('User not logged in.');
+    }
   }
 }
 

@@ -1,12 +1,12 @@
 <div class="project-details-container" *ngIf="project">
     <div class="project-header">
       <div class="action-buttons">
-        <button class="btn btn-primary"(click)="showAddMemberToProject()">Add user</button>
-        <button class="btn btn-danger" >Delete user</button>
-        <button class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
+        <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">Add user</button>
+        <button *ngIf="isManager()"  class="btn btn-danger" >Delete user</button>
+        <button *ngIf="isManager()"    class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
       </div>
 
-      <h2 class="project-title">Project Name: {{ project.title }}</h2>
+      <h2 class="project-title">Project Name: {{ project.title | titlecase }}</h2>
     </div>
 
   <!-- Task status section -->

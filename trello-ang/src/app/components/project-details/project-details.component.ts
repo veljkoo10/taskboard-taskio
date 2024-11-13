@@ -34,7 +34,9 @@ export class ProjectDetailsComponent {
     this.loadPendingTasks();
     this.loadActiveUsers()
   }
-
+  isManager(): boolean {
+    return localStorage.getItem('role') === 'Manager';
+  }
   loadPendingTasks() {
     const project = this.project as any;
     this.pendingTasks = [];

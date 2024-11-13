@@ -16,6 +16,24 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func GetProjectsByUserID(userID string) ([]models.Project, error) {
+	collection := db.Client.Database("testdb").Collection("projects")
+	var projects []models.Project
+
+	filter := bson.M{"users": userID}
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err = cursor.All(context.TODO(), &projects); err != nil {
+		return nil, err
+	}
+
+	return projects, nil
+}
+
 func userExists(userID string) (bool, error) {
 	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
 	fmt.Println("Requesting URL:", url) // Debug log

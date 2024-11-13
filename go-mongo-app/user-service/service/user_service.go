@@ -28,9 +28,12 @@ func GetActiveUsers() ([]models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Case-insensitive match for 'role' with "member" or "Member"
 	filter := bson.M{
 		"isActive": true,
-		"role":     "member",
+		"role": bson.M{
+			"$in": []string{"member", "Member"},
+		},
 	}
 
 	cursor, err := collection.Find(ctx, filter)
@@ -54,6 +57,7 @@ func GetActiveUsers() ([]models.User, error) {
 
 	return activeUsers, nil
 }
+
 func UserExists(userID string) (bool, error) {
 	userCollection := db.Client.Database("testdb").Collection("users")
 	var user models.User
