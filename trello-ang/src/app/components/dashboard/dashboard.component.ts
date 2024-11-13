@@ -16,14 +16,20 @@ export class DashboardComponent implements OnInit {
   project: Project = new Project();
   projects: Project[] = [];
   selectedProject!: Project | null;
+  newProj: any
 
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService) {}
 
   ngOnInit() {
     this.loadProjects();
+    
+    this.projectService.projectCreated$.subscribe((newProject: Project) => {
+      // Učitavamo projekte i postavljamo novi kao selektovan
+      this.newProj = this.projectService.getNewProject()
 
-    this.projectService.projectCreated$.subscribe(() => {
       this.loadProjects();
+      this.selectProject(this.newProj);
+      console.log(this.newProj)
     });
   }
 

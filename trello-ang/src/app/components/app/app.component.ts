@@ -57,6 +57,7 @@ export class AppComponent {
 
    // Metoda za kreiranje projekta
   createProject(): void {
+    
     if (!this.project.title || !this.project.description ||
         !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
       this.errorMessage = 'All fields must be filled!';
@@ -118,12 +119,13 @@ export class AppComponent {
             (response: Project) => {
               console.log('Project created successfully:', response);
 
-              // Resetovanje forme i dodavanje novog projekta u listu
+               // Emitujemo novokreirani projekat
+              this.projectService.notifyProjectCreated(response);
+
+              // Resetovanje forme i dodavanje novog projekta u listWu
               this.project = new Project();
               this.successMessage = 'The project was successfully created!';
               this.projects.push(response);
-
-              this.projectService.notifyProjectCreated(response);
 
 
               // Zatvori modal (ako je primenljivo)
@@ -146,10 +148,6 @@ export class AppComponent {
     );
   }
 
-  selectProject(project: Project): void {
-    this.selectedProject = project;
-    console.log('Selected project:', this.selectedProject);
-  }
 
 
 

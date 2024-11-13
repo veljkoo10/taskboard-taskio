@@ -12,6 +12,7 @@ export class ProjectService {
   private baseUrl = 'http://localhost/taskio/projects';
   private taskUrl = 'http://localhost:8082/tasks';
   private projectCreated = new Subject<Project>();
+  private newProject = {} 
 
   constructor(private http: HttpClient) {}
   getProjectsByUser(userId: string, token: string): Observable<Project[]> {
@@ -22,7 +23,13 @@ export class ProjectService {
     return this.http.get<Project[]>(`${this.baseUrl}/user/${userId}`, { headers });
   }
   createProject(managerId: string, project: Project): Observable<Project> {
+    console.log(project)
+    this.newProject = project
     return this.http.post<Project>(`${this.baseUrl}/create/${managerId}`, project);
+  }
+
+  getNewProject(){
+    return this.newProject
   }
 
   getProjects(): Observable<Project[]> {
@@ -37,7 +44,7 @@ export class ProjectService {
     return this.http.post<any>(`${this.taskUrl}/create/${projectId}`, task).pipe(
       catchError((error) => {
         if (error.status === 409) {
-          alert('Task name must be unique!');
+          alert('A task with that name exist!');
         }
         throw error;
       })
