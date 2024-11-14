@@ -16,6 +16,54 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func GetUserDetails(userIDs []string) ([]models.User, error) {
+	var users []models.User
+
+	// Iteriramo kroz sve korisnike i pozivamo korisnički servis
+	for _, userID := range userIDs {
+		url := fmt.Sprintf("http://user-service:8080/users/%s", userID) // Putanja za korisnički servis
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch user details for %s: %v", userID, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("received non-OK response for user %s: %s", userID, resp.Status)
+		}
+
+		var user models.User
+		err = json.NewDecoder(resp.Body).Decode(&user)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode user data for %s: %v", userID, err)
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+func GetUsersForProject(projectID string) ([]string, error) {
+	// Pretvaranje string ID-ja u ObjectID
+	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return nil, errors.New("invalid project ID")
+	}
+
+	// Upit u kolekciji projekata da preuzmemo projekat sa svim korisnicima
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.New("project not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	// Vraćamo sve korisnike koji su povezani sa projektom
+	return project.Users, nil
+}
 func GetProjectIDByTitle(title string) (string, error) {
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project

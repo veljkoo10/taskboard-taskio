@@ -10,6 +10,33 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func GetUsersForProjectHandler(w http.ResponseWriter, r *http.Request) {
+	// Uzimamo projectId iz URL-a
+	vars := mux.Vars(r)
+	projectID := vars["projectId"]
+
+	// Pozivamo servisnu funkciju da dobijemo korisnike za dati projekat
+	usersIDs, err := service.GetUsersForProject(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Pozivamo funkciju koja dohvaća sve detalje o korisnicima sa korisničkog servisa
+	users, err := service.GetUserDetails(usersIDs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Postavljamo header za JSON i šaljemo listu korisnika
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(users)
+	if err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
+}
+
 func GetProjectIDByTitle(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		Title string `json:"title"`

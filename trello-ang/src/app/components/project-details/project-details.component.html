@@ -1,8 +1,7 @@
 <div class="project-details-container" *ngIf="project">
     <div class="project-header">
       <div class="action-buttons">
-        <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">Add user</button>
-        <button *ngIf="isManager()"  class="btn btn-danger" >Delete user</button>
+        <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">User management</button>
         <button *ngIf="isManager()"    class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
       </div>
 
@@ -77,12 +76,12 @@
       </div>
     </div>
   </div>
-<!-- Modal -->
+<!-- Modal za dodavanje korisnika -->
 <div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Add New Member</h3>
+        <h3 class="modal-title">Manager: </h3>
         <button type="button" class="btn-close" (click)="cancelAddMember()"></button>
       </div>
       <div class="modal-body">
@@ -96,6 +95,14 @@
             </label>
           </li>
         </ul>
+
+        <!-- Prikaz korisnika koji su već na projektu -->
+        <h4>Users in the project:</h4>
+        <ul class="user-list">
+          <li *ngFor="let user of projectUsers">
+            {{ user.username | titlecase }}
+          </li>
+        </ul>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cancelAddMember()">Cancel</button>
@@ -104,6 +111,7 @@
     </div>
   </div>
 </div>
+
 
 
 <!-- Task Details Modal -->

@@ -22,6 +22,7 @@ export class ProjectDetailsComponent {
   selectedTask: any = null;
   isTaskDetailsVisible: boolean = false;
   projectId: string | null = null;
+  projectUsers: any[] = [];
   constructor(private projectService: ProjectService,private userService: UserService,private cdRef: ChangeDetectorRef) {}
 
   ngOnChanges(changes: SimpleChanges) {
@@ -47,6 +48,7 @@ export class ProjectDetailsComponent {
           if (this.project) {
             this.project.id = projectId;
             this.projectId = projectId;
+            this.loadUsersForProject(projectId);
           }
         } else {
           console.error('Project ID nije string:', response);
@@ -57,6 +59,18 @@ export class ProjectDetailsComponent {
       }
     );
   }
+  loadUsersForProject(projectId: string) {
+    this.projectService.getUsersForProject(projectId).subscribe(
+      (users) => {
+        // Filtriranje korisnika sa ulogom "Member" (bilo "Member" ili "member")
+        this.projectUsers = users.filter(user => user.role.toLowerCase() === 'member');
+      },
+      (error) => {
+        console.error('Error loading users for project:', error);
+      }
+    );
+  }
+
 
 
 

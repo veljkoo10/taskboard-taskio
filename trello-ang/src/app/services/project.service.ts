@@ -15,6 +15,9 @@ export class ProjectService {
   private newProject = {}
 
   constructor(private http: HttpClient) {}
+  getUsersForProject(projectId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/${projectId}/users`);
+  }
   getProjectIDByTitle(title: string): Observable<string> {
     return this.http.post<string>(`${this.baseUrl}/title/id`, { title })
       .pipe(
