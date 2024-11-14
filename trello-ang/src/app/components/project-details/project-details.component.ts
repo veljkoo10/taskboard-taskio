@@ -21,7 +21,7 @@ export class ProjectDetailsComponent {
   selectedUsers: any[] = [];
   selectedTask: any = null;
   isTaskDetailsVisible: boolean = false;
-
+  projectId: string | null = null;
   constructor(private projectService: ProjectService,private userService: UserService,private cdRef: ChangeDetectorRef) {}
 
   ngOnChanges(changes: SimpleChanges) {
@@ -33,7 +33,33 @@ export class ProjectDetailsComponent {
   ngOnInit() {
     this.loadPendingTasks();
     this.loadActiveUsers()
+    if (this.project && this.project.title) {
+      this.getProjectIDByTitle(this.project.title);
+    }
   }
+  getProjectIDByTitle(title: string) {
+    this.projectService.getProjectIDByTitle(title).subscribe(
+      (response: any) => {
+        const projectId = response?.projectId;
+
+        if (typeof projectId === 'string') {
+          console.log('Project ID:', projectId);
+          if (this.project) {
+            this.project.id = projectId;
+            this.projectId = projectId;
+          }
+        } else {
+          console.error('Project ID nije string:', response);
+        }
+      },
+      (error) => {
+        console.error('Error fetching project ID:', error);
+      }
+    );
+  }
+
+
+
   isManager(): boolean {
     return localStorage.getItem('role') === 'Manager';
   }
@@ -90,8 +116,8 @@ export class ProjectDetailsComponent {
     }
   }
   showCreateTaskForm() {
-    const project = this.project as any;
-    console.log(project.id);
+    const projectId = this.project as any;
+    console.log(projectId);
     this.isCreateTaskFormVisible = true;
     this.cdRef.detectChanges();
     document.querySelector('#mm')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
@@ -139,35 +165,37 @@ export class ProjectDetailsComponent {
 
 
   createTask() {
-    const project = this.project as any;
-
     if (!this.taskName || !this.taskDescription) {
       alert('Please fill in all fields before creating the task.');
       return;
     }
 
-    if (project) {
+    if (this.projectId) {
+      const projectIdStr = String(this.projectId);
+      console.log('Project ID je:', projectIdStr);
+
       const newTask = {
         name: this.taskName,
         description: this.taskDescription
       };
 
-      this.projectService.createTask(project.id, newTask).subscribe(
+      this.projectService.createTask(projectIdStr, newTask).subscribe(
         (response) => {
           console.log('Task successfully created:', response);
-
-          // Dodajte novi zadatak u pendingTasks
           this.pendingTasks.push(response.name);
-
-          // Resetujte formu
           this.cancelCreateTask();
         },
         (error) => {
           console.error('Error creating task:', error);
         }
       );
+    } else {
+      console.error('Project ID is missing');
+      alert('Project ID is missing. Could not create task.');
     }
-}
+  }
+
+
 
 
   showTaskDetails(task: any) {

@@ -12,9 +12,18 @@ export class ProjectService {
   private baseUrl = 'http://localhost/taskio/projects';
   private taskUrl = 'http://localhost:8082/tasks';
   private projectCreated = new Subject<Project>();
-  private newProject = {} 
+  private newProject = {}
 
   constructor(private http: HttpClient) {}
+  getProjectIDByTitle(title: string): Observable<string> {
+    return this.http.post<string>(`${this.baseUrl}/title/id`, { title })
+      .pipe(
+        catchError((error) => {
+          console.error('Error fetching project ID:', error);
+          throw error;
+        })
+      );
+  }
   getProjectsByUser(userId: string, token: string): Observable<Project[]> {
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${token}`
@@ -41,15 +50,19 @@ export class ProjectService {
   }
 
   createTask(projectId: string, task: { name: string, description: string }): Observable<Task> {
+    console.log('Project ID pre slanja:', projectId);
     return this.http.post<any>(`${this.taskUrl}/create/${projectId}`, task).pipe(
       catchError((error) => {
         if (error.status === 409) {
-          alert('A task with that name exist!');
+          alert('A task with that name already exists!');
         }
         throw error;
       })
     );
   }
+
+
+
 
   getTasks(): Observable<any[]> {
     return this.http.get<any[]>(this.taskUrl);

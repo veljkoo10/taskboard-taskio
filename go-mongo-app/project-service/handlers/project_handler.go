@@ -10,6 +10,35 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func GetProjectIDByTitle(w http.ResponseWriter, r *http.Request) {
+	var requestBody struct {
+		Title string `json:"title"`
+	}
+
+	// Parsiranje tela zahteva
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Poziv servisne funkcije za proveru projekta po nazivu
+	projectID, err := service.GetProjectIDByTitle(requestBody.Title)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ako projekat postoji, vraćamo njegov ID
+	if projectID == "" {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	// Odgovaranje sa ID-em projekta
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"projectId": projectID})
+}
+
 func GetProjectsByUserID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["userId"]

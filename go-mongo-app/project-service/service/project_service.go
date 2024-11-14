@@ -16,6 +16,22 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func GetProjectIDByTitle(title string) (string, error) {
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+
+	filter := bson.M{"title": bson.M{"$regex": primitive.Regex{Pattern: "^" + title + "$", Options: "i"}}}
+	err := collection.FindOne(context.TODO(), filter).Decode(&project)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return project.ID.Hex(), nil
+}
+
 func GetProjectsByUserID(userID string) ([]models.Project, error) {
 	collection := db.Client.Database("testdb").Collection("projects")
 	var projects []models.Project

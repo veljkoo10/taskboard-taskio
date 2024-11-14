@@ -27,6 +27,7 @@ func main() {
 	bootstrap.InsertInitialProjects()
 
 	router := mux.NewRouter()
+	router.HandleFunc("/projects/title/id", handlers.GetProjectIDByTitle).Methods("POST")
 	router.HandleFunc("/projects/user/{userId}", handlers.GetProjectsByUserID).Methods("GET")
 	router.HandleFunc("/projects", handlers.GetProjects).Methods("GET")
 	router.HandleFunc("/projects/create/{managerId}", handlers.CreateProject).Methods("POST")

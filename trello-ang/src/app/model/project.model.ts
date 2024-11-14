@@ -1,4 +1,5 @@
 export class Project {
+  id?: string;
   title: string;
   description: string;
   expected_end_date: string;
@@ -7,6 +8,7 @@ export class Project {
   users: any[];
 
   constructor() {
+    this.id='';
     this.title = '';
     this.description = '';
     this.expected_end_date = '';
