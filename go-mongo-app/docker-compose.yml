@@ -19,6 +19,7 @@ services:
       - "8081:8080" # Expose project service on port 8081
     depends_on:
       - mongo
+      - user-service
     environment:
       - MONGO_URI=mongodb://mongo:27017/testdb
       - ENABLE_BOOTSTRAP=true
