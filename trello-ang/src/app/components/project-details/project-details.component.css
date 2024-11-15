@@ -387,3 +387,19 @@ body {
 .modal-footer .btn-success:hover {
   background-color: #216e4e;
 }
+
+.user-item button {
+  background-color: #ff4d4d; /* Crvena boja */
+  color: white; /* Bela boja za tekst */
+  border: none; /* Bez ivice */
+  border-radius: 5px; /* Zaobljeni uglovi */
+  padding: 5px 10px; /* Unutrašnje margine */
+  font-size: 14px; /* Veličina fonta */
+  cursor: pointer; /* Ikonica pokazivača */
+  transition: background-color 0.3s ease, transform 0.2s ease; /* Animacija */
+  margin-left: auto;
+}
+
+.user-item button:hover {
+  background-color: #e60000; /* Tamnija crvena pri prelasku mišem */
+}

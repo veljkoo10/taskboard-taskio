@@ -303,6 +303,27 @@ export class ProjectDetailsComponent {
     this.selectedTask = null;
   }
 
+  removeUserFromProject(userId: string): void {
+    if (!this.project?.id) {
+      console.error('Project ID is missing.');
+      return;
+    }
+  
+    this.projectService.removeMemberToProject(this.project.id, [userId]).subscribe(
+      (response) => {
+        console.log('User removed successfully:', response);
+        // Uklanjanje korisnika iz lokalne liste korisnika na projektu
+        this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+  
+        // Osvežavanje liste dostupnih korisnika
+        this.loadActiveUsers();
+      },
+      (error) => {
+        console.error('Error removing user:', error);
+      }
+    );
+  }
+  
 
 }
 

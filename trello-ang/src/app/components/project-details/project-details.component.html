@@ -129,7 +129,9 @@
         <ul class="user-list">
           <li *ngFor="let user of projectUsers"  class="user-item">
             {{ user.username | titlecase }}
+            <button style="float: right;" (click)="removeUserFromProject(user.id)">Remove user</button>
           </li>
+          
         </ul>
       </div>
       <div class="modal-footer">
