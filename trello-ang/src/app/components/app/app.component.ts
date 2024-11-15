@@ -1,4 +1,4 @@
-import {Component, HostListener, ChangeDetectorRef, ApplicationRef} from '@angular/core';
+import { Component, HostListener, ChangeDetectorRef, ApplicationRef, ViewChild, ElementRef } from '@angular/core';
 import {ProjectService} from "../../services/project.service";
 import {Router} from "@angular/router";
 import {AuthService} from "../../services/auth.service";
@@ -57,14 +57,15 @@ export class AppComponent {
 
    // Metoda za kreiranje projekta
   createProject(): void {
-    
+    // Check if all fields are filled
     if (!this.project.title || !this.project.description ||
-        !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
+      !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
       this.errorMessage = 'All fields must be filled!';
       return;
     }
 
-    if (this.project.min_people < 1) {
+    // Validate minimum and maximum number of people
+    if (this.project.min_people <1) {
       this.errorMessage = 'Minimum number of people must be at least 1.';
       return;
     }
@@ -79,11 +80,14 @@ export class AppComponent {
       return;
     }
 
+
+    // Check if the number of users exceeds max_people
     if (this.project.users.length > this.project.max_people) {
       this.errorMessage = `You can have a maximum of ${this.project.max_people} users!`;
       return;
     }
 
+    // Validate the expected end date
     const currentDate = new Date();
     const expectedEndDate = new Date(this.project.expected_end_date);
     if (expectedEndDate <= currentDate) {
@@ -91,15 +95,16 @@ export class AppComponent {
       return;
     }
 
+    // Clear any previous error messages
     this.errorMessage = '';
 
     const managerId = localStorage.getItem('user_id');
-
     if (!managerId) {
       this.errorMessage = 'Manager ID is missing. Please log in again.';
       return;
     }
 
+    // Check if a project with the same title already exists
     this.projectService.checkProjectByTitle(this.project.title).subscribe(
       (response: string) => {
         if (response === 'Project exists') {
@@ -115,20 +120,20 @@ export class AppComponent {
             manager_id: managerId
           };
 
+          // Call the service to create the project
           this.projectService.createProject(managerId, projectPayload).subscribe(
             (response: Project) => {
               console.log('Project created successfully:', response);
 
-               // Emitujemo novokreirani projekat
+              // Emit the newly created project
               this.projectService.notifyProjectCreated(response);
 
-              // Resetovanje forme i dodavanje novog projekta u listWu
+              // Reset the form and add the new project to the list
               this.project = new Project();
               this.successMessage = 'The project was successfully created!';
               this.projects.push(response);
 
-
-              // Zatvori modal (ako je primenljivo)
+              // Close modal (if applicable)
               const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
               if (closeModalButton) {
                 (closeModalButton as HTMLElement).click();
@@ -148,9 +153,11 @@ export class AppComponent {
     );
   }
 
-
-
-
+  resetForm(): void {
+    this.project = new Project();
+    this.errorMessage = '';
+    this.successMessage = '';
+  }
   loadProjects() {
     this.projectService.getProjects().subscribe(
       (data: Project[]) => {

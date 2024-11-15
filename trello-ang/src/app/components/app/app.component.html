@@ -38,7 +38,7 @@
   </div>
 </nav>
 <router-outlet></router-outlet>
-<div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" aria-hidden="true">
+<div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" (hidden.bs.modal)="resetForm()">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">

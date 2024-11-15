@@ -11,25 +11,21 @@ import (
 )
 
 func GetUsersForProjectHandler(w http.ResponseWriter, r *http.Request) {
-	// Uzimamo projectId iz URL-a
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
-	// Pozivamo servisnu funkciju da dobijemo korisnike za dati projekat
 	usersIDs, err := service.GetUsersForProject(projectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Pozivamo funkciju koja dohvaća sve detalje o korisnicima sa korisničkog servisa
 	users, err := service.GetUserDetails(usersIDs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Postavljamo header za JSON i šaljemo listu korisnika
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(users)
 	if err != nil {
@@ -42,26 +38,22 @@ func GetProjectIDByTitle(w http.ResponseWriter, r *http.Request) {
 		Title string `json:"title"`
 	}
 
-	// Parsiranje tela zahteva
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Poziv servisne funkcije za proveru projekta po nazivu
 	projectID, err := service.GetProjectIDByTitle(requestBody.Title)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Ako projekat postoji, vraćamo njegov ID
 	if projectID == "" {
 		http.Error(w, "Project not found", http.StatusNotFound)
 		return
 	}
 
-	// Odgovaranje sa ID-em projekta
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"projectId": projectID})
 }
@@ -70,14 +62,12 @@ func GetProjectsByUserID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["userId"]
 
-	// Call the service function to get projects by user ID
 	projects, err := service.GetProjectsByUserID(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Set the response header and send the projects as JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(projects)
 }

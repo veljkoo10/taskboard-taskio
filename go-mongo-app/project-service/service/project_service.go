@@ -19,9 +19,8 @@ import (
 func GetUserDetails(userIDs []string) ([]models.User, error) {
 	var users []models.User
 
-	// Iteriramo kroz sve korisnike i pozivamo korisnički servis
 	for _, userID := range userIDs {
-		url := fmt.Sprintf("http://user-service:8080/users/%s", userID) // Putanja za korisnički servis
+		url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch user details for %s: %v", userID, err)
@@ -45,13 +44,11 @@ func GetUserDetails(userIDs []string) ([]models.User, error) {
 }
 
 func GetUsersForProject(projectID string) ([]string, error) {
-	// Pretvaranje string ID-ja u ObjectID
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return nil, errors.New("invalid project ID")
 	}
 
-	// Upit u kolekciji projekata da preuzmemo projekat sa svim korisnicima
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project
 	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
@@ -61,7 +58,6 @@ func GetUsersForProject(projectID string) ([]string, error) {
 		return nil, err
 	}
 
-	// Vraćamo sve korisnike koji su povezani sa projektom
 	return project.Users, nil
 }
 func GetProjectIDByTitle(title string) (string, error) {

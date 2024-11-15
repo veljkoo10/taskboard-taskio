@@ -1,3 +1,30 @@
+.project-users h3 {
+  margin-top: 20px;
+  font-size: 1.2em;
+}
+
+.project-users .user-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.project-users .user-list li {
+  margin-bottom: 10px;
+}
+
+.project-users .user-list li::before {
+  content: "🔹";
+  margin-right: 8px;
+}
+
+.project-users .user-list li.manager {
+  color: #007bff; /* Plava za menadžere */
+}
+
+.project-users .user-list li.member {
+  color: #28a745; /* Zelena za članove */
+}
+
 body {
   overflow-x: hidden;
   margin: 0;
@@ -351,4 +378,25 @@ body {
   color: #aaa;
   text-align: center;
   padding: 20px;
+}
+.modal-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modal-title span {
+  font-weight: normal;
+  color: #216e4e;  /* Optional, you can style this differently */
+}
+
+.modal-title span:last-child {
+  margin-right: 0; /* Prevent margin after the last element */
+}
+.available-slots {
+  font-size: 16px;
+  font-weight: bold;
+  color: #555;
+  margin-top: 10px;
 }

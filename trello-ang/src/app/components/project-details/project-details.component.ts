@@ -23,13 +23,35 @@ export class ProjectDetailsComponent {
   isTaskDetailsVisible: boolean = false;
   projectId: string | null = null;
   projectUsers: any[] = [];
+  projectManagers: any[] = [];
+  availableSlots: number = 0;
+
   constructor(private projectService: ProjectService,private userService: UserService,private cdRef: ChangeDetectorRef) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
-      this.pendingTasks = [];
-      this.loadPendingTasks();
+      this.resetAddMemberForm();  // Reset the add member form
+      this.resetCreateTaskForm();  // Reset the create task form
+      this.loadPendingTasks();     // Reload pending tasks to ensure they are up-to-date
+      this.loadUsersForProject();  // Reload project users to show any updates
     }
+  }
+  getAvailableSpots(): number {
+    if (!this.project) {
+      return 0;
+    }
+    return this.project.max_people - this.projectUsers.length-1;
+  }
+
+  resetAddMemberForm() {
+    this.isAddMemberFormVisible = false;
+    this.selectedUsers = [];  // Clear the selected users
+  }
+
+  resetCreateTaskForm() {
+    this.isCreateTaskFormVisible = false;
+    this.taskName = '';
+    this.taskDescription = '';  // Reset task details
   }
   ngOnInit() {
     this.loadPendingTasks();
@@ -38,6 +60,10 @@ export class ProjectDetailsComponent {
       this.getProjectIDByTitle(this.project.title);
     }
   }
+  isUserInProject(userId: string): boolean {
+    return this.projectUsers.some(user => user.id === userId);
+  }
+
   getProjectIDByTitle(title: string) {
     this.projectService.getProjectIDByTitle(title).subscribe(
       (response: any) => {
@@ -48,7 +74,7 @@ export class ProjectDetailsComponent {
           if (this.project) {
             this.project.id = projectId;
             this.projectId = projectId;
-            this.loadUsersForProject(projectId);
+            this.loadUsersForProject();
           }
         } else {
           console.error('Project ID nije string:', response);
@@ -59,20 +85,21 @@ export class ProjectDetailsComponent {
       }
     );
   }
-  loadUsersForProject(projectId: string) {
-    this.projectService.getUsersForProject(projectId).subscribe(
-      (users) => {
-        // Filtriranje korisnika sa ulogom "Member" (bilo "Member" ili "member")
-        this.projectUsers = users.filter(user => user.role.toLowerCase() === 'member');
-      },
-      (error) => {
-        console.error('Error loading users for project:', error);
-      }
-    );
+  loadUsersForProject() {
+    if (this.project && this.project.id) {
+      this.projectService.getUsersForProject(this.project.id).subscribe(
+        (users) => {
+          this.projectUsers = users.filter(user => user.role.toLowerCase() === 'member');
+          this.projectManagers = users.filter(user => user.role.toLowerCase() === 'manager');
+          // After loading project users, reload active users
+          this.loadActiveUsers();
+        },
+        (error) => {
+          console.error('Error loading users for project:', error);
+        }
+      );
+    }
   }
-
-
-
 
   isManager(): boolean {
     return localStorage.getItem('role') === 'Manager';
@@ -93,13 +120,18 @@ export class ProjectDetailsComponent {
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
       (data) => {
-        this.users = data;
+        // Filtriraj i sortiraj aktivne korisnike koji nisu deo projekta
+        this.users = this.sortUsersAlphabetically(
+          data.filter(user => !this.isUserInProject(user.id))
+        );
       },
       (error) => {
         console.error('Error fetching active users:', error);
       }
     );
   }
+
+
 
 
   toggleSelection(user: any) {
@@ -110,6 +142,9 @@ export class ProjectDetailsComponent {
       this.selectedUsers.splice(index, 1);
     }
   }
+  sortUsersAlphabetically(users: any[]): any[] {
+    return users.sort((a, b) => a.username.localeCompare(b.username));
+  }
 
   addSelectedUsersToProject() {
     const project = this.project as any;
@@ -119,7 +154,10 @@ export class ProjectDetailsComponent {
       this.projectService.addMemberToProject(project.id, userIds).subscribe(
         (response) => {
           console.log('Users successfully added:', response);
-          this.isAddMemberFormVisible = false;
+          this.loadUsersForProject();  // Ponovno učitavanje korisnika u projektu
+          this.loadActiveUsers();     // Osveži listu aktivnih korisnika
+          this.selectedUsers = [];   // Očisti selektovane korisnike
+          this.availableSlots = this.getAvailableSpots(); // Ažuriraj broj slobodnih mesta
         },
         (error) => {
           console.error('Error adding users to project:', error);
@@ -129,6 +167,9 @@ export class ProjectDetailsComponent {
       alert('No users selected.');
     }
   }
+
+
+
   showCreateTaskForm() {
     const projectId = this.project as any;
     console.log(projectId);

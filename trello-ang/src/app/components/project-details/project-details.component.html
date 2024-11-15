@@ -77,16 +77,26 @@
     </div>
   </div>
 <!-- Modal za dodavanje korisnika -->
-<div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible">
+<div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible" >
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Manager: </h3>
+        <h3 class="modal-title">
+          Manager:
+          <!-- Display managers inline with commas between them -->
+          <span *ngFor="let user of projectManagers; let isLast = last">
+            {{ user.username | titlecase }}<span *ngIf="!isLast">, </span>
+          </span>
+        </h3>
         <button type="button" class="btn-close" (click)="cancelAddMember()"></button>
       </div>
       <div class="modal-body">
+        <!-- Lista korisnika koji mogu biti dodati na projekat -->
         <h4>Select a user to add to the project:</h4>
-        <!-- Lista korisnika sa dugmetom za dodavanje u projekat -->
+        <div class="available-spots">
+          <p>Available Spots: {{ getAvailableSpots() }}</p>
+        </div>
+
         <ul class="user-list">
           <li *ngFor="let user of users">
             <label>
@@ -95,6 +105,7 @@
             </label>
           </li>
         </ul>
+
 
         <!-- Prikaz korisnika koji su već na projektu -->
         <h4>Users in the project:</h4>
@@ -111,6 +122,7 @@
     </div>
   </div>
 </div>
+
 
 
 
