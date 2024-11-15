@@ -108,9 +108,14 @@ func AddUserToTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send a JSON response instead of plain text
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("User successfully added to task"))
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "User successfully added to task",
+	})
 }
+
 func RemoveUserFromTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID := vars["taskId"]

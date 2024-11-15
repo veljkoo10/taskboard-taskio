@@ -213,6 +213,55 @@ export class ProjectDetailsComponent {
     }
   }
 
+  isAddTaskUserVisible: boolean = false; 
+selectedTaskUsers: any[] = []; // Stores selected users for the task
+
+showAddTaskUserModal(task: any) {
+  console.log('Opening Add Task User Modal:', task);
+  this.selectedTask = task; // Ensure task is valid
+  this.isAddTaskUserVisible = true; // Toggle visibility
+}
+
+closeAddTaskUserModal() {
+  this.isAddTaskUserVisible = false;
+  this.selectedTaskUsers = []; // Reset selected users
+}
+
+
+// Toggle User Selection for Task
+toggleTaskUserSelection(user: any) {
+  const index = this.selectedTaskUsers.indexOf(user);
+  if (index === -1) {
+    this.selectedTaskUsers.push(user);
+  } else {
+    this.selectedTaskUsers.splice(index, 1);
+  }
+}
+
+// Add Selected Users to Task
+addSelectedUsersToTask() {
+  if (this.selectedTask && this.selectedTaskUsers.length > 0) {
+    const taskId = this.selectedTask.id;
+    const userIds = this.selectedTaskUsers.map(user => user.id);
+
+    userIds.forEach(userId => {
+      this.taskService.addUserToTask(taskId, userId).subscribe(
+        response => {
+          console.log(`User ${userId} added to task ${taskId}:`, response);
+        },
+        error => {
+          console.error(`Error adding user ${userId} to task ${taskId}:`, error);
+        }
+      );
+    });
+
+    this.closeAddTaskUserModal();
+  } else {
+    alert("No users selected.");
+  }
+}
+
+
   showCreateTaskForm() {
     const projectId = this.project as any;
     console.log(projectId);

@@ -403,3 +403,15 @@ body {
 .user-item button:hover {
   background-color: #e60000; /* Tamnija crvena pri prelasku mišem */
 }
+
+.modal {
+  display: block !important;  /* Force modal to be displayed */
+  opacity: 1 !important;
+  transition: opacity 0.3s ease;
+}
+.modal-background {
+  display: block;
+  opacity: 0.5;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+

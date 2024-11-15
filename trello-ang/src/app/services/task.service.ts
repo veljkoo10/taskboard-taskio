@@ -45,8 +45,11 @@ export class TaskService {
     );
   }
 
-  // Add a user to a task
   addUserToTask(taskId: string, userId: string): Observable<any> {
+    // Log the request to see the taskId and userId being passed
+    console.log(`Adding user ${userId} to task ${taskId}`);
+  
+    // Send the PUT request with taskId and userId as URL parameters
     return this.http.put<any>(`${this.taskUrl}/${taskId}/users/${userId}`, {}).pipe(
       catchError((error) => {
         console.error('Error adding user to task:', error);
@@ -54,6 +57,8 @@ export class TaskService {
       })
     );
   }
+  
+  
 
   // Remove a user from a task
   removeUserFromTask(taskId: string, userId: string): Observable<any> {

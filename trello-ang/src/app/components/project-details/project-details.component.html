@@ -169,13 +169,43 @@
         </div>
 
       </div>
+      <!-- Updated Task Details Modal -->
       <div class="modal-footer">
-        <button class="btn btn-primary">Add User</button>
+        <button class="btn btn-primary" (click)="showAddTaskUserModal(selectedTask)">Add User</button>
         <button class="btn btn-danger">Delete Task</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add Users to Task Modal -->
+<div id="addTaskUserModal" class="modal" *ngIf="isAddTaskUserVisible">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Users to Task</h5>
+        <button type="button" class="btn-close" (click)="closeAddTaskUserModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <ul class="user-list">
+          <li *ngFor="let user of projectUsers" class="user-item">
+            <label>
+              <input type="checkbox" (change)="toggleTaskUserSelection(user)" />
+              {{ user.username | titlecase }}
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeAddTaskUserModal()">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="addSelectedUsersToTask()">Add Users</button>
       </div>
     </div>
   </div>
 </div>
+
+
 
 
 
