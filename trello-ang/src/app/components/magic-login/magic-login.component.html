@@ -1,0 +1,19 @@
+<div class="modal-body">
+  <form (submit)="sendMagicLink(); $event.preventDefault()">
+    <div class="form-outline mb-3">
+      <label class="form-label" for="magicLinkEmail">Unesite vašu email adresu:</label>
+      <input
+        [(ngModel)]="email"
+        name="magicLinkEmail"
+        type="email"
+        id="magicLinkEmail"
+        class="form-control form-control-sm"
+        placeholder="Email"
+        required
+      />
+    </div>
+    <button type="submit" class="btn btn-primary">Pošalji magični link</button>
+  </form>
+  <div *ngIf="message" class="mt-2">{{ message }}</div>
+</div>
+

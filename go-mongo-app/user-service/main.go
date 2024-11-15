@@ -38,6 +38,8 @@ func main() {
 	router.HandleFunc("/api/check-user-active", handlers.CheckUserActive).Methods("GET", "OPTIONS")
 	router.HandleFunc("/users/{id}/change-password", handlers.ChangePassword).Methods("POST", "OPTIONS")
 	router.HandleFunc("/users/{id}/exists", handlers.CheckUserExists).Methods("GET", "OPTIONS")
+	router.HandleFunc("/send-magic-link", handlers.SendMagicLinkHandler).Methods("POST", "OPTIONS")
+	router.HandleFunc("/verify-magic-link", handlers.VerifyMagicLinkHandler).Methods("GET", "OPTIONS")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

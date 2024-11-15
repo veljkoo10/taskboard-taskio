@@ -69,4 +69,15 @@ export class UserService {
   getActiveUsers(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/users/active`);
   }
+  loginWithMagic(email: string, username: string): Observable<any> {
+    const requestBody = { email, username };
+
+    return this.http.post<any>(`${this.baseUrl}/send-magic-link`, requestBody);
+  }
+  loginWithMagicLink(email: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/send-magic-link?email=${email}`, {});
+  }
+  loginMagicLink(token: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/verify-magic-link?token=${token}`, {});
+  }
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 	"user-service/db"
@@ -497,4 +498,106 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Password changed successfully"})
+}
+func SendMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
+	// Pokušaj da uzmeš email iz query parametra
+	email := r.URL.Query().Get("email")
+	username := r.URL.Query().Get("username")
+
+	// Ako nema email-a ili username-a u query parametru, proveri JSON telo
+	if email == "" || username == "" {
+		var user struct {
+			Email    string `json:"email"`
+			Username string `json:"username"`
+		}
+
+		// Parsiranje tela zahteva ako email ili username nisu prosleđeni u query
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			http.Error(w, "Nevalidan input", http.StatusBadRequest)
+			return
+		}
+		email = user.Email
+		username = user.Username
+	}
+
+	// Ako email ili username nisu prosleđeni ni u query ni u JSON telu, vrati grešku
+	if email == "" || username == "" {
+		http.Error(w, "Email and Username must be forwarded", http.StatusBadRequest)
+		return
+	}
+
+	// Pronalaženje korisnika po email-u
+	userData, err := service.FindUserByEmail(email)
+	if err != nil {
+		http.Error(w, "Korisnik nije pronađen", http.StatusNotFound)
+		log.Printf("Error finding user with email %s: %v", email, err)
+		return
+	}
+
+	// Provera da li se email i username podudaraju
+	if userData.Username != username {
+		http.Error(w, "Username and email do not match", http.StatusBadRequest)
+		return
+	}
+
+	// Generisanje magic link-a
+	magicLink, err := security.GenerateMagicLink(userData)
+	if err != nil {
+		http.Error(w, "Error generating magic link", http.StatusInternalServerError)
+		log.Printf("Error generating magic link for user %v: %v", userData, err)
+		return
+	}
+
+	// Slanje magic link-a putem email-a
+	err = service.SendMagicLinkEmail(email, magicLink)
+	if err != nil {
+		http.Error(w, "Error sending email", http.StatusInternalServerError)
+		log.Printf("Error sending magic link to email %s: %v", email, err)
+		return
+	}
+
+	// Uspešan odgovor
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "The magic link has been sent to the email",
+	})
+}
+
+func VerifyMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
+	// Dohvati token iz URL-a
+	tokenString := r.URL.Query().Get("token")
+	if tokenString == "" {
+		http.Error(w, "Token not found", http.StatusBadRequest)
+		return
+	}
+
+	// Dekodiraj i verifikuj token
+	claims, err := security.ParseAccessToken(tokenString) // Pozivamo funkciju za dekodiranje
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		log.Println("Error decoding token:", err)
+		return
+	}
+
+	// Ako je token validan, koristi klaime za dalje akcije
+	log.Printf("Korisnik ID: %s, Rola: %s\n", claims.ID, claims.Role)
+
+	// Generisanje novog access token-a koji korisnik može koristiti nakon verifikacije
+	accessToken, err := security.NewAccessToken(*claims) // Dereferencirajte claims
+	if err != nil {
+		http.Error(w, "Error generating new token", http.StatusInternalServerError)
+		return
+	}
+
+	// Vraćanje odgovora sa novim access token-om i korisničkim informacijama
+	response := map[string]interface{}{
+		"access_token": accessToken, // Novi access token
+		"role":         claims.Role,
+		"user_id":      claims.ID, // Korisnički ID
+	}
+
+	// Pošaljite odgovor sa podacima u JSON formatu
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
 }

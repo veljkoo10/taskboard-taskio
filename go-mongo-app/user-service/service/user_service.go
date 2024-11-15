@@ -347,3 +347,9 @@ func ChangePassword(userID, oldPassword, newPassword string) error {
 
 	return nil // Uspešno promenjena lozinka
 }
+func SendMagicLinkEmail(email, magicLink string) error {
+	subject := "Magic Link for Login"
+	body := "Click the following link to login: " + magicLink
+	err := notification.SendEmail(email, subject, body, emailConfig)
+	return err
+}

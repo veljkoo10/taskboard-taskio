@@ -4,6 +4,7 @@ import {AuthService} from "../../services/auth.service";
 import { User } from '../../model/user.model';
 import {UserService} from "../../services/user.service";
 
+
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
@@ -16,6 +17,8 @@ export class LoginComponent {
   username: string = '';
   password: string = '';
   loginError: string = '';
+  email: string='';
+  resetMessageMagic:string='';
   user: User = new User('', '', '', '', '', '','');
   constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
 
@@ -77,5 +80,26 @@ export class LoginComponent {
       }
     );
   }
+  checkEmailAndUsernameAndSendMagicLink() {
+    console.log("Email koji je unet:", this.email);
+    console.log("Username koji je unet:", this.username);
+
+    if (!this.email || !this.username) {
+      this.resetMessageMagic = 'Email i Username moraju biti uneti.';
+      return;
+    }
+
+    this.userService.loginWithMagic(this.email, this.username).subscribe(
+      (response) => {
+        console.log('Odgovor sa servera:', response);
+        this.resetMessageMagic = response.message;
+      },
+      (error) => {
+        console.error('Greška pri slanju magic linka:', error);
+        this.resetMessageMagic = 'Desila se greška pri slanju magic linka.';
+      }
+    );
+  }
+
 
 }

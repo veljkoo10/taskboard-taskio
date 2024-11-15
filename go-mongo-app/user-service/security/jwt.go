@@ -5,6 +5,8 @@ import (
 	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
+	"time"
+	"user-service/models"
 )
 
 type User struct {
@@ -24,6 +26,26 @@ type UserClaims struct {
 func NewAccessToken(claims UserClaims) (string, error) {
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return accessToken.SignedString([]byte(os.Getenv("TOKEN_SECRET")))
+}
+func GenerateMagicLink(user models.User) (string, error) {
+	// Koristiš korisničke podatke, uključujući rolu
+	claims := UserClaims{
+		ID:       user.ID,
+		Role:     user.Role, // Uzimaš rolu korisnika iz baze
+		IsActive: user.IsActive,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: jwt.TimeFunc().Add(time.Hour).Unix(), // Token traje 1 sat
+		},
+	}
+
+	token, err := NewAccessToken(claims)
+	if err != nil {
+		return "", err
+	}
+
+	// Generišemo magic link sa tokenom
+	magicLink := fmt.Sprintf("http://localhost:4200/verify-magic-link?token=%s", token)
+	return magicLink, nil
 }
 
 func ParseAccessToken(accessToken string) (*UserClaims, error) {

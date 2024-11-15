@@ -10,7 +10,9 @@ export class AuthService {
   private readonly registerUrl = `${this.baseUrl}/register`;
   private readonly loginUrl = `${this.baseUrl}/login`;
   private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;
-  private readonly profileUrl = `${this.baseUrl}/profile`; 
+  private readonly profileUrl = `${this.baseUrl}/profile`;
+  private readonly verifyUrl = `${this.baseUrl}/verify-magic-link`;
+  private readonly magicUrl = `${this.baseUrl}/send-magic-link`;
 
   constructor(private http: HttpClient) {}
 
@@ -56,9 +58,17 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('access_token');
   }
-  
 
-  // Provera da li je korisnik prijavljen
+  sendMagicLink(email: string): Observable<any> {
+    return this.http.post<any>(this.magicUrl, { email }, {
+      headers: new HttpHeaders({'Content-Type': 'application/json'})
+    }).pipe(
+      catchError(error => {
+        console.error('Error sending magic link email:', error);
+        return throwError('Failed to send magic link email. Please try again.');
+      })
+    );
+  }
   isAuthenticated(): boolean {
     return !!localStorage.getItem('authToken');
   }

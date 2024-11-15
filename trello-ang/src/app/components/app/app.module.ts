@@ -9,6 +9,8 @@ import { RegisterComponent } from '../register/register.component';
 import { DashboardComponent } from '../dashboard/dashboard.component';
 import { ProjectDetailsComponent } from '../project-details/project-details.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import {MagicLinkComponent} from "../magic-login/magic-login.component";
+import {VerifyMagicLinkComponent} from "../verify-magic-link/verify-magic-link.component";
 
 
 @NgModule({
@@ -17,7 +19,9 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
     LoginComponent,
     DashboardComponent,
     ProjectDetailsComponent,
-    UserProfileComponent
+    UserProfileComponent,
+    MagicLinkComponent,
+    VerifyMagicLinkComponent
   ],
   imports: [
     BrowserModule,

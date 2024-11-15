@@ -51,13 +51,20 @@
               </div>
               <div class="text-center mt-4">
                 <p class="text-muted">
-                    Forgot your password? 
-                    <a href="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-muted">Reset it here</a>.
+                  Forgot your password?
+                  <a href="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-muted">Reset it here</a>.
                 </p>
-            </div> 
+
+                <p class="text-muted">
+                  Don't have an account?
+                  <a href="#magicLinkModal" data-bs-toggle="modal" data-bs-target="#magicLinkModal" class="text-muted">Request Magic Link</a>.
+                </p>
+              </div>
               <div class="divider d-flex align-items-center my-4">
                 <p class="text-center fw-bold mx-3 mb-0 text-muted">OR</p>
               </div>
+
+
 
               <!-- Code input section -->
               <div class="form-outline mb-4">
@@ -70,7 +77,7 @@
                 <button type="submit" class="custom-btn">Login</button>
               </div>
             </form>
-          
+
             <!-- Registration section -->
             <div class="text-center mt-4">
               <p class="text-muted">Don't have an account? <a (click)="navigateToRegister()" class="text-muted">Register here</a>.</p>
@@ -111,7 +118,46 @@
       </div>
     </div>
   </div>
-  <!-- End of modal -->
+  <div class="modal fade" id="magicLinkModal" tabindex="-1" aria-labelledby="magicLinkModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="magicLinkModalLabel">Magic Link Login</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form (submit)="checkEmailAndUsernameAndSendMagicLink(); $event.preventDefault()">
+
+            <!-- Email input for Magic Link -->
+            <div class="form-outline mb-3">
+              <label class="form-label" for="email">Enter your email address:</label>
+              <input [(ngModel)]="email" name="email" type="email" id="email" class="form-control form-control-sm" placeholder="Email" required />
+              <div *ngIf="!isEmailValid(email) && email" class="text-danger">
+                Please enter a valid email address.
+              </div>
+            </div>
+
+            <!-- Username input -->
+            <div class="form-outline mb-3">
+              <label class="form-label" for="username">Enter your username:</label>
+              <input [(ngModel)]="username" name="username" type="text" id="username" class="form-control form-control-sm" placeholder="Username" required />
+              <div *ngIf="!username && username" class="text-danger">
+                Username is required.
+              </div>
+            </div>
+
+            <!-- Message display after checking -->
+            <p class="text-muted" *ngIf="resetMessageMagic">{{ resetMessageMagic }}</p>
+
+            <div class="btn-container">
+              <button type="submit" class="custom-btn" [disabled]="!email || !username">Send Magic Link</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
 
   <!-- End of modal -->
