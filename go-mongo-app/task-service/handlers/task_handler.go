@@ -8,6 +8,35 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID, ok := vars["taskId"]
+	if !ok {
+		http.Error(w, "Task ID is required in URL", http.StatusBadRequest)
+		return
+	}
+
+	var requestBody struct {
+		Status string `json:"status"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&requestBody); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	updatedTask, err := service.UpdateTaskStatus(taskID, requestBody.Status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(updatedTask); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
 func GetTasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := service.GetTasks()
 	if err != nil {

@@ -1,34 +1,51 @@
 <div class="project-details-container" *ngIf="project">
-    <div class="project-header">
-      <div class="action-buttons">
-        <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">User management</button>
-        <button *ngIf="isManager()"    class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
-      </div>
-
-      <h2 class="project-title">Project Name: {{ project.title | titlecase }}</h2>
+  <div class="project-header">
+    <div class="action-buttons">
+      <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">User management</button>
+      <button *ngIf="isManager()"    class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
     </div>
+
+    <h2 class="project-title">Project Name: {{ project.title | titlecase }}</h2>
+  </div>
 
   <!-- Task status section -->
   <div class="task-status">
     <div class="status-item to-do">
       <p>Pending</p>
       <ul>
-        <!-- Display all pending tasks with an icon -->
+        <!-- Display all pending tasks -->
         <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
-          <span class="task-icon">⏳</span >
-          {{ task }}
+          <span class="task-icon">⏳</span>
+          {{ task.name }}
         </li>
       </ul>
     </div>
-    <div class="status-item">
+
+    <div class="status-item in-progress">
       <p>Work in Progress</p>
+      <ul>
+        <!-- Display all tasks with 'in-progress' status -->
+        <li *ngFor="let task of inProgressTasks" (click)="showTaskDetails(task)">
+          <span class="task-icon">🔄</span>
+          {{ task.name }}
+        </li>
+      </ul>
     </div>
-    <div class="status-item">
+
+    <div class="status-item done">
       <p>Done</p>
+      <ul>
+        <!-- Display all tasks with 'done' status -->
+        <li *ngFor="let task of doneTasks" (click)="showTaskDetails(task)">
+          <span class="task-icon">✔️</span>
+          {{ task.name }}
+        </li>
+      </ul>
     </div>
   </div>
 
-    <!-- Modal Background -->
+
+  <!-- Modal Background -->
     <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
 
     <!-- Modal -->
@@ -98,9 +115,9 @@
         </div>
 
         <ul class="user-list">
-          <li *ngFor="let user of users">
+          <li *ngFor="let user of users" class="user-item">
             <label>
-              <input type="checkbox" (change)="toggleUserSelection(user)" />
+              <input type="checkbox" (change)="toggleSelection(user)" />
               {{ user.username | titlecase }}
             </label>
           </li>
@@ -110,7 +127,7 @@
         <!-- Prikaz korisnika koji su već na projektu -->
         <h4>Users in the project:</h4>
         <ul class="user-list">
-          <li *ngFor="let user of projectUsers">
+          <li *ngFor="let user of projectUsers"  class="user-item">
             {{ user.username | titlecase }}
           </li>
         </ul>
@@ -134,22 +151,29 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Task Details</h5>
-        <button style="background-color: red" type="button" class="btn-close" (click)="closeTaskDetails()"></button>
+        <button type="button" class="btn-close" (click)="closeTaskDetails()">&#10005;</button>
       </div>
       <div class="modal-body">
         <h6>Task Name: {{ selectedTask?.name }}</h6>
         <p>Description: {{ selectedTask?.description }}</p>
-        <p>Status: {{ selectedTask?.status | titlecase }}</p>
+
+        <!-- Radio buttons for status -->
+        <!-- Radio buttons for status -->
+        <div *ngIf="selectedTask">
+          <label>Status:</label><br>
+          <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status" (change)="updateTaskStatus('pending')" /> Pending
+          <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status" (change)="updateTaskStatus('work in progress')" /> Work in Progress
+          <input type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status" (change)="updateTaskStatus('done')" /> Done
+        </div>
+
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary">Add User</button>
         <button class="btn btn-danger">Delete Task</button>
-        <button class="btn btn-warning">Change Status</button>
       </div>
     </div>
   </div>
 </div>
-
 
 
 

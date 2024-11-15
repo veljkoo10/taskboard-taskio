@@ -17,6 +17,37 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return nil, errors.New("invalid task ID format")
+	}
+
+	collection := db.Client.Database("testdb").Collection("tasks")
+	var task models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.New("task not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	_, err = collection.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": taskObjectID},
+		bson.M{"$set": bson.M{"status": status}},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
+	if err != nil {
+		return nil, err
+	}
+
+	return &task, nil
+}
 func userExists(userID string) (bool, error) {
 	// Prepare the URL for the request
 	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
@@ -196,7 +227,7 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		Description: description,
 		Status:      "pending",
 		Users:       []string{}, // Empty list of users
-		ProjectID:   projectObjectID.Hex(),
+		Project_ID:  projectObjectID.Hex(),
 	}
 
 	// Connect to MongoDB collection and insert the task

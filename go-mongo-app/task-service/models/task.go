@@ -10,5 +10,5 @@ type Task struct {
 	Description string             `bson:"description" json:"description"`
 	Status      string             `bson:"status" json:"status"`
 	Users       []string           `bson:"users" json:"users"`
-	ProjectID   string             `json:"project_id" bson:"project_id"`
+	Project_ID  string             `json:"project_id" bson:"project_id"`
 }

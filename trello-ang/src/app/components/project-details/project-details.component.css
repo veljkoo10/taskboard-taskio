@@ -1,30 +1,3 @@
-.project-users h3 {
-  margin-top: 20px;
-  font-size: 1.2em;
-}
-
-.project-users .user-list {
-  list-style-type: none;
-  padding-left: 0;
-}
-
-.project-users .user-list li {
-  margin-bottom: 10px;
-}
-
-.project-users .user-list li::before {
-  content: "🔹";
-  margin-right: 8px;
-}
-
-.project-users .user-list li.manager {
-  color: #007bff; /* Plava za menadžere */
-}
-
-.project-users .user-list li.member {
-  color: #28a745; /* Zelena za članove */
-}
-
 body {
   overflow-x: hidden;
   margin: 0;
@@ -109,7 +82,6 @@ body {
   left: -80px; /* Pomerite ulevo za željeni broj piksela */
 }
 
-
 .task-status {
   display: flex;
   justify-content: space-between;
@@ -126,8 +98,9 @@ body {
   background-color: #d3d3d3;
   border: 1px solid #ccc;
   flex-basis: 30%;
-  height: 150px;
+  height: auto; /* Allow status item to grow based on content */
   box-sizing: border-box;
+  margin-bottom: 20px; /* Space between items */
 }
 
 /* Uniform styling for p elements in all status-item divs */
@@ -137,45 +110,135 @@ body {
   font-weight: bold;
 }
 
+/* Pending status styling */
+.status-item.to-do {
+  background-color: #f8f9fa;  /* Light background */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.status-item.to-do p {
+  color: black; /* Black text for "Pending" title */
+}
+
+.status-item.to-do ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 10px;
+  font-size: 18px;
+  color: #333;
+}
+
+.status-item.to-do li {
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.status-item.to-do li .task-icon {
+  margin-right: 10px;
+  color: #f39c12; /* Yellow for Pending */
+  font-size: 20px;
+}
+
+.status-item.to-do li:hover {
+  background-color: #e6f7ff;
+  cursor: pointer;
+}
+
+.status-item.to-do ul:empty {
+  font-style: italic;
+  color: #aaa;
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* In-progress status styling */
+.status-item.in-progress {
+  background-color: #e9ecef;
+}
+
+.status-item.in-progress p {
+  color: black; /* Blue text for "In Progress" */
+}
+
+.status-item.in-progress ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 10px;
+  font-size: 18px;
+  color: #333;
+}
+
+.status-item.in-progress li {
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.status-item.in-progress li .task-icon {
+  margin-right: 10px;
+  color: #007bff; /* Blue for In Progress */
+  font-size: 20px;
+}
+
+.status-item.in-progress li:hover {
+  background-color: #e6f7ff;
+  cursor: pointer;
+}
+
+/* Done status styling */
+.status-item.done {
+  background-color: #d4edda;
+}
+
+.status-item.done p {
+  color: black; /* Green text for "Done" */
+}
+
+.status-item.done ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 10px;
+  font-size: 18px;
+  color: #333;
+}
+
+.status-item.done li {
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.status-item.done li .task-icon {
+  margin-right: 10px;
+  color: #28a745; /* Green for Done */
+  font-size: 20px;
+}
+
+.status-item.done li:hover {
+  background-color: #e6f7ff;
+  cursor: pointer;
+}
 
 /* Media Queries for Responsiveness */
 @media (max-width: 1200px) {
-  .project-details-container {
-    margin-left: 200px; /* Reduce margin-left for smaller screens */
-  }
-
-  .project-title {
-    font-size: 1.3rem;
-  }
-
-  .task-status {
-    gap: 10px;
-  }
-
-  .status-item {
-    flex-basis: 45%;
-  }
-
-  .action-buttons {
-    gap: 15px;
-    justify-content: center; /* Center buttons on medium screens */
-  }
-
-  .action-buttons .btn {
-    font-size: 1rem;
-    min-width: auto; /* Remove min-width to allow wrapping */
-  }
-}
-
-@media (max-width: 992px) {
-  .project-details-container {
-    margin-left: 150px;
-  }
-
-  .project-title {
-    font-size: 1.2rem;
-  }
-
   .task-status {
     gap: 10px;
   }
@@ -186,53 +249,23 @@ body {
 }
 
 @media (max-width: 768px) {
-  .dashboard-container {
+  .task-status {
     flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-  }
-
-  .project-details-container {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .project-header {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .action-buttons {
-    justify-content: center;
-    gap: 15px;
-    width: 100%;
+    gap: 10px;
   }
 
   .status-item {
     flex-basis: 100%;
-    margin-bottom: 10px;
   }
 }
 
 @media (max-width: 480px) {
-  .project-title {
-    font-size: 1.1rem;
-  }
-
-  .action-buttons .btn {
-    font-size: 0.9rem;
-    padding: 8px 12px;
-  }
-
   .status-item {
     padding: 15px;
     font-size: 1rem;
   }
 }
+
 /* Modal background */
 .modal-background {
   position: fixed;
@@ -240,28 +273,26 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);  /* Transparent black background */
-  z-index: 999; /* Pozadina ide ispod modala */
-  display: none;  /* Pozadinska opacitetna pozadina nije vidljiva dok se modal ne otvori */
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
 }
 
-/* Modal */
 .modal {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 1000;  /* Modal ide ispred pozadine */
-  display: none;  /* Modal je skriven dok je 'isCreateTaskFormVisible' false */
+  z-index: 1000;
+  display: none;
 }
 
 .modal.show {
-  display: block; /* Postavlja modal na 'block' kada se prikazuje */
+  display: block;
 }
 
-/* Modal content */
 .modal-dialog {
-  width: 50%; /* Širina modala */
+  width: 50%;
 }
 
 .modal-content {
@@ -270,133 +301,89 @@ body {
   border-radius: 5px;
 }
 
-/* Optional: Stylize buttons */
 .btn-close {
   border: none;
   background: transparent;
   font-size: 20px;
 }
 
-/* Style for status-item with a Pending task */
-.status-item.to-do {
-  margin-top: 20px;
-  background-color: #f8f9fa;  /* Light background */
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease; /* Add animation for expanding */
-  height: auto; /* Height will grow with content */
-  overflow: visible; /* Allow content (list) to expand */
-}
-
-/* Inside text for Pending status */
-.status-item.to-do p {
-  font-size: 18px;
-  font-weight: bold;
-  color: black; /* Black text for "Pending" title */
-  margin-bottom: 10px;
-}
-
-/* Task list styling */
-.status-item ul {
-  list-style-type: none; /* Remove standard list bullets */
-  padding-left: 0; /* Remove left padding */
-  margin-top: 10px;
-  font-size: 18px; /* Increase font size */
-  color: #333; /* Dark color for text */
-}
-
-/* Style for each task item */
-.status-item li {
-  background-color: #f9f9f9; /* Light background for each task */
-  border: 1px solid #ccc; /* Light grey border */
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.3s ease; /* Hover animation */
-}
-
-/* Icon before each task item */
-.status-item li .task-icon {
-  margin-right: 10px; /* Space between icon and text */
-  color: #f39c12; /* Yellow color for the pending icon */
-  font-size: 20px; /* Increase icon size */
-}
-
-/* Hover effect for task items */
-.status-item li:hover {
-  background-color: #e6f7ff; /* Light blue background on hover */
+.modal-footer .btn {
+  background-color: #2a8a68;
+  color: white;
+  border: none;
+  padding: 8px 12px;
   cursor: pointer;
 }
 
-/* If the list is empty, show a message in italics */
-.status-item.to-do ul:empty {
-  font-style: italic;
-  color: #aaa;
-  text-align: center;
-  padding: 20px;
-  font-size: 16px;
-  line-height: 1.5;
+.modal-footer .btn:hover {
+  background-color: #185a42;
 }
-
-/* Styling for user list */
+/* Stilizacija korisničke liste */
 .user-list {
-  list-style-type: none;
-  padding-left: 0;
-  margin-top: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  display: grid;
+  gap: 10px; /* Razmak između korisnika */
 }
 
-/* Style for each user item */
-.user-list li {
+.user-item {
   display: flex;
-  align-items: center;
-  padding: 8px;
-  margin-bottom: 8px;
-  background-color: #f9f9f9; /* Light background for each user */
-  border: 1px solid #ddd; /* Light grey border */
-  border-radius: 8px;
-  transition: background-color 0.3s ease; /* Hover animation */
+  align-items: center; /* Poravnanje checkboxa sa tekstom */
+  gap: 10px; /* Razmak između checkboxa i korisničkog imena */
+  background-color: #f8f9fa; /* Svetla pozadina za korisnike */
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+.user-item label {
+  display: flex;
+  align-items: center; /* Poravnanje checkboxa sa tekstom */
+  gap: 8px; /* Razmak između checkboxa i korisničkog imena */
 }
 
-/* Style for checkbox */
-.user-list li input[type="checkbox"] {
-  margin-right: 10px; /* Space between checkbox and user name */
-  transform: scale(1.2); /* Make checkbox slightly larger */
+.user-item input[type="checkbox"] {
+  margin: 0; /* Uklonite podrazumevane margine */
+  padding: 0; /* Uklonite podrazumevani padding */
+  width: 18px;
+  height: 18px;
 }
 
-/* Hover effect for user items */
-.user-list li:hover {
-  background-color: #e6f7ff; /* Light blue background on hover */
+.user-item:hover {
+  background-color: #e9ecef; /* Svetlija boja na hover */
+}
+
+.user-item input[type="checkbox"] {
+  margin: 0; /* Uklonite podrazumevane margine */
+  width: 18px;
+  height: 18px;
   cursor: pointer;
 }
 
-/* If no users are available, show a message */
-.user-list:empty {
-  font-style: italic;
-  color: #aaa;
-  text-align: center;
-  padding: 20px;
-}
-.modal-title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.modal-title span {
-  font-weight: normal;
-  color: #216e4e;  /* Optional, you can style this differently */
-}
-
-.modal-title span:last-child {
-  margin-right: 0; /* Prevent margin after the last element */
-}
-.available-slots {
-  font-size: 16px;
+.username {
+  font-size: 1rem;
+  color: #333;
   font-weight: bold;
-  color: #555;
-  margin-top: 10px;
+}
+
+/* Dodatna stilizacija za modal */
+.modal-body h4 {
+  font-size: 1.25rem;
+  margin-bottom: 15px;
+  color: #2a8a68;
+}
+
+.available-spots {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.modal-footer .btn-success {
+  background-color: #2a8a68;
+}
+
+.modal-footer .btn-success:hover {
+  background-color: #216e4e;
 }

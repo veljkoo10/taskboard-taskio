@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	"net/http"
 	"os"
-	"task-service/boostrap"
+	bootstrap "task-service/boostrap"
 	"task-service/db"
 	"task-service/handlers"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 	router.HandleFunc("/tasks/create/{project_id}", handlers.CreateTaskHandler).Methods("POST")
 	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.AddUserToTask).Methods("PUT")
 	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.RemoveUserFromTask).Methods("DELETE")
+	router.HandleFunc("/tasks/{taskId}", handlers.UpdateTaskHandler).Methods("PUT")
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},

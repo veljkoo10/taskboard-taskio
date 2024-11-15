@@ -3,6 +3,7 @@ import { Project } from '../../model/project.model';
 import { ProjectService } from 'src/app/services/project.service';
 import { UserService } from 'src/app/services/user.service';
 import { ChangeDetectorRef } from '@angular/core';
+import { TaskService } from 'src/app/services/task.service'; // Import TaskService
 
 
 @Component({
@@ -16,7 +17,6 @@ export class ProjectDetailsComponent {
   taskDescription: string = '';
   isCreateTaskFormVisible: boolean = false;
   isAddMemberFormVisible:boolean=false;
-  pendingTasks: string[] = [];
   users: any[] = [];
   selectedUsers: any[] = [];
   selectedTask: any = null;
@@ -25,15 +25,21 @@ export class ProjectDetailsComponent {
   projectUsers: any[] = [];
   projectManagers: any[] = [];
   availableSlots: number = 0;
-
-  constructor(private projectService: ProjectService,private userService: UserService,private cdRef: ChangeDetectorRef) {}
-
+  pendingTasks: any[] = [];
+  inProgressTasks: any[] = [];
+  doneTasks: any[] = [];
+  constructor(
+    private taskService: TaskService,
+    private projectService: ProjectService,
+    private userService: UserService,
+    private cdRef: ChangeDetectorRef
+  ) {}
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
-      this.resetAddMemberForm();  // Reset the add member form
-      this.resetCreateTaskForm();  // Reset the create task form
-      this.loadPendingTasks();     // Reload pending tasks to ensure they are up-to-date
-      this.loadUsersForProject();  // Reload project users to show any updates
+      this.resetAddMemberForm();
+      this.resetCreateTaskForm();
+      this.loadTasks();
+      this.loadUsersForProject();
     }
   }
   getAvailableSpots(): number {
@@ -45,16 +51,16 @@ export class ProjectDetailsComponent {
 
   resetAddMemberForm() {
     this.isAddMemberFormVisible = false;
-    this.selectedUsers = [];  // Clear the selected users
+    this.selectedUsers = [];
   }
 
   resetCreateTaskForm() {
     this.isCreateTaskFormVisible = false;
     this.taskName = '';
-    this.taskDescription = '';  // Reset task details
+    this.taskDescription = '';
   }
   ngOnInit() {
-    this.loadPendingTasks();
+    this.loadTasks();
     this.loadActiveUsers()
     if (this.project && this.project.title) {
       this.getProjectIDByTitle(this.project.title);
@@ -89,9 +95,8 @@ export class ProjectDetailsComponent {
     if (this.project && this.project.id) {
       this.projectService.getUsersForProject(this.project.id).subscribe(
         (users) => {
-          this.projectUsers = users.filter(user => user.role.toLowerCase() === 'member');
-          this.projectManagers = users.filter(user => user.role.toLowerCase() === 'manager');
-          // After loading project users, reload active users
+          this.projectUsers = this.sortUsersAlphabetically(users.filter(user => user.role.toLowerCase() === 'member'));
+          this.projectManagers = this.sortUsersAlphabetically(users.filter(user => user.role.toLowerCase() === 'manager'));
           this.loadActiveUsers();
         },
         (error) => {
@@ -101,18 +106,43 @@ export class ProjectDetailsComponent {
     }
   }
 
+
   isManager(): boolean {
     return localStorage.getItem('role') === 'Manager';
   }
-  loadPendingTasks() {
-    const project = this.project as any;
-    this.pendingTasks = [];
+  loadTasks() {
     if (this.project) {
-      const projectIdStr = String(project.id);
-      this.projectService.getTasks().subscribe(tasks => {
-        this.pendingTasks = tasks
-          .filter(task => task.status === 'pending' && String(task.project_id) === projectIdStr)
-          .map(task => task.name);
+      const projectIdStr = String(this.project.id);
+      this.taskService.getTasks().subscribe(tasks => {
+        console.log('Fetched tasks:', tasks);
+
+        this.pendingTasks = [];
+        this.inProgressTasks = [];
+        this.doneTasks = [];
+
+        tasks.forEach(task => {
+          console.log('Task structure:', task);
+
+          if (String(task.project_id) === projectIdStr) {
+            switch (task.status.toLowerCase()) {
+              case 'pending':
+                this.pendingTasks.push(task);
+                break;
+              case 'work in progress':
+                this.inProgressTasks.push(task);
+                break;
+              case 'done':
+                this.doneTasks.push(task);
+                break;
+              default:
+                console.warn(`Unrecognized task status: ${task.status}`);
+            }
+          }
+        });
+
+        console.log('Pending Tasks:', this.pendingTasks);
+        console.log('In Progress Tasks:', this.inProgressTasks);
+        console.log('Done Tasks:', this.doneTasks);
       });
     }
   }
@@ -120,7 +150,6 @@ export class ProjectDetailsComponent {
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
       (data) => {
-        // Filtriraj i sortiraj aktivne korisnike koji nisu deo projekta
         this.users = this.sortUsersAlphabetically(
           data.filter(user => !this.isUserInProject(user.id))
         );
@@ -154,10 +183,10 @@ export class ProjectDetailsComponent {
       this.projectService.addMemberToProject(project.id, userIds).subscribe(
         (response) => {
           console.log('Users successfully added:', response);
-          this.loadUsersForProject();  // Ponovno učitavanje korisnika u projektu
-          this.loadActiveUsers();     // Osveži listu aktivnih korisnika
-          this.selectedUsers = [];   // Očisti selektovane korisnike
-          this.availableSlots = this.getAvailableSpots(); // Ažuriraj broj slobodnih mesta
+          this.loadUsersForProject();
+          this.loadActiveUsers();
+          this.selectedUsers = [];
+          this.availableSlots = this.getAvailableSpots();
         },
         (error) => {
           console.error('Error adding users to project:', error);
@@ -168,7 +197,21 @@ export class ProjectDetailsComponent {
     }
   }
 
+  updateTaskStatus(status: string) {
+    if (this.selectedTask) {
+      this.selectedTask.status = status;
 
+      this.taskService.updateTaskStatus(this.selectedTask.id, status).subscribe(
+        (response) => {
+          console.log('Task status updated successfully:', response);
+          this.loadTasks();
+        },
+        (error) => {
+          console.error('Error updating task status:', error);
+        }
+      );
+    }
+  }
 
   showCreateTaskForm() {
     const projectId = this.project as any;
@@ -202,13 +245,7 @@ export class ProjectDetailsComponent {
       );
     }
   }
-  toggleUserSelection(user: any) {
-    if (this.selectedUsers.includes(user)) {
-      this.selectedUsers = this.selectedUsers.filter(u => u !== user);
-    } else {
-      this.selectedUsers.push(user);
-    }
-  }
+
   cancelCreateTask() {
     this.isCreateTaskFormVisible = false;
     this.taskName = '';
@@ -238,6 +275,7 @@ export class ProjectDetailsComponent {
         (response) => {
           console.log('Task successfully created:', response);
           this.pendingTasks.push(response.name);
+          this.loadTasks();
           this.cancelCreateTask();
         },
         (error) => {
@@ -251,14 +289,12 @@ export class ProjectDetailsComponent {
   }
 
 
-
-
   showTaskDetails(task: any) {
     console.log("Selected task:", task);
     this.selectedTask = task;
     this.isTaskDetailsVisible = true;
     this.cdRef.detectChanges();
-    document.querySelector('#taskModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top:20px");
+    document.querySelector('#taskModal')?.setAttribute('style', 'display:block; opacity: 100%; margin-top:20px');
 
   }
 
