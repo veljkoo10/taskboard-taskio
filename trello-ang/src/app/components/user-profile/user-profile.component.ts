@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import { AuthService } from 'src/app/services/auth.service';
 import { UserService } from 'src/app/services/user.service';
 
@@ -21,7 +21,7 @@ export class UserProfileComponent implements OnInit {
   successMessage: string = '';
   passwordError: string = '';
 
-  constructor(private authService: AuthService, private userService: UserService) {}
+  constructor( private router: Router,private authService: AuthService, private userService: UserService) {}
 
   ngOnInit(): void {
     this.user = this.getUserInfoFromToken();
@@ -30,7 +30,7 @@ export class UserProfileComponent implements OnInit {
 
       this.userService.getUserById(this.user.id).subscribe({
         next: (data) => {
-          this.user = data; // Sačuvaj podatke dobijene sa servera
+          this.user = data;
           console.log("User data from server:", this.user);
         },
         error: (error) => {
@@ -126,5 +126,20 @@ export class UserProfileComponent implements OnInit {
       alert(this.passwordError);
     }
   }
+  onDeleteAccount(): void {
+    if (confirm('Are you sure you want to delete your account?')) {
+      this.userService.deactivateUser(this.user.id).subscribe({
+        next: (response) => {
+          alert('Your account has been deleted.');
+          this.authService.logout();
+          this.router.navigate(['/login']);
 
+        },
+        error: (error) => {
+          console.error('Error deleting user:', error);
+          alert('There was an error deleting your account.');
+        }
+      });
+    }
+  }
 }

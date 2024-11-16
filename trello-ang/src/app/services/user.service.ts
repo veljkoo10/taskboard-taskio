@@ -80,4 +80,8 @@ export class UserService {
   loginMagicLink(token: string): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/verify-magic-link?token=${token}`, {});
   }
+  deactivateUser(userId: string): Observable<any> {
+    const url = `${this.baseUrl}/users/${userId}/deactivate`;
+    return this.http.put<any>(url, null);
+  }
 }

@@ -266,7 +266,6 @@ body {
   }
 }
 
-/* Modal background */
 .modal-background {
   position: fixed;
   top: 0;
@@ -275,7 +274,19 @@ body {
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 999;
-  display: none;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  float: right;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
 }
 
 .modal {
@@ -284,7 +295,7 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000;
-  display: none;
+  display: block!important;
 }
 
 .modal.show {
@@ -300,6 +311,22 @@ body {
   background-color: white;
   border-radius: 5px;
 }
+.modal-header {
+  display: flex;
+  justify-content: space-between; /* Raspoređuje naslov i dugme na krajeve */
+  align-items: center; /* Vertikalno centriranje */
+}
+
+.modal-header .btn-close {
+  font-size: 22px; /* Veličina ikone */
+  background: transparent;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
 
 .btn-close {
   border: none;
@@ -307,17 +334,7 @@ body {
   font-size: 20px;
 }
 
-.modal-footer .btn {
-  background-color: #2a8a68;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  cursor: pointer;
-}
 
-.modal-footer .btn:hover {
-  background-color: #185a42;
-}
 /* Stilizacija korisničke liste */
 .user-list {
   list-style: none;
@@ -325,6 +342,15 @@ body {
   margin: 20px 0;
   display: grid;
   gap: 10px; /* Razmak između korisnika */
+}
+.project-title.highlight {
+  font-size: 2.3rem; /* Veća veličina fonta */
+  color: #2a8a68;    /* Zelena boja */
+  font-weight: bold; /* Podebljan tekst */
+  text-transform: uppercase; /* Velika slova za isticanje */
+  text-align: center; /* Centriranje naslova */
+  margin: 20px 0; /* Dodatni razmak iznad i ispod */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* Blaga senka za efekt */
 }
 
 .user-item {
@@ -367,13 +393,6 @@ body {
   font-weight: bold;
 }
 
-/* Dodatna stilizacija za modal */
-.modal-body h4 {
-  font-size: 1.25rem;
-  margin-bottom: 15px;
-  color: #2a8a68;
-}
-
 .available-spots {
   font-size: 1rem;
   font-weight: bold;
@@ -388,30 +407,49 @@ body {
   background-color: #216e4e;
 }
 
-.user-item button {
-  background-color: #ff4d4d; /* Crvena boja */
-  color: white; /* Bela boja za tekst */
-  border: none; /* Bez ivice */
-  border-radius: 5px; /* Zaobljeni uglovi */
-  padding: 5px 10px; /* Unutrašnje margine */
-  font-size: 14px; /* Veličina fonta */
-  cursor: pointer; /* Ikonica pokazivača */
-  transition: background-color 0.3s ease, transform 0.2s ease; /* Animacija */
-  margin-left: auto;
+/* Dodatna stilizacija za modal */
+.modal-body h4 {
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+  color: #2a8a68;
+}
+.modal-body label {
+  font-weight: bold;
+  font-size: 1.2rem; /* Optionally increase font size */
+  color: #333;
 }
 
-.user-item button:hover {
-  background-color: #e60000; /* Tamnija crvena pri prelasku mišem */
+.radio-group {
+  display: flex; /* Prikazuje sve radio dugmadi i labela u jednoj liniji */
+  gap: 20px; /* Razmak između radio dugmadi */
+  align-items: center; /* Poravnava radio dugmad i tekst po vertikali */
 }
 
-.modal {
-  display: block !important;  /* Force modal to be displayed */
-  opacity: 1 !important;
-  transition: opacity 0.3s ease;
-}
-.modal-background {
-  display: block;
-  opacity: 0.5;
-  background-color: rgba(0, 0, 0, 0.5);
+.radio-group label {
+  display: flex;
+  align-items: center; /* Poravnanje teksta i radio dugmeta */
+  gap: 8px; /* Razmak između dugmeta i teksta */
+  cursor: pointer;
+  font-size: 1rem; /* Veličina teksta */
+  color: #333;
 }
 
+.radio-group input[type="radio"] {
+  appearance: none; /* Uklanja podrazumevani stil */
+  width: 18px; /* Širina kruga */
+  height: 18px; /* Visina kruga */
+  border: 2px solid #216e4e; /* Boja ivice */
+  border-radius: 50%; /* Krug */
+  outline: none; /* Bez spoljnog okvira */
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.radio-group input[type="radio"]:checked {
+  background-color: #216e4e; /* Boja kada je dugme selektovano */
+  border-color: #28a745; /* Promena boje ivice kada je selektovano */
+}
+
+.radio-group input[type="radio"]:focus {
+  box-shadow: 0 0 5px rgba(33, 110, 78, 0.5); /* Efekat fokusa */
+}

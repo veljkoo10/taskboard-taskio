@@ -38,15 +38,16 @@
   </div>
 </nav>
 <router-outlet></router-outlet>
-<div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" (hidden.bs.modal)="resetForm()">
-  <div class="modal-dialog">
+
+<div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" #addProjectModal>
+  <div class="modal-dialog" >
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="addProjectModalLabel">Create a project</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="resetForm()"></button>
       </div>
       <div class="modal-body">
-        <form>
+        <form #projectForm="ngForm">
           <div class="mb-3">
             <label for="projectTitle" class="form-label">Title:</label>
             <input type="text" class="form-control" id="projectTitle" [(ngModel)]="project.title" name="title" required>
@@ -75,9 +76,10 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" (click)="createProject()" >Save</button>
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" (click)="resetForm()">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="createProject()">Save</button>
       </div>
     </div>
   </div>
 </div>
+

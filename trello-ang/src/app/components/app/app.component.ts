@@ -4,6 +4,7 @@ import {Router} from "@angular/router";
 import {AuthService} from "../../services/auth.service";
 import {Project} from "../../model/project.model";
 import {DashboardComponent} from "../dashboard/dashboard.component"
+import {NgForm} from "@angular/forms";
 
 @Component({
   selector: 'app-root',
@@ -11,6 +12,7 @@ import {DashboardComponent} from "../dashboard/dashboard.component"
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
+  @ViewChild('projectForm') projectForm!: NgForm;
   logoPath: string = 'assets/trello4.png';
   profilePath: string = 'assets/user3.png';
   selectedProject!: Project | null;
@@ -48,14 +50,19 @@ export class AppComponent {
   }
   @HostListener('document:click', ['$event'])
   onClick(event: MouseEvent): void {
-    const clickedInside = event.target instanceof HTMLElement && event.target.closest('.profile-menu');
+    const clickedInsideProfileMenu = event.target instanceof HTMLElement && event.target.closest('.profile-menu');
     const clickedProfileIcon = event.target instanceof HTMLElement && event.target.closest('.nav-link.custom-link');
-    if (!clickedInside && !clickedProfileIcon) {
+    const clickedInsideModal = event.target instanceof HTMLElement && event.target.closest('#addProjectModal');
+
+    if (!clickedInsideProfileMenu && !clickedProfileIcon) {
       this.isProfileMenuOpen = false;
+    }
+    if (!clickedInsideModal) {
+      this.resetForm();
     }
   }
 
-   // Metoda za kreiranje projekta
+
   createProject(): void {
     // Check if all fields are filled
     if (!this.project.title || !this.project.description ||
@@ -120,15 +127,12 @@ export class AppComponent {
             manager_id: managerId
           };
 
-          // Call the service to create the project
           this.projectService.createProject(managerId, projectPayload).subscribe(
             (response: Project) => {
               console.log('Project created successfully:', response);
 
-              // Emit the newly created project
               this.projectService.notifyProjectCreated(response);
 
-              // Reset the form and add the new project to the list
               this.project = new Project();
               this.successMessage = 'The project was successfully created!';
               this.projects.push(response);
@@ -154,10 +158,14 @@ export class AppComponent {
   }
 
   resetForm(): void {
+    if (this.projectForm) {
+      this.projectForm.resetForm(); // Reset form if the reference is available
+    }
     this.project = new Project();
     this.errorMessage = '';
     this.successMessage = '';
   }
+
   loadProjects() {
     this.projectService.getProjects().subscribe(
       (data: Project[]) => {

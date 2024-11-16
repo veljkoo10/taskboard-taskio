@@ -353,3 +353,24 @@ func SendMagicLinkEmail(email, magicLink string) error {
 	err := notification.SendEmail(email, subject, body, emailConfig)
 	return err
 }
+func DeactivateUser(userID string) error {
+	collection := db.Client.Database("testdb").Collection("users")
+
+	// Pretvori string userID u ObjectID
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("invalid user ID format")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Ažuriraj IsActive polje na false
+	update := bson.M{"$set": bson.M{"isActive": false}}
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

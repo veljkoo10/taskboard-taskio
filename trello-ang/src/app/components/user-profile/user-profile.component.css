@@ -1,13 +1,13 @@
 body {
   font-family: Arial, sans-serif;
   display: flex;
-  justify-content: center;
-  align-items: flex-start; /* Align items from the top */
-  height: calc(100vh - 75px); /* Full height minus the navbar height */
-  background-color: #f4f6f9;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  height: 100vh;
   margin: 0;
+  background-color: #f4f6f9;
 }
-
 .container {
   display: flex;
   gap: 40px;
@@ -19,7 +19,25 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin-top: 120px; /* Increased margin-top to push the container further down */
 }
+.delete-button-section {
+  text-align: center;
+  margin-top: 30px;
+}
 
+.delete-btn {
+  background-color: red !important;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.delete-btn:hover {
+  background-color: darkred;
+}
 .profile-picture {
   display: flex;
   flex-direction: column;
@@ -53,7 +71,7 @@ body {
 }
 button.btn {
   background-color: #2a8a68; /* Zelena boja */
-  color: black; /* Crn tekst */
+  color: white; /* Crn tekst */
   border: none;
   border-radius: 5px;
   padding: 12px;
