@@ -188,12 +188,23 @@
         <button type="button" class="btn-close" (click)="closeAddTaskUserModal()">×</button>
       </div>
       <div class="modal-body">
+        <!-- Lista korisnika dostupnih za dodavanje na task -->
+        <h4>Select a user to add to the task:</h4>
         <ul class="user-list">
           <li *ngFor="let user of projectUsers" class="user-item">
             <label>
               <input type="checkbox" (change)="toggleTaskUserSelection(user)" />
               {{ user.username | titlecase }}
             </label>
+          </li>
+        </ul>
+
+        <!-- Prikaz korisnika koji su već dodani na task -->
+        <h4>Users in the task:</h4>
+        <ul class="user-list">
+          <li *ngFor="let user of taskUsers" class="user-item">
+            {{ user.username | titlecase }}
+            <button style="float: right;" (click)="removeUserFromTask(user.id)">Remove user</button>
           </li>
         </ul>
       </div>
@@ -204,9 +215,3 @@
     </div>
   </div>
 </div>
-
-
-
-
-
-

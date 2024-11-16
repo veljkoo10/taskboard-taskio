@@ -49,42 +49,36 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 	return &task, nil
 }
 func userExists(userID string) (bool, error) {
-	// Prepare the URL for the request
 	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
+	fmt.Println(userID)
 	fmt.Println("Requesting URL:", url) // Debug log
 
-	// Make the GET request
 	resp, err := http.Get(url)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Log the response status code
 	fmt.Println("Response Status Code:", resp.StatusCode) // Debug log
 
-	// Read the response body (use io.ReadAll for Go 1.16+)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("failed to read response body: %v", err)
 	}
+	fmt.Printf("URL: %s, Response: %s\n", url, string(body))
 
-	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("received non-OK response: %s", body)
 	}
 
-	// Debug: print the body of the response to check its content
 	fmt.Println("Response Body:", string(body))
 
-	// Parse the response body to get the 'exists' field
 	var result map[string]bool
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse response body: %v", err)
 	}
 
-	// Ensure that the response contains the "exists" field
 	exists, ok := result["exists"]
 	if !ok {
 		return false, fmt.Errorf("response missing 'exists' field")
@@ -303,7 +297,7 @@ func AddUserToTask(taskID string, userID string) error {
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
-		bson.M{"$addToSet": bson.M{"users": userID}},
+		bson.M{"$addToSet": bson.M{"Users": userID}},
 	)
 	if err != nil {
 		return err
@@ -348,11 +342,61 @@ func RemoveUserFromTask(taskID string, userID string) error {
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
-		bson.M{"$pull": bson.M{"users": userID}},
+		bson.M{"$pull": bson.M{"Users": userID}},
 	)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+func GetUsersForTask(taskID string) ([]models.User, error) {
+	// Konvertuj task ID u ObjectID
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return nil, errors.New("invalid task ID format")
+	}
+
+	// Pronađi zadatak u kolekciji
+	collection := db.Client.Database("testdb").Collection("tasks")
+	var task models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.New("task not found")
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to fetch task: %v", err)
+	}
+
+	// Ako zadatak nema korisnika, vrati praznu listu
+	if len(task.Users) == 0 {
+		return []models.User{}, nil
+	}
+
+	// Pozovi user-service za svakog korisnika u listi
+	var users []models.User
+	for _, userID := range task.Users {
+		url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch user %s: %v", userID, err)
+		}
+		defer resp.Body.Close()
+
+		// Proveri statusni kod
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to fetch user %s, status: %d", userID, resp.StatusCode)
+		}
+
+		// Parsiraj odgovor u strukturu User
+		var user models.User
+		err = json.NewDecoder(resp.Body).Decode(&user)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse user %s: %v", userID, err)
+		}
+
+		// Dodaj korisnika u rezultat
+		users = append(users, user)
+	}
+
+	return users, nil
 }

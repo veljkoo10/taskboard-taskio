@@ -28,6 +28,8 @@ export class ProjectDetailsComponent {
   pendingTasks: any[] = [];
   inProgressTasks: any[] = [];
   doneTasks: any[] = [];
+  taskUsers: any[] = []; // Lista korisnika dodanih na trenutni task
+
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
@@ -114,14 +116,12 @@ export class ProjectDetailsComponent {
     if (this.project) {
       const projectIdStr = String(this.project.id);
       this.taskService.getTasks().subscribe(tasks => {
-        console.log('Fetched tasks:', tasks);
 
         this.pendingTasks = [];
         this.inProgressTasks = [];
         this.doneTasks = [];
 
         tasks.forEach(task => {
-          console.log('Task structure:', task);
 
           if (String(task.project_id) === projectIdStr) {
             switch (task.status.toLowerCase()) {
@@ -238,7 +238,6 @@ toggleTaskUserSelection(user: any) {
   }
 }
 
-// Add Selected Users to Task
 addSelectedUsersToTask() {
   if (this.selectedTask && this.selectedTaskUsers.length > 0) {
     const taskId = this.selectedTask.id;
@@ -248,6 +247,13 @@ addSelectedUsersToTask() {
       this.taskService.addUserToTask(taskId, userId).subscribe(
         response => {
           console.log(`User ${userId} added to task ${taskId}:`, response);
+          
+          // Ažuriraj lokalni niz taskUsers
+          const addedUser = this.projectUsers.find(user => user.id === userId);
+          if (addedUser) {
+            this.taskUsers.push(addedUser);
+            this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+          }
         },
         error => {
           console.error(`Error adding user ${userId} to task ${taskId}:`, error);
@@ -255,7 +261,6 @@ addSelectedUsersToTask() {
       );
     });
 
-    this.closeAddTaskUserModal();
   } else {
     alert("No users selected.");
   }
@@ -345,7 +350,45 @@ addSelectedUsersToTask() {
     this.cdRef.detectChanges();
     document.querySelector('#taskModal')?.setAttribute('style', 'display:block; opacity: 100%; margin-top:20px');
 
+    // Učitajte korisnike na tasku
+  this.taskService.getUsersForTask(task.id).subscribe(
+    (users) => {
+      this.taskUsers = this.sortUsersAlphabetically(users);
+    },
+    (error) => {
+      console.error('Error loading users for task:', error);
+    }
+  );
   }
+
+  removeUserFromTask(userId: string): void {
+    if (!this.selectedTask?.id) {
+      console.error('Task ID is missing.');
+      return;
+    }
+  
+    this.taskService.removeUserFromTask(this.selectedTask.id, userId).subscribe(
+      (response) => {
+        console.log('User removed from task successfully:', response);
+  
+        // Ukloni korisnika iz lokalne liste korisnika na tasku
+        const removedUser = this.taskUsers.find(user => user.id === userId);
+        this.taskUsers = this.taskUsers.filter(user => user.id !== userId);
+  
+        // Vraćanje korisnika u listu dostupnih korisnika na projektu
+        if (removedUser) {
+          this.projectUsers.push(removedUser);
+          this.projectUsers = this.sortUsersAlphabetically(this.projectUsers);
+        }
+      },
+      (error) => {
+        console.error('Error removing user from task:', error);
+      }
+    );
+  }
+  
+  
+  
 
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
@@ -372,6 +415,8 @@ addSelectedUsersToTask() {
       }
     );
   }
+
+  
   
 
 }

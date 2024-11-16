@@ -57,6 +57,10 @@ export class TaskService {
       })
     );
   }
+
+  getUsersForTask(taskId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.taskUrl}/${taskId}/users`);
+  }
   
   
 

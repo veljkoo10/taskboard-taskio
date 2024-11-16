@@ -98,34 +98,49 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func AddUserToTask(w http.ResponseWriter, r *http.Request) {
+// AddUserToTaskHandler handles adding a user to a task.
+func AddUserToTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID := vars["taskId"]
 	userID := vars["userId"]
 
-	if err := service.AddUserToTask(taskID, userID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	err := service.AddUserToTask(taskID, userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Send a JSON response instead of plain text
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "User successfully added to task",
-	})
+	json.NewEncoder(w).Encode(map[string]string{"message": "User added to task successfully"})
 }
 
-func RemoveUserFromTask(w http.ResponseWriter, r *http.Request) {
+// RemoveUserFromTaskHandler handles removing a user from a task.
+func RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID := vars["taskId"]
 	userID := vars["userId"]
 
-	if err := service.RemoveUserFromTask(taskID, userID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	err := service.RemoveUserFromTask(taskID, userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("User successfully removed from task"))
+	json.NewEncoder(w).Encode(map[string]string{"message": "User removed from task successfully"})
+}
+
+// GetUsersForTaskHandler handles retrieving users for a specific task.
+func GetUsersForTaskHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID := vars["taskID"]
+
+	users, err := service.GetUsersForTask(taskID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(users)
 }

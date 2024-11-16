@@ -17,7 +17,7 @@
     "@angular/forms": "^16.2.0",
     "@angular/platform-browser": "^16.2.0",
     "@angular/platform-browser-dynamic": "^16.2.0",
-    "@angular/router": "^16.2.0",
+    "@angular/router": "^16.2.12",
     "@ng-bootstrap/ng-bootstrap": "^17.0.1",
     "bootstrap": "^5.3.3",
     "jwt-decode": "^4.0.0",
