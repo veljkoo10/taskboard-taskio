@@ -14,7 +14,7 @@
             </div>
 
             <form (ngSubmit)="login()">
-              <!-- Email input -->
+              <!-- Username input -->
               <div class="form-outline mb-4">
                 <label class="form-label" for="username">Username:</label>
                 <input
@@ -40,41 +40,72 @@
                 />
               </div>
 
-              <!-- Display error message if loginError is set -->
+              <!-- Error message -->
               <div *ngIf="loginError" class="text-danger mb-3">
                 {{ loginError }}
               </div>
 
-              <!-- Sign in button with (click) event -->
+              <!-- Sign in button -->
               <div class="btn-container">
                 <button type="button" class="custom-btn" (click)="login()">Sign in</button>
               </div>
+
               <div class="text-center mt-4">
                 <p class="text-muted">
                   Forgot your password?
                   <a href="#forgotPasswordModal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-muted">Reset it here</a>.
                 </p>
-
-                <p class="text-muted">
-                  Don't have an account?
-                  <a href="#magicLinkModal" data-bs-toggle="modal" data-bs-target="#magicLinkModal" class="text-muted">Request Magic Link</a>.
-                </p>
               </div>
+
               <div class="divider d-flex align-items-center my-4">
                 <p class="text-center fw-bold mx-3 mb-0 text-muted">OR</p>
               </div>
 
-
-
-              <!-- Code input section -->
+              <!-- Magic Link input section -->
+              <!-- Magic Link input section -->
               <div class="form-outline mb-4">
-                <label class="form-label" for="codeInput">Code:</label>
-                <input type="text" id="codeInput" class="form-control form-control-lg" placeholder="Enter your code" />
+                <label class="form-label" for="magicLinkEmail">Enter your email address:</label>
+                <input
+                  type="email"
+                  id="magicLinkEmail"
+                  class="form-control form-control-lg"
+                  [(ngModel)]="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  required
+                  (keydown.enter)="sendMagicLink()"
+                />
+              </div>
+              <div class="form-outline mb-4">
+                <label class="form-label" for="magicLinkUsername">Username:</label>
+                <input
+                  type="text"
+                  id="magicLinkUsername"
+                  class="form-control form-control-lg"
+                  [(ngModel)]="magicLinkUsername"
+                  name="magicLinkUsername"
+                  placeholder="Enter your username"
+                  required
+                  (keydown.enter)="sendMagicLink()"
+                />
               </div>
 
-              <!-- Login button -->
+              <!-- Submit button for Magic Link -->
               <div class="btn-container">
-                <button type="submit" class="custom-btn">Login</button>
+                <button
+                  type="button"
+                  class="custom-btn"
+                  (click)="sendMagicLink()"
+                  [disabled]="!email || !magicLinkUsername"
+                >
+                  Send Magic Link
+                </button>
+
+              </div>
+
+              <!-- Magic Link response message -->
+              <div *ngIf="message" class="alert mt-3" [ngClass]="{ 'alert-success': isSuccess, 'alert-danger': !isSuccess }">
+                {{ message }}
               </div>
             </form>
 
@@ -88,77 +119,4 @@
       </div>
     </div>
   </div>
-
-  <!-- Modal for forgot password -->
-  <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="forgotPasswordModalLabel">Reset Password</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form (submit)="checkEmailAndResetPassword(); $event.preventDefault()">
-            <!-- Email input -->
-            <div class="form-outline mb-3">
-              <label class="form-label" for="resetEmail">Enter your email address:</label>
-              <input [(ngModel)]="resetEmail" name="resetEmail" type="email" id="resetEmail" class="form-control form-control-sm" placeholder="Email" required />
-              <div *ngIf="!isEmailValid(resetEmail) && resetEmail" class="text-danger">
-              </div>
-            </div>
-
-            <!-- Message display after checking -->
-            <p class="text-muted" *ngIf="resetMessage">{{ resetMessage }}</p>
-
-            <div class="btn-container">
-              <button type="submit" class="custom-btn">Send Reset Link</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="magicLinkModal" tabindex="-1" aria-labelledby="magicLinkModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="magicLinkModalLabel">Magic Link Login</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form (submit)="checkEmailAndUsernameAndSendMagicLink(); $event.preventDefault()">
-
-            <!-- Email input for Magic Link -->
-            <div class="form-outline mb-3">
-              <label class="form-label" for="email">Enter your email address:</label>
-              <input [(ngModel)]="email" name="email" type="email" id="email" class="form-control form-control-sm" placeholder="Email" required />
-              <div *ngIf="!isEmailValid(email) && email" class="text-danger">
-                Please enter a valid email address.
-              </div>
-            </div>
-
-            <!-- Username input -->
-            <div class="form-outline mb-3">
-              <label class="form-label" for="username">Enter your username:</label>
-              <input [(ngModel)]="username" name="username" type="text" id="username" class="form-control form-control-sm" placeholder="Username" required />
-              <div *ngIf="!username && username" class="text-danger">
-                Username is required.
-              </div>
-            </div>
-
-            <!-- Message display after checking -->
-            <p class="text-muted" *ngIf="resetMessageMagic">{{ resetMessageMagic }}</p>
-
-            <div class="btn-container">
-              <button type="submit" class="custom-btn" [disabled]="!email || !username">Send Magic Link</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-
-  <!-- End of modal -->
 </section>

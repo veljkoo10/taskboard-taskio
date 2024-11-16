@@ -59,8 +59,8 @@ export class AuthService {
     localStorage.removeItem('access_token');
   }
 
-  sendMagicLink(email: string): Observable<any> {
-    return this.http.post<any>(this.magicUrl, { email }, {
+  sendMagicLink(email: string, username: string): Observable<any> {
+    return this.http.post<any>(this.magicUrl, { email, username }, {
       headers: new HttpHeaders({'Content-Type': 'application/json'})
     }).pipe(
       catchError(error => {
@@ -69,6 +69,7 @@ export class AuthService {
       })
     );
   }
+
   isAuthenticated(): boolean {
     return !!localStorage.getItem('authToken');
   }

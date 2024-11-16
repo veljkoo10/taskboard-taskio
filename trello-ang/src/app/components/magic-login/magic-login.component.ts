@@ -19,21 +19,5 @@ export class MagicLinkComponent {
     private http: HttpClient
   ) {}
 
-  sendMagicLink() {
-    if (!this.email) {
-      this.message = 'Molimo vas da unesete email adresu.';
-      return;
-    }
 
-    this.authService.sendMagicLink(this.email).subscribe({
-      next: (response) => {
-        this.message = 'Magic link je uspešno poslat na vašu email adresu. Proverite svoj inbox.';
-        console.log('Magic link poslat:', response);
-      },
-      error: (error) => {
-        console.error('Greška prilikom slanja magic link-a:', error);
-        this.message = 'Došlo je do greške pri slanju magic link-a. Pokušajte ponovo.';
-      }
-    });
-  }
 }

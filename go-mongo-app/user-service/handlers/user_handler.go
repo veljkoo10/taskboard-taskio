@@ -534,6 +534,12 @@ func SendMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Provera da li je korisnik aktivan
+	if !userData.IsActive {
+		http.Error(w, "Korisnik nije aktivan", http.StatusForbidden)
+		return
+	}
+
 	// Provera da li se email i username podudaraju
 	if userData.Username != username {
 		http.Error(w, "Username and email do not match", http.StatusBadRequest)

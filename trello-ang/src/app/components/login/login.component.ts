@@ -15,10 +15,13 @@ export class LoginComponent {
   resetEmail: string = '';
   resetMessage: string = '';
   username: string = '';
+  magicLinkUsername: string = '';
   password: string = '';
   loginError: string = '';
   email: string='';
   resetMessageMagic:string='';
+  message:string='';
+  isSuccess: boolean = false;
   user: User = new User('', '', '', '', '', '','');
   constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
 
@@ -41,6 +44,35 @@ export class LoginComponent {
     } else {
       this.loginError = 'Please enter both username and password.';
     }
+  }
+  sendMagicLink() {
+    if (!this.email || !this.magicLinkUsername) {
+      this.message = 'Molimo vas da unesete email adresu i korisničko ime.';
+      this.isSuccess = false;
+      return;
+    }
+
+    this.authService.sendMagicLink(this.email, this.magicLinkUsername).subscribe({
+      next: (response) => {
+        this.message = 'Magic link sent successfully to your email.';
+        this.isSuccess = true; // Uspešna poruka
+        console.log('Magic link poslat:', response);
+      },
+      error: (error) => {
+        console.error('Greška prilikom slanja magic link-a:', error);
+
+        if (error.status === 403) {
+          this.message = 'Your account is not active. Contact support for more information.';
+        } else if (error.status === 400 && error.error.includes('Username i email se ne podudaraju')) {
+          this.message = 'The email and username entered do not match. Please check your data and try again.';
+        } else if (error.status === 404) {
+          this.message = 'The user with the entered email was not found. Check the entry.';
+        } else {
+          this.message = 'The user is not active or does not exist.';
+        }
+        this.isSuccess = false; // Greška
+      },
+    });
   }
 
 
