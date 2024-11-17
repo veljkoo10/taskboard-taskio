@@ -3,10 +3,11 @@
     <!-- Left elements -->
     <div class="d-flex align-items-center">
       <!-- Brand -->
-      <a class="navbar-brand me-2 mb-1 d-flex align-items-center" (click)="goToDashboard()">
-        <img [src]="logoPath" width="45" height="45" alt="Dumbbell Logo" loading="lazy" style="cursor: pointer;">
-        <h4 class="ms-2 mb-0" style="cursor: pointer;">Taskio</h4>
+      <a class="navbar-brand me-2 mb-1 d-flex align-items-center logo-container" (click)="goToDashboard()">
+        <img [src]="logoPath" alt="Dumbbell Logo" loading="lazy" class="logo-image" style="cursor: pointer;">
+        <h4 class="ms-3 mb-0 logo-text" style="cursor: pointer;">Taskio</h4>
       </a>
+
 
       <!-- Request link (visible for ADMIN only) -->
       <h4 class="nav-link custom-link add-project-link ms-2" *ngIf="isManager()" data-bs-toggle="modal" data-bs-target="#addProjectModal">
@@ -18,7 +19,7 @@
     <div class="d-flex align-items-center position-relative">
       <!-- Profile icon -->
       <a class="nav-link custom-link" (click)="toggleProfileMenu()">
-        <img [src]="profilePath" alt="Profile Icon" width="40" height="40" style="cursor: pointer;">
+        <img [src]="profilePath" alt="Profile Icon" width="45" height="45" style="cursor: pointer;">
       </a>
 
       <!-- Profile menu -->

@@ -3,15 +3,55 @@
   text-decoration: none;
   color: black;
 }
+/* Povećanje veličine logotipa */
+.logo-container {
+  display: flex;
+  align-items: center;  /* Poravnanje slike i teksta u sredinu */
+  text-decoration: none;
+}
+
+/* Povećanje slike logotipa */
+.logo-image {
+  width: 57px; /* Povećaj širinu logotipa */
+  height: 55px; /* Povećaj visinu logotipa */
+  transition: transform 0.3s ease, filter 0.3s ease; /* Glatki prelaz */
+}
+
+/* Hover efekat za logo */
+.logo-container:hover .logo-image {
+  filter: brightness(0) invert(1); /* Bele boje na hover */
+  transform: scale(1.1); /* Blago povećanje na hover */
+}
+
+/* Stilizacija teksta logotipa */
+.logo-text {
+  font-size: 1.9rem; /* Veća veličina fonta */
+  font-weight: bold; /* Deblji font */
+  margin-left: 10px; /* Razmak između slike i teksta */
+  transition: color 0.3s ease, transform 0.3s ease; /* Glatki prelaz boje i veličine */
+  display: flex;
+  align-items: center; /* Poravnanje teksta sa slikom */
+}
+
+/* Hover efekat za tekst */
+.logo-container:hover .logo-text {
+  color: #ddd; /* Svetlije bele boje na hover */
+  transform: scale(1.1); /* Blago povećanje na hover */
+}
+
+
 * {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
+
 }
 .navbar {
   background-color: #216e4e !important;
   padding-left: 10px;
   padding-right: 10px;
   height: 75px;
+  align-items: center;  /* Poravnanje slike i teksta u sredinu */
+
 }
 
 .nav-link {
@@ -43,6 +83,7 @@
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+
 }
 
 .custom-alert i {
@@ -62,31 +103,39 @@
   color: black;
   text-decoration: none;
   text-align: center;
+  transform: scale(1.1);
+  transition: color 0.3s, background-color 0.3s;
+
 }
 
 .profile-menu a:hover {
-  background-color: #1a593e;
-}
-.add-project-link {
-  margin-top: 11px;
-  color: black;
-  padding: 5px 10px;
-  border-radius: 5px;
-  transition: background-color 0.3s, transform 0.2s;
-  cursor: pointer;
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-  display: inline-block;
-  font-family: 'YourFontName', sans-serif; /* Apply the same font-family */
+  color: white;
 }
 
+.add-project-link {
+   margin-top: 5px;
+   color: black;
+   padding: 10px 20px; /* Veći padding za bolji izgled */
+   border-radius: 5px;
+   font-size: 1.8rem; /* Veća veličina fonta */
+   font-weight: 600; /* Bold za istaknut tekst */
+   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Dobar font za čitljivost */
+   text-transform: capitalize; /* Prvo slovo veliko */
+   transition: background-color 0.3s, transform 0.2s;
+   cursor: pointer;
+   text-align: center;
+   margin-left: auto;
+   margin-right: auto;
+   display: inline-block;
+ }
+
 .add-project-link:hover {
-  transform: scale(1.05);
+  transform: scale(1.1); /* Blago povećanje na hover */
+  color: white; /* Kontrastni tekst na hover */
 }
 
 .add-project-link:active {
-  transform: scale(0.95);
+  transform: scale(0.95); /* Blago smanjenje na aktivaciju */
 }
 
 .modal-content {
@@ -170,8 +219,9 @@ body {
   transition: background-color 0.3s, transform 0.3s;
   text-transform: capitalize;
 
+
 }
 
 .project-list li:hover {
-  transform: scale(1.1);
+  transition: color 0.3s, background-color 0.3s;
 }

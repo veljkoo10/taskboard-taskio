@@ -29,6 +29,13 @@
 
       <label for="role">Role:</label>
       <input type="text" id="role"  value= {{user.role}} readonly>
+      <button
+        style="background-color: red; color: white; margin-top: 20px;"
+        type="button"
+        class="btn btn-danger"
+        (click)="onDeleteAccount()">
+        Delete Account
+      </button>
 
     </form>
   </div>

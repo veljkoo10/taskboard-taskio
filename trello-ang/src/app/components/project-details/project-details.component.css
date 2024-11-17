@@ -60,8 +60,12 @@ body {
   gap: 10px;
   flex-wrap: wrap; /* Allow buttons to wrap to next line */
   justify-content: flex-start; /* Keep buttons aligned to the left */
-}
+  transition: color 0.3s ease; /* Glatki prelaz za boju teksta */
 
+}
+.action-buttons button:hover {
+  color: white; /* Boja teksta postaje bela na hover */
+}
 .action-buttons .btn {
   font-size: 1.1rem;
   background-color: #216e4e;
@@ -101,6 +105,7 @@ body {
   height: auto; /* Allow status item to grow based on content */
   box-sizing: border-box;
   margin-bottom: 20px; /* Space between items */
+  transition: transform 0.3s ease;
 }
 
 /* Uniform styling for p elements in all status-item divs */
@@ -115,7 +120,9 @@ body {
   background-color: #f8f9fa;  /* Light background */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
-
+.status-item.to-do ul:hover {
+  transform: scale(1.03); /* Skalira element za 5% na hover */
+}
 .status-item.to-do p {
   color: black; /* Black text for "Pending" title */
 }
@@ -175,7 +182,9 @@ body {
   font-size: 18px;
   color: #333;
 }
-
+.status-item.in-progress ul:hover {
+  transform: scale(1.03); /* Skalira element za 5% na hover */
+}
 .status-item.in-progress li {
   background-color: #f9f9f9;
   border: 1px solid #ccc;
@@ -206,7 +215,9 @@ body {
 .status-item.done p {
   color: black; /* Green text for "Done" */
 }
-
+.status-item.done ul:hover {
+  transform: scale(1.03); /* Skalira element za 5% na hover */
+}
 .status-item.done ul {
   list-style-type: none;
   padding-left: 0;
@@ -277,12 +288,12 @@ body {
 }
 
 .btn-danger {
-  background-color: #dc3545;
-  color: white;
+  background-color: #dc3545;  /* Crvena boja */
   border: none;
-  padding: 5px 10px;
-  cursor: pointer;
-  float: right;
+  padding: 5px 10px; /* Unutrašnje margine za lepši izgled */
+  border-radius: 3px; /* Zaobljeni uglovi */
+  color: white;
+  font-size: 0.9rem;
 }
 
 .btn-danger:hover {

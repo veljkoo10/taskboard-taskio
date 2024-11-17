@@ -80,10 +80,12 @@ button.btn {
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
+  font-size: 1.2rem;
 }
 
 button.btn:hover {
   background-color: #1c573b; /* Malo tamnija zelena za hover */
+  transform: scale(1.05);
 }
 
 .form-section h2 {

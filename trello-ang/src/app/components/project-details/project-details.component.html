@@ -54,7 +54,6 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Create New Task</h5>
-            <button type="button" class="btn-close" (click)="cancelCreateTask()"></button>
           </div>
           <div class="modal-body">
             <form #taskForm="ngForm">
@@ -93,7 +92,6 @@
             {{ user.username | titlecase }}<span *ngIf="!isLast">, </span>
           </span>
         </h3>
-        <button type="button" class="btn-close" (click)="cancelAddMember()"></button>
       </div>
       <div class="modal-body">
         <!-- Lista korisnika koji mogu biti dodati na projekat -->
@@ -190,7 +188,6 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Add Users to Task</h5>
-        <button type="button" class="btn-close" (click)="closeAddTaskUserModal()">×</button>
       </div>
       <div class="modal-body">
         <!-- Lista korisnika dostupnih za dodavanje na task -->

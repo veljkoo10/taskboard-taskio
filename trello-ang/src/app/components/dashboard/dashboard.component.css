@@ -65,6 +65,7 @@
 
 .profile-menu a:hover {
   background-color: #1a593e;
+
 }
 .add-project-link {
   margin-top: 11px;
@@ -119,16 +120,15 @@
   padding: 20px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   z-index: 10;
-  overflow-y: scroll;
+  overflow-y: auto;
+  padding-top: 80px;
 }
 
 .sidebar::-webkit-scrollbar {
-  display: none;
+  width: 5px;
 }
 
-.sidebar {
-  scrollbar-width: none;
-}
+
 
 .navbar {
   background-color: #216e4e !important;
@@ -152,24 +152,30 @@
 body {
   margin-left: 300px;
 }
+
 .project-list {
-  margin-top: 50px;
+  margin-top: 20px;
   list-style-type: none;
   padding: 0;
   text-align: center;
-  max-height: calc(100vh - 50px);
 }
 
 .project-list li {
-  font-size: 1.25rem;
-  padding: 10px;
+  font-size: 1.5rem; /* Veći font za bolju čitljivost */
+  font-weight: 600;
+  padding: 15px 10px; /* Veći padding za preglednost */
   color: black;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
-  text-transform: capitalize;
 
+  transition: background-color 0.3s, transform 0.3s;
 }
 
 .project-list li:hover {
   transform: scale(1.1);
+  color: white;
+
+}
+
+.project-list li:active {
+  transform: scale(0.95);
 }
