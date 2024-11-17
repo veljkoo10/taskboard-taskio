@@ -220,6 +220,7 @@ showAddTaskUserModal(task: any) {
   console.log('Opening Add Task User Modal:', task);
   this.selectedTask = task; // Ensure task is valid
   this.isAddTaskUserVisible = true; // Toggle visibility
+  this.isTaskDetailsVisible = false;
 }
 
 closeAddTaskUserModal() {
@@ -387,14 +388,25 @@ addSelectedUsersToTask() {
     );
   }
   
-  
-  
+  closeAddMember() {
+    this.isAddMemberFormVisible = false;
+    this.selectedUsers = [];
+  }
+  closeCreateTask(){
+    this.isCreateTaskFormVisible=false;
+  }  
 
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
     this.selectedTask = null;
   }
-
+  closeAddUserToTask(){
+    this.isAddTaskUserVisible=false;
+    this.selectedUsers=[];
+  }
+  cancelAddTaskUserModal(){
+    this.isTaskDetailsVisible = false;
+  }
   removeUserFromProject(userId: string): void {
     if (!this.project?.id) {
       console.error('Project ID is missing.');

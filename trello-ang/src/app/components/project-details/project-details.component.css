@@ -290,10 +290,10 @@ body {
 .btn-danger {
   background-color: #dc3545;  /* Crvena boja */
   border: none;
-  padding: 5px 10px; /* Unutrašnje margine za lepši izgled */
-  border-radius: 3px; /* Zaobljeni uglovi */
+  padding: 8.6px 13px; /* Veličina dugmeta */
+  font-size: 9px;    /* Veličina teksta *//* Zaobljeni uglovi */
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.94rem;
 }
 
 .btn-danger:hover {
@@ -308,6 +308,10 @@ body {
   z-index: 1000;
   display: block!important;
 }
+.user-item button {
+  margin-left: auto;
+}
+
 
 .modal.show {
   display: block;

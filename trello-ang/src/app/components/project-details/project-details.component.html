@@ -3,6 +3,7 @@
     <div class="action-buttons">
       <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">User management</button>
       <button *ngIf="isManager()"    class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
+      
     </div>
 
     <h2 class="project-title highlight">Project Name: {{ project.title | titlecase }}</h2>
@@ -15,6 +16,7 @@
       <ul>
         <!-- Display all pending tasks -->
         <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
+          <button type="button" class="btn-close" (click)="closeTaskDetails()"></button>
           <span class="task-icon">⏳</span>
           {{ task.name }}
         </li>
@@ -54,7 +56,9 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Create New Task</h5>
+            <button type="button" class="btn-close" aria-label="Close" (click)="closeCreateTask()">&#10005;</button>
           </div>
+          
           <div class="modal-body">
             <form #taskForm="ngForm">
               <div class="form-group">
@@ -82,16 +86,20 @@
 
 <!-- Modal za dodavanje korisnika -->
 <div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible" >
+
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">
           Manager:
-          <!-- Display managers inline with commas between them -->
+         
           <span *ngFor="let user of projectManagers; let isLast = last">
             {{ user.username | titlecase }}<span *ngIf="!isLast">, </span>
+
           </span>
+          
         </h3>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeAddMember()">&#10005;</button>
       </div>
       <div class="modal-body">
         <!-- Lista korisnika koji mogu biti dodati na projekat -->
@@ -177,6 +185,7 @@
       <div class="modal-footer">
         <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Add User</button>
         <button  *ngIf="isManager()" class="btn btn-danger">Delete Task</button>
+        <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
       </div>
     </div>
   </div>
@@ -188,7 +197,9 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Add Users to Task</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeAddUserToTask()">&#10005;</button>
       </div>
+      
       <div class="modal-body">
         <!-- Lista korisnika dostupnih za dodavanje na task -->
         <h4>Select a user to add to the task:</h4>
@@ -206,7 +217,7 @@
         <ul class="user-list">
           <li *ngFor="let user of taskUsers" class="user-item">
             {{ user.username | titlecase }}
-            <button class="btn btn-danger btn-sm float-end" (click)="removeUserFromTask(user.id)">Remove user</button>
+            <button class="btn btn-danger btn-sm" (click)="removeUserFromTask(user.id)">Remove user</button>
           </li>
         </ul>
       </div>
