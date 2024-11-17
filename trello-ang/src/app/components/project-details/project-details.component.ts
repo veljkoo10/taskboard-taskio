@@ -175,11 +175,28 @@ export class ProjectDetailsComponent {
     return users.sort((a, b) => a.username.localeCompare(b.username));
   }
 
+  closeTasksDoneModal(){
+    document.querySelector('.all-tasks-done-modal')?.setAttribute("style", "display:none; opacity: 100%; margin-top: 20px")
+  }
+  
+  showTasksDoneModal(){
+    document.querySelector('.all-tasks-done-modal')?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
+  }
+
   addSelectedUsersToProject() {
     const project = this.project as any;
     if (project && this.selectedUsers.length > 0) {
+      // Proveri da li je projekat aktivan
+      console.log(this.pendingTasks.length + this.inProgressTasks.length," +++ ", this.doneTasks.length)
+      if (!this.isProjectActive()) {
+        //alert('You cannot add users to the project because all tasks are marked as done.');
+        this.showTasksDoneModal();
+        this.selectedUsers = [];
+        return;
+      }
+  
       const userIds = this.selectedUsers.map(user => user.id);
-
+  
       this.projectService.addMemberToProject(project.id, userIds).subscribe(
         (response) => {
           console.log('Users successfully added:', response);
@@ -189,6 +206,7 @@ export class ProjectDetailsComponent {
           this.availableSlots = this.getAvailableSpots();
         },
         (error) => {
+          this.showMaxPeople();
           console.error('Error adding users to project:', error);
         }
       );
@@ -196,6 +214,7 @@ export class ProjectDetailsComponent {
       alert('No users selected.');
     }
   }
+  
 
   updateTaskStatus(status: string) {
     if (this.selectedTask) {
@@ -243,29 +262,40 @@ addSelectedUsersToTask() {
   if (this.selectedTask && this.selectedTaskUsers.length > 0) {
     const taskId = this.selectedTask.id;
     const userIds = this.selectedTaskUsers.map(user => user.id);
+    const username = this.selectedTaskUsers.map(user => user.username)
 
     userIds.forEach(userId => {
-      this.taskService.addUserToTask(taskId, userId).subscribe(
-        response => {
-          console.log(`User ${userId} added to task ${taskId}:`, response);
-          
-          // Ažuriraj lokalni niz taskUsers
-          const addedUser = this.projectUsers.find(user => user.id === userId);
-          if (addedUser) {
-            this.taskUsers.push(addedUser);
-            this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+      // Proveri da li je korisnik već dodeljen ovom tasku
+      const isAlreadyAssigned = this.taskUsers.some(user => user.id === userId);
+      
+      if (!isAlreadyAssigned) {
+        this.taskService.addUserToTask(taskId, userId).subscribe(
+          response => {
+            console.log(`User ${userId} added to task ${taskId}:`, response);
+            
+            // Ažuriraj lokalni niz taskUsers
+            const addedUser = this.projectUsers.find(user => user.id === userId);
+            if (addedUser) {
+              // Dodaj korisnika u taskUsers
+              this.taskUsers.push(addedUser);
+              // Ukloni korisnika iz projectUsers
+              this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+            }
+          },
+          error => {
+            console.error(`Error adding user ${userId} to task ${taskId}:`, error);
           }
-        },
-        error => {
-          console.error(`Error adding user ${userId} to task ${taskId}:`, error);
-        }
-      );
+        );
+      } else {
+        alert(`User: ${username} is already assigned to the task.`);
+      }
     });
 
   } else {
     alert("No users selected.");
   }
 }
+
 
 
   showCreateTaskForm() {
@@ -287,7 +317,7 @@ addSelectedUsersToTask() {
     const project = this.project as any;
     if (project && user) {
       console.log(`Dodavanje korisnika ${user.name} u projekat ${project.name}`);
-
+        
       this.projectService.addMemberToProject(project.id, user.id).subscribe(
         (response) => {
           console.log('User added to project:', response);
@@ -395,9 +425,6 @@ addSelectedUsersToTask() {
   closeCreateTask(){
     this.isCreateTaskFormVisible=false;
   }  
-  cancelCreateTaskk(): void {
-    this.isCreateTaskFormVisible = false;
-  }
 
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
@@ -431,6 +458,24 @@ addSelectedUsersToTask() {
     );
   }
 
+  isProjectActive(): boolean {
+    // Ako su svi zadaci u statusu "done", projekat je neaktivan
+    //Ako nema ni jedan task, onda daje da se dodaju useri (nov projekat)
+    if(this.pendingTasks.length === 0 && this.inProgressTasks.length === 0 && this.doneTasks.length !== 0){
+      return false;
+    }
+    else{
+      return true
+    }
+  }
+
+  closeMaxPeople(){
+    document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:none; opacity: 100%; margin-top: 20px")
+  }
+
+  showMaxPeople(){
+    document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
+  }
   
   
 

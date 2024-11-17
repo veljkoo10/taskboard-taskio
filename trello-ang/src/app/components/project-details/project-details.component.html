@@ -192,19 +192,16 @@
 </div>
 
 <!-- Add Users to Task Modal -->
-<!-- Pozadinski sloj -->
-<div class="modal-background" *ngIf="isAddTaskUserVisible" (click)="closeAddTaskUserModal()"></div>
-
-<!-- Modal za dodavanje korisnika na task -->
 <div id="addTaskUserModal" class="modal" *ngIf="isAddTaskUserVisible">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Add Users to Task</h5>
-        <button type="button" class="btn-close" aria-label="Close" (click)="closeAddTaskUserModal()">&#10005;</button>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeAddUserToTask()">&#10005;</button>
       </div>
       
       <div class="modal-body">
+        <!-- Lista korisnika dostupnih za dodavanje na task -->
         <h4>Select a user to add to the task:</h4>
         <ul class="user-list">
           <li *ngFor="let user of projectUsers" class="user-item">
@@ -215,6 +212,7 @@
           </li>
         </ul>
 
+        <!-- Prikaz korisnika koji su već dodani na task -->
         <h4>Users in the task:</h4>
         <ul class="user-list">
           <li *ngFor="let user of taskUsers" class="user-item">
@@ -231,3 +229,17 @@
   </div>
 </div>
 
+
+<div class="all-tasks-done-modal" (click)="closeTasksDoneModal()">
+  <div class="modal-content">
+    <p>You cannot add users to the project because all tasks are marked as done.</p>
+    <button (click)="closeTasksDoneModal()">OK</button>
+  </div>
+</div>
+
+<div class="max-people-error-modal" (click)="closeMaxPeople()">
+  <div class="modal-content">
+    <p>Can't add these people to project, no available slots.</p>
+    <button (click)="closeMaxPeople()">OK</button>
+  </div>
+</div>
