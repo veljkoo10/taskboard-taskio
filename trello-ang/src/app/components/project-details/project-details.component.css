@@ -286,7 +286,13 @@ body {
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 999;
 }
-
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000; /* Modal treba da bude iznad pozadine */
+}
 .btn-danger {
   background-color: #dc3545;  /* Crvena boja */
   border: none;
@@ -377,6 +383,8 @@ body {
   border: 1px solid #ddd;
   border-radius: 5px;
   transition: background-color 0.3s ease;
+  font-size: 1.2rem; 
+  font-weight: bold; 
 }
 .user-item label {
   display: flex;

@@ -395,6 +395,9 @@ addSelectedUsersToTask() {
   closeCreateTask(){
     this.isCreateTaskFormVisible=false;
   }  
+  cancelCreateTaskk(): void {
+    this.isCreateTaskFormVisible = false;
+  }
 
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
