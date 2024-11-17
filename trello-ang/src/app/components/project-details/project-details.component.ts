@@ -279,7 +279,7 @@ addSelectedUsersToTask() {
               // Dodaj korisnika u taskUsers
               this.taskUsers.push(addedUser);
               // Ukloni korisnika iz projectUsers
-              this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+              //this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
             }
           },
           error => {
@@ -437,18 +437,26 @@ addSelectedUsersToTask() {
   cancelAddTaskUserModal(){
     this.isTaskDetailsVisible = false;
   }
+
   removeUserFromProject(userId: string): void {
     if (!this.project?.id) {
       console.error('Project ID is missing.');
       return;
     }
-  
+    
+    if(this.project.min_people <= this.projectUsers.length - 1){
+    console.log(this.projectUsers.length - 1)
+
     this.projectService.removeMemberToProject(this.project.id, [userId]).subscribe(
       (response) => {
         console.log('User removed successfully:', response);
         // Uklanjanje korisnika iz lokalne liste korisnika na projektu
         this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
-  
+        
+        // Ažuriraj project.users ručno
+        if (this.project?.users) {
+          this.project.users = this.project.users.filter(user => user.id !== userId);
+        }
         // Osvežavanje liste dostupnih korisnika
         this.loadActiveUsers();
       },
@@ -456,6 +464,11 @@ addSelectedUsersToTask() {
         console.error('Error removing user:', error);
       }
     );
+  }
+  else{
+    console.log(this.project.users.length - 1)
+    alert(`Can't remove more pople, minimum number of people is:  ${this.project.min_people}`)
+  }
   }
 
   isProjectActive(): boolean {

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
-import {Observable, Subject} from 'rxjs';
+import {Observable, Subject, throwError} from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Project } from "../model/project.model";
 import { Task } from "../model/task.model";
@@ -87,5 +87,15 @@ export class ProjectService {
 
   notifyProjectCreated(project: Project) {
     this.projectCreated.next(project);
+  }
+
+  getPeojectById(projectId: string): Observable<any[]> {
+    const url = `${this.baseUrl}/${projectId}`;
+    return this.http.get<any>(url).pipe(
+      catchError(error => {
+        console.error('Error fetching user profile:', error);
+        return throwError(error);
+      })
+    );
   }
 }
