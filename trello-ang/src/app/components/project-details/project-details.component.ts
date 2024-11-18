@@ -406,7 +406,8 @@ addSelectedUsersToTask() {
       console.error('Task ID is missing.');
       return;
     }
-  
+
+    if(this.selectedTask.status !== "done"){
     this.taskService.removeUserFromTask(this.selectedTask.id, userId).subscribe(
       (response) => {
         console.log('User removed from task successfully:', response);
@@ -425,6 +426,10 @@ addSelectedUsersToTask() {
         console.error('Error removing user from task:', error);
       }
     );
+  }
+  else{
+    alert("Cant remove member from done task!")
+  }
   }
   
   closeAddMember() {
