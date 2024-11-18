@@ -397,7 +397,7 @@ func IsActiveProject(projectID string) (bool, error) {
 	// Proverite da li ima taskova
 	if len(project.Tasks) == 0 {
 		fmt.Println("No tasks found for the project")
-		return false, nil
+		return true, nil
 	}
 
 	// Iteriraj kroz sve taskove i dohvati status
