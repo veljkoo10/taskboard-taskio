@@ -84,4 +84,5 @@ export class UserService {
     const url = `${this.baseUrl}/users/${userId}/deactivate`;
     return this.http.put<any>(url, null);
   }
+  
 }

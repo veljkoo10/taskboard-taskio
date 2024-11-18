@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import { AuthService } from 'src/app/services/auth.service';
 import { UserService } from 'src/app/services/user.service';
+import{ ProjectService } from 'src/app/services/project.service';
+import { Project } from 'src/app/model/project.model'
+import { forkJoin, of } from 'rxjs';
 
 @Component({
   selector: 'app-user-profile',
@@ -13,6 +16,10 @@ export class UserProfileComponent implements OnInit {
   user: any;
   userId: string = '';
 
+
+  project: Project = new Project();
+  projects: Project[] = [];
+
   oldPassword: string = '';
   newPassword: string = '';
   confirmPassword: string = '';
@@ -21,7 +28,7 @@ export class UserProfileComponent implements OnInit {
   successMessage: string = '';
   passwordError: string = '';
 
-  constructor( private router: Router,private authService: AuthService, private userService: UserService) {}
+  constructor( private router: Router,private authService: AuthService, private userService: UserService, private projectService: ProjectService) {}
 
   ngOnInit(): void {
     this.user = this.getUserInfoFromToken();
@@ -38,6 +45,7 @@ export class UserProfileComponent implements OnInit {
         }
       });
     }
+    this.loadProjects()
   }
 
   closeModalAndRefresh(){
@@ -126,20 +134,65 @@ export class UserProfileComponent implements OnInit {
       alert(this.passwordError);
     }
   }
+  
   onDeleteAccount(): void {
-    if (confirm('Are you sure you want to delete your account?')) {
-      this.userService.deactivateUser(this.user.id).subscribe({
-        next: (response) => {
-          alert('Your account has been deleted.');
-          this.authService.logout();
-          this.router.navigate(['/login']);
-
-        },
-        error: (error) => {
-          console.error('Error deleting user:', error);
-          alert('There was an error deleting your account.');
+    const projectStatusChecks = this.projects.map(project => {
+      if (project.id) {
+        // Pozovite servis samo ako je `id` definisan
+        return this.projectService.isProjectActive(project.id);
+      } else {
+        // Ako `id` nije definisan, vratite Observable koji emituje `false`
+        return of(false);
+      }
+    });
+  
+    forkJoin(projectStatusChecks).subscribe(
+      (results) => {
+        const anyProjectActive = results.some(isActive => isActive);
+  
+        if (anyProjectActive) {
+          alert('You cannot delete your account because some projects are still active.');
+          return;
         }
-      });
+  
+        if (confirm('Are you sure you want to delete your account?')) {
+          this.userService.deactivateUser(this.user.id).subscribe({
+            next: (response) => {
+              alert('Your account has been deleted.');
+              this.authService.logout();
+              this.router.navigate(['/login']);
+            },
+            error: (error) => {
+              console.error('Error deleting user:', error);
+              alert('There was an error deleting your account.');
+            }
+          });
+        }
+      },
+      (error) => {
+        console.error('Error checking project status:', error);
+        alert('There was an error checking project status.');
+      }
+    );
+  }
+  
+  loadProjects() {
+    const userId = localStorage.getItem('user_id');
+    const token = localStorage.getItem('access_token');
+
+    if (userId && token) {
+      this.projectService.getProjectsByUser(userId, token).subscribe(
+        (data: Project[]) => {
+          this.projects = data;
+          console.log(this.projects)
+        },
+        (error) => {
+          console.error('Error fetching projects', error);
+        }
+      );
+    } else {
+      console.error('User not logged in.');
     }
   }
+
 }
