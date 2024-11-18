@@ -400,3 +400,21 @@ func GetUsersForTask(taskID string) ([]models.User, error) {
 
 	return users, nil
 }
+
+func GetTaskByID(taskID string) (*models.Task, error) {
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return nil, errors.New("invalid task ID")
+	}
+
+	collection := db.Client.Database("testdb").Collection("tasks")
+	var task models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.New("task not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &task, nil
+}

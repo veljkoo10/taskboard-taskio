@@ -215,3 +215,19 @@ func AddTaskToProjectHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Task successfully added to project"))
 }
+
+func IsActiveProject(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	projectID := vars["projectId"]
+
+	// Pozovi servis za dobijanje statusa svih taskova u projektu
+	status, err := service.IsActiveProject(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Vrati rezultat u JSON formatu
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"result": status})
+}

@@ -4,6 +4,9 @@ import {Observable, Subject, throwError} from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Project } from "../model/project.model";
 import { Task } from "../model/task.model";
+import { map } from 'rxjs/operators';
+import { lastValueFrom } from 'rxjs';
+
 
 @Injectable({
   providedIn: 'root'
@@ -98,4 +101,19 @@ export class ProjectService {
       })
     );
   }
+
+  isProjectActive(projectId: string): Observable<boolean> {
+    const url = `${this.baseUrl}/isActive/${projectId}`;
+    console.log(url);
+    
+    return this.http.get<{ result: boolean }>(url).pipe(
+      // Ekstraktovanje vrednosti result direktno
+      map(response => response.result),  // direktno dobijanje true/false iz odgovora
+      catchError((error) => {
+        console.error('Error checking project active status:', error);
+        return throwError(error);
+      })
+    );
+  }
+  
 }

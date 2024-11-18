@@ -370,3 +370,88 @@ func AddTaskToProject(projectID string, taskID string) error {
 
 	return nil
 }
+
+func IsActiveProject(projectID string) (bool, error) {
+	// Lista za skladištenje statusa
+	var taskStatuses []string
+	var pendingTasks []string
+	var inProgressTasks []string
+	var doneTasks []string
+
+	// Konvertovanje projectID u ObjectID
+	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		fmt.Printf("Invalid project ID format: %v\n", err)
+		return false, fmt.Errorf("invalid project ID: %v", err)
+	}
+
+	// Dohvatanje projekta iz baze
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
+	err = collection.FindOne(context.TODO(), bson.M{"_id": projectObjectID}).Decode(&project)
+	if err != nil {
+		fmt.Printf("Failed to find project: %v\n", err)
+		return false, fmt.Errorf("failed to find project: %v", err)
+	}
+
+	// Proverite da li ima taskova
+	if len(project.Tasks) == 0 {
+		fmt.Println("No tasks found for the project")
+		return false, nil
+	}
+
+	// Iteriraj kroz sve taskove i dohvati status
+	for _, taskID := range project.Tasks {
+		taskStatus, err := getTaskStatus(taskID)
+		if err != nil {
+			fmt.Printf("Failed to fetch status for task %s: %v\n", taskID, err)
+			return false, fmt.Errorf("failed to fetch status for task %s: %v", taskID, err)
+		}
+
+		// Dodaj status u odgovarajuću listu
+		taskStatuses = append(taskStatuses, taskStatus)
+		switch taskStatus {
+		case "pending":
+			pendingTasks = append(pendingTasks, taskStatus)
+		case "work in progress":
+			inProgressTasks = append(inProgressTasks, taskStatus)
+		case "done":
+			doneTasks = append(doneTasks, taskStatus)
+		}
+	}
+
+	// Logika za odlučivanje
+	fmt.Printf("Pending: %d, In Progress: %d, Done: %d\n", len(pendingTasks), len(inProgressTasks), len(doneTasks))
+	if len(pendingTasks) == 0 && len(inProgressTasks) == 0 && len(doneTasks) != 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// getTaskStatus - dobija status zadatka sa task-servisa
+func getTaskStatus(taskID string) (string, error) {
+	url := fmt.Sprintf("http://task-service:8080/tasks/%s", taskID)
+
+	// Šaljemo GET zahtev na task-servis
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request to task service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Proveri statusni kod odgovora
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("error response from task service: status code %d", resp.StatusCode)
+	}
+
+	// Parsiranje odgovora
+	var responseBody struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return "", fmt.Errorf("failed to decode response body: %v", err)
+	}
+
+	return responseBody.Status, nil
+}

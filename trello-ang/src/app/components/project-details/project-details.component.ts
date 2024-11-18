@@ -185,35 +185,44 @@ export class ProjectDetailsComponent {
 
   addSelectedUsersToProject() {
     const project = this.project as any;
+    
     if (project && this.selectedUsers.length > 0) {
-      // Proveri da li je projekat aktivan
-      console.log(this.pendingTasks.length + this.inProgressTasks.length," +++ ", this.doneTasks.length)
-      if (!this.isProjectActive()) {
-        //alert('You cannot add users to the project because all tasks are marked as done.');
-        this.showTasksDoneModal();
-        this.selectedUsers = [];
-        return;
-      }
   
-      const userIds = this.selectedUsers.map(user => user.id);
+      // Provera da li je projekat aktivan pre nego što dodate korisnike
+      this.projectService.isProjectActive(project.id).subscribe(
+        (isActive) => {
+          if (!isActive) {
+            this.showTasksDoneModal();
+            this.selectedUsers = [];
+            return;
+          }
   
-      this.projectService.addMemberToProject(project.id, userIds).subscribe(
-        (response) => {
-          console.log('Users successfully added:', response);
-          this.loadUsersForProject();
-          this.loadActiveUsers();
-          this.selectedUsers = [];
-          this.availableSlots = this.getAvailableSpots();
+          // Ako je projekat aktivan, nastavljamo sa dodavanjem korisnika
+          const userIds = this.selectedUsers.map(user => user.id);
+  
+          this.projectService.addMemberToProject(project.id, userIds).subscribe(
+            (response) => {
+              console.log('Users successfully added:', response);
+              this.loadUsersForProject();
+              this.loadActiveUsers();
+              this.selectedUsers = [];
+              this.availableSlots = this.getAvailableSpots();
+            },
+            (error) => {
+              this.showMaxPeople();
+              console.error('Error adding users to project:', error);
+            }
+          );
         },
         (error) => {
-          this.showMaxPeople();
-          console.error('Error adding users to project:', error);
+          console.error('Error while checking project status', error);
         }
       );
     } else {
       alert('No users selected.');
     }
   }
+  
   
 
   updateTaskStatus(status: string) {

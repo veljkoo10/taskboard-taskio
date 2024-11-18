@@ -26,6 +26,7 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/tasks", handlers.GetTasks).Methods("GET")
+	router.HandleFunc("/tasks/{taskId}", handlers.GetTaskByID).Methods("GET", "OPTIONS")
 	router.HandleFunc("/tasks/create/{project_id}", handlers.CreateTaskHandler).Methods("POST")
 	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.AddUserToTaskHandler).Methods("PUT")
 	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.RemoveUserFromTaskHandler).Methods("DELETE")
