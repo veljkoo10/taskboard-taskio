@@ -5,12 +5,14 @@ import { FormsModule } from "@angular/forms";
 import { AuthService } from "../../services/auth.service";
 import { filter, map, switchMap } from "rxjs";
 import {UserService} from "../../services/user.service";
+import {NgIf} from "@angular/common";
 
 @Component({
   selector: 'app-register',
   standalone: true,
   imports: [
     FormsModule,
+    NgIf,
   ],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']

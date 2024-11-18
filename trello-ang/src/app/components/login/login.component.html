@@ -120,4 +120,36 @@
       </div>
     </div>
   </div>
+  <!-- Modal for forgot password -->
+  <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="forgotPasswordModalLabel">Reset Password</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form (submit)="checkEmailAndResetPassword(); $event.preventDefault()">
+            <!-- Email input -->
+            <div class="form-outline mb-3">
+              <label class="form-label" for="resetEmail">Enter your email address:</label>
+              <input [(ngModel)]="resetEmail" name="resetEmail" type="email" id="resetEmail" class="form-control form-control-sm" placeholder="Email" required />
+              <div *ngIf="!isEmailValid(resetEmail) && resetEmail" class="text-danger">
+              </div>
+            </div>
+
+            <!-- Message display after checking -->
+            <p
+              *ngIf="resetMessage"
+              [ngClass]="{ 'text-danger': !isSuccess, 'text-success': isSuccess }">
+              {{ resetMessage }}
+            </p>
+            <div class="btn-container">
+              <button type="submit" class="custom-btn">Send Reset Link</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>

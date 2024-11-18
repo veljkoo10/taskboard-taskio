@@ -8,7 +8,14 @@ body {
   display: flex;
   flex-wrap: nowrap;
 }
+.user-item:hover {
+  background-color: #e9ecef; /* Svetlija boja na hover */
 
+}
+.project-title .project-name {
+  color: black; /* Zelena boja */
+  font-weight: bold; /* Podebljan tekst */
+}
 .sidebar {
   position: fixed;
   top: 0;
@@ -458,8 +465,8 @@ body {
   outline: none; /* Bez spoljnog okvira */
   cursor: pointer;
   transition: background-color 0.3s ease, border-color 0.3s ease;
-  font-size: 1.2rem; 
-  font-weight: bold; 
+  font-size: 1.2rem;
+  font-weight: bold;
 }
 
 .radio-group input[type="radio"]:checked {
