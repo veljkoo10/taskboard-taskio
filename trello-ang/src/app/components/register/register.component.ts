@@ -4,8 +4,8 @@ import { User } from '../../model/user.model';
 import { FormsModule } from "@angular/forms";
 import { AuthService } from "../../services/auth.service";
 import { filter, map, switchMap } from "rxjs";
-import {UserService} from "../../services/user.service";
-import {NgIf} from "@angular/common";
+import { UserService } from "../../services/user.service";
+import {NgClass, NgIf} from "@angular/common";
 
 @Component({
   selector: 'app-register',
@@ -13,6 +13,7 @@ import {NgIf} from "@angular/common";
   imports: [
     FormsModule,
     NgIf,
+    NgClass
   ],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
@@ -24,13 +25,34 @@ export class RegisterComponent {
   settingIcon = 'assets/setting.png';
   backgroundIcon = 'assets/Login-rafiki.svg';
   usernameIcon = 'assets/id-card.png';
-  user: User = new User('', '', '', '', '', '','');
+  user: User = new User('', '', '', '', '', '', '');
   passwordError: string = '';
+  modalTitle: string = '';
+  modalMessage: string = '';
+  isModalVisible: boolean = false;
+  onCloseCallback: (() => void) | null = null;
+  modalType: string = 'success';
 
-  constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
+  constructor(private router: Router, private authService: AuthService, private userService: UserService) {}
 
   navigateToLogin() {
     this.router.navigate(['/login']);
+  }
+
+  showModal(title: string, message: string, type: string = 'success', onClose?: () => void) {
+    this.modalTitle = title;
+    this.modalMessage = message;
+    this.modalType = type;
+    this.isModalVisible = true;
+    this.onCloseCallback = onClose || null;
+  }
+
+  closeModal() {
+    this.isModalVisible = false;
+    if (this.onCloseCallback) {
+      this.onCloseCallback();
+      this.onCloseCallback = null;
+    }
   }
 
   isFormValid(): boolean {
@@ -85,21 +107,22 @@ export class RegisterComponent {
   register() {
     if (!this.isFormValid()) {
       if (this.passwordError) {
-        alert(this.passwordError);
+        this.showModal('Password Error', this.passwordError, 'error');
       } else {
-        alert('All fields must be filled!');
+        this.showModal('Validation Error', 'All fields must be filled!', 'error');
       }
       return;
     }
+
     if (!this.validateEmail(this.user.email)) {
-      alert('Email must be in @gmail.com format!');
+      this.showModal('Email Error', 'Email must be in @gmail.com format!', 'error');
       return;
     }
 
     this.checkEmailExists().pipe(
       map(exists => {
         if (exists) {
-          alert('Email already exists! Please try another email.');
+          this.showModal('Email Error', 'Email already exists! Please try another email.', 'error');
           return false;
         }
         return true;
@@ -109,7 +132,7 @@ export class RegisterComponent {
         return this.userService.checkUsernameExists(this.user.username).pipe(
           map(usernameExists => {
             if (usernameExists.exists) {
-              alert('Username already exists! Please try another username.');
+              this.showModal('Username Error', 'Username already exists! Please try another username.', 'error');
               return false;
             }
             return true;
@@ -121,17 +144,20 @@ export class RegisterComponent {
       if (shouldRegister) {
         this.authService.register(this.user).subscribe({
           next: (response) => {
-            console.log('Registration successful:', response);
-            alert('You are successfully registered! Check your email to confirm your account.');
-            this.user = new User('', '', '', '', '', '','');
-            this.navigateToLogin();
+            this.showModal(
+              'Success',
+              'You are successfully registered! Check your email to confirm your account.',
+              'success',
+              () => this.navigateToLogin()
+            );
+            this.user = new User('', '', '', '', '', '', '');
           },
           error: (error) => {
-            console.error('Registration failed:', error);
-            alert('The data is not correct.');
+            this.showModal('Registration Error', 'The data is not correct.', 'error');
           }
         });
       }
     });
   }
+
 }

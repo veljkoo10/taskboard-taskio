@@ -106,4 +106,46 @@
 </div>
 
 </body>
+<!-- Modal for Password Change Result -->
+<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': successMessage || errorMessage }" style="display: block;" *ngIf="successMessage || errorMessage">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ successMessage ? 'Success' : 'Error' }}</h5>
+        <button type="button" class="close" (click)="closeResultModal()" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" [ngClass]="{ 'success': successMessage, 'error': errorMessage }">
+        <p>{{ successMessage || errorMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" (click)="closeResultModal()">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for Deleting Account -->
+<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': deleteAccountModalVisible }" style="display: block;" *ngIf="deleteAccountModalVisible">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Account Status</h5>
+        <button type="button" class="close" (click)="closeDeleteAccountModal()" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>{{ accountDeleteMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button style="background-color: red;" type="button" class="btn btn-danger" (click)="deleteUserAccount()">Yes, Delete</button>
+        <button style="background-color: grey;" type="button" class="btn btn-secondary" (click)="closeDeleteAccountModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 </html>

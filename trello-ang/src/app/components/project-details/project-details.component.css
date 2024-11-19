@@ -113,6 +113,8 @@ body {
   box-sizing: border-box;
   margin-bottom: 20px; /* Space between items */
   transition: transform 0.3s ease;
+  font-weight: bold;
+
 }
 
 /* Uniform styling for p elements in all status-item divs */
@@ -364,6 +366,8 @@ body {
   margin: 20px 0;
   display: grid;
   gap: 10px; /* Razmak između korisnika */
+  font-weight: bold;
+
 }
 .project-title.highlight {
   font-size: 2.3rem; /* Veća veličina fonta */
@@ -502,7 +506,7 @@ body {
 
 .all-tasks-done-modal button {
   padding: 10px 20px;
-  background-color: green;
+  background-color: #216e4e;
   color: white;
   border: none;
   cursor: pointer;
@@ -511,7 +515,7 @@ body {
 }
 
 .all-tasks-done-modal button:hover {
-  background-color: greenyellow;
+  background-color: #1a5a40;
 }
 
 .max-people-error-modal {
@@ -520,7 +524,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  height: 100vh;
   display: none;
   justify-content: center;
   align-items: center;
@@ -533,19 +537,22 @@ body {
   padding: 20px;
   border-radius: 5px;
   text-align: center;
-  width: 50%;
+  width: auto;
 }
 
 .max-people-error-modal button {
   padding: 10px 20px;
-  background-color: green;
+  background-color: #216e4e;
   color: white;
   border: none;
   cursor: pointer;
   margin:auto;
-  width: 30%;
+  width: 20%;
 }
 
 .max-people-error-modal button:hover {
-  background-color: greenyellow;
+  background-color: #1a5a40;
+}
+.modal-title {
+  font-weight: bold;
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component, ElementRef} from '@angular/core';
 import {Router} from "@angular/router";
 import {AuthService} from "../../services/auth.service";
 import { User } from '../../model/user.model';
@@ -23,7 +23,7 @@ export class LoginComponent {
   message:string='';
   isSuccess: boolean = false;
   user: User = new User('', '', '', '', '', '','');
-  constructor(private router: Router, private authService: AuthService,private userService:UserService) {}
+  constructor(private router: Router, private authService: AuthService,private userService:UserService,private elRef: ElementRef) {}
 
   login() {
     if (this.username && this.password) {
@@ -111,6 +111,19 @@ export class LoginComponent {
         this.resetMessage = 'An error occurred while checking the user\'s status.';
       }
     );
+  }
+  ngAfterViewInit() {
+    const forgotPasswordModal = this.elRef.nativeElement.querySelector('#forgotPasswordModal');
+    if (forgotPasswordModal) {
+      forgotPasswordModal.addEventListener('hidden.bs.modal', () => {
+        this.resetForgotPasswordForm();
+      });
+    }
+  }
+  resetForgotPasswordForm() {
+    this.resetEmail = '';
+    this.resetMessage = '';
+    this.isSuccess = false;
   }
   checkEmailAndUsernameAndSendMagicLink() {
     console.log("Email koji je unet:", this.email);

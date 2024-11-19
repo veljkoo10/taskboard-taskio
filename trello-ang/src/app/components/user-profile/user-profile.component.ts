@@ -15,6 +15,7 @@ export class UserProfileComponent implements OnInit {
   userIcon = 'assets/user.png';
   user: any;
   userId: string = '';
+  accountDeleteMessage: string = 'Are you sure you want to delete your account?';
 
 
   project: Project = new Project();
@@ -27,6 +28,7 @@ export class UserProfileComponent implements OnInit {
   errorMessage: string = '';
   successMessage: string = '';
   passwordError: string = '';
+  deleteAccountModalVisible: boolean = false;
 
   constructor( private router: Router,private authService: AuthService, private userService: UserService, private projectService: ProjectService) {}
 
@@ -47,7 +49,13 @@ export class UserProfileComponent implements OnInit {
     }
     this.loadProjects()
   }
+  onDeleteAccount(): void {
+    this.deleteAccountModalVisible = true;
+  }
 
+  closeDeleteAccountModal(): void {
+    this.deleteAccountModalVisible = false;
+  }
   closeModalAndRefresh(){
     window.location.reload();
   }
@@ -99,13 +107,11 @@ export class UserProfileComponent implements OnInit {
   onSubmitChangePassword(): void {
     if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {
       this.errorMessage = 'All fields must be filled out.';
-      alert(this.errorMessage);
       return;
     }
 
     if (this.newPassword !== this.confirmPassword) {
       this.errorMessage = 'New password and confirm password do not match.';
-      alert(this.errorMessage);
       return;
     }
 
@@ -114,68 +120,66 @@ export class UserProfileComponent implements OnInit {
       const passwordData = {
         oldPassword: this.oldPassword,
         newPassword: this.newPassword,
-        confirmPassword: this.confirmPassword
+        confirmPassword: this.confirmPassword,
       };
 
       this.userService.changePassword(userId, passwordData).subscribe({
-        next: (response) => {
+        next: () => {
           this.successMessage = 'Password changed successfully!';
-          console.log('Success');
           this.errorMessage = '';
         },
-        error: (error) => {
+        error: () => {
           this.errorMessage = 'Wrong old password.';
-          alert(this.errorMessage);
           this.successMessage = '';
-        }
+        },
       });
     }
+
     if (this.passwordError) {
-      alert(this.passwordError);
+      this.errorMessage = this.passwordError;
     }
   }
-  
-  onDeleteAccount(): void {
+
+
+  deleteUserAccount(): void {
     const projectStatusChecks = this.projects.map(project => {
       if (project.id) {
-        // Pozovite servis samo ako je `id` definisan
         return this.projectService.isProjectActive(project.id);
       } else {
-        // Ako `id` nije definisan, vratite Observable koji emituje `false`
         return of(false);
       }
     });
-  
+
     forkJoin(projectStatusChecks).subscribe(
       (results) => {
         const anyProjectActive = results.some(isActive => isActive);
-  
         if (anyProjectActive) {
-          alert('You cannot delete your account because some projects are still active.');
+          this.accountDeleteMessage = 'You cannot delete your account because some projects are still active.';
           return;
         }
-  
-        if (confirm('Are you sure you want to delete your account?')) {
-          this.userService.deactivateUser(this.user.id).subscribe({
-            next: (response) => {
-              alert('Your account has been deleted.');
-              this.authService.logout();
-              this.router.navigate(['/login']);
-            },
-            error: (error) => {
-              console.error('Error deleting user:', error);
-              alert('There was an error deleting your account.');
-            }
-          });
-        }
+
+        this.userService.deactivateUser(this.user.id).subscribe({
+          next: (response) => {
+            this.accountDeleteMessage = 'Your account has been deleted.';
+            this.authService.logout();
+            this.router.navigate(['/login']);
+          },
+          error: (error) => {
+            console.error('Error deleting user:', error);
+            this.accountDeleteMessage = 'There was an error deleting your account.';
+          }
+        });
+
+        this.closeDeleteAccountModal();
       },
       (error) => {
         console.error('Error checking project status:', error);
-        alert('There was an error checking project status.');
+        this.accountDeleteMessage = 'There was an error checking project status.';
       }
     );
   }
-  
+
+
   loadProjects() {
     const userId = localStorage.getItem('user_id');
     const token = localStorage.getItem('access_token');
@@ -193,6 +197,10 @@ export class UserProfileComponent implements OnInit {
     } else {
       console.error('User not logged in.');
     }
+  }
+  closeResultModal(): void {
+    this.successMessage = '';
+    this.errorMessage = '';
   }
 
 }
