@@ -29,6 +29,7 @@ export class ProjectDetailsComponent {
   inProgressTasks: any[] = [];
   doneTasks: any[] = [];
   taskUsers: any[] = []; // Lista korisnika dodanih na trenutni task
+  user: any;
 
   constructor(
     private taskService: TaskService,
@@ -62,12 +63,30 @@ export class ProjectDetailsComponent {
     this.taskDescription = '';
   }
   ngOnInit() {
+    this.user = this.getUserInfoFromToken();
     this.loadTasks();
     this.loadActiveUsers()
     if (this.project && this.project.title) {
       this.getProjectIDByTitle(this.project.title);
     }
   }
+
+  getUserInfoFromToken(): any {
+    const token = localStorage.getItem('access_token');
+    console.log("Token:", token);
+    if (token) {
+      try {
+        const payloadBase64 = token.split('.')[1];
+        const payloadJson = atob(payloadBase64);
+        return JSON.parse(payloadJson);
+      } catch (error) {
+        console.error('Invalid token format:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
   isUserInProject(userId: string): boolean {
     return this.projectUsers.some(user => user.id === userId);
   }
@@ -226,20 +245,38 @@ export class ProjectDetailsComponent {
   
 
   updateTaskStatus(status: string) {
-    if (this.selectedTask) {
-      this.selectedTask.status = status;
+  if (this.selectedTask) {
+    const taskId = this.selectedTask.id;
+    const userId = this.user.id; // Pretpostavka da imaš `currentUser` objekt sa `id` korisnika
 
-      this.taskService.updateTaskStatus(this.selectedTask.id, status).subscribe(
-        (response) => {
-          console.log('Task status updated successfully:', response);
-          this.loadTasks();
-        },
-        (error) => {
-          console.error('Error updating task status:', error);
+    // Proveri da li je korisnik član taska
+    this.taskService.isUserOnTask(taskId, userId).subscribe(
+      (isMember) => {
+        if (isMember) {
+          // Ako je korisnik član, ažuriraj status
+          this.selectedTask.status = status;
+          this.taskService.updateTaskStatus(taskId, status).subscribe(
+            (response) => {
+              console.log('Task status updated successfully:', response);
+              this.loadTasks();
+            },
+            (error) => {
+              console.error('Error updating task status:', error);
+            }
+          );
+        } else {
+          // Ako korisnik nije član, prikaži alert
+          alert('You are not a member of this task and cannot update its status.');
         }
-      );
-    }
+      },
+      (error) => {
+        console.error('Error checking task membership:', error);
+        alert('An error occurred while checking task membership.');
+      }
+    );
   }
+}
+
 
   isAddTaskUserVisible: boolean = false; 
 selectedTaskUsers: any[] = []; // Stores selected users for the task

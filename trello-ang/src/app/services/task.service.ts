@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Task } from "../model/task.model";
+import { map } from 'rxjs/operators';
+import {Observable, Subject, throwError} from 'rxjs';
+
 
 @Injectable({
   providedIn: 'root'
@@ -73,4 +75,19 @@ export class TaskService {
       })
     );
   }
+
+  isUserOnTask(taskId: string, userId: string): Observable<boolean> {
+    const url = `${this.taskUrl}/${taskId}/member-of/${userId}`;
+    console.log(url);
+    
+    return this.http.get<{ isMember: boolean }>(url).pipe(
+      // Ekstraktovanje vrednosti result direktno
+      map(response => response.isMember),  // direktno dobijanje true/false iz odgovora
+      catchError((error) => {
+        console.error('Error checking project active status:', error);
+        return throwError(error);
+      })
+    );
+  }
+
 }

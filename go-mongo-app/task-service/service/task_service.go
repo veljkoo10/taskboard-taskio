@@ -418,3 +418,31 @@ func GetTaskByID(taskID string) (*models.Task, error) {
 
 	return &task, nil
 }
+
+func IsUserInTask(taskID string, userID string) (bool, error) {
+	// Parsiranje taskID-a u ObjectID
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return false, errors.New("invalid task ID format")
+	}
+
+	// Pretraga task-a u bazi
+	collection := db.Client.Database("testdb").Collection("tasks")
+	var task models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return false, errors.New("task not found")
+		}
+		return false, err
+	}
+
+	// Provera da li userID postoji u listi users
+	for _, id := range task.Users {
+		if id == userID {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}

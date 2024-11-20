@@ -32,6 +32,8 @@ func main() {
 	router.HandleFunc("/tasks/{taskId}/users/{userId}", handlers.RemoveUserFromTaskHandler).Methods("DELETE")
 	router.HandleFunc("/tasks/{taskID}/users", handlers.GetUsersForTaskHandler).Methods("GET")
 	router.HandleFunc("/tasks/{taskId}", handlers.UpdateTaskHandler).Methods("PUT")
+	router.HandleFunc("/tasks/{taskId}/member-of/{userId}", handlers.CheckUserInTaskHandler).Methods("GET")
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},

@@ -158,3 +158,34 @@ func GetTaskByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
 }
+
+func CheckUserInTaskHandler(w http.ResponseWriter, r *http.Request) {
+	// Izvlačenje taskId i userId iz URL-a
+	vars := mux.Vars(r)
+	taskID, ok := vars["taskId"]
+	if !ok {
+		http.Error(w, "Task ID is required", http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := vars["userId"]
+	if !ok {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Pozivanje servisne funkcije
+	isMember, err := service.IsUserInTask(taskID, userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Slanje odgovora kao JSON
+	response := map[string]bool{"isMember": isMember}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
