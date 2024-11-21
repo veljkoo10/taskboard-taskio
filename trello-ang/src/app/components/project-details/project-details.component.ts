@@ -28,8 +28,9 @@ export class ProjectDetailsComponent {
   pendingTasks: any[] = [];
   inProgressTasks: any[] = [];
   doneTasks: any[] = [];
-  taskUsers: any[] = []; // Lista korisnika dodanih na trenutni task
+  taskUsers: any[] = [];
   user: any;
+  
 
   constructor(
     private taskService: TaskService,
@@ -247,12 +248,13 @@ export class ProjectDetailsComponent {
   updateTaskStatus(status: string) {
   if (this.selectedTask) {
     const taskId = this.selectedTask.id;
-    const userId = this.user.id; // Pretpostavka da imaš `currentUser` objekt sa `id` korisnika
-
+    const userId = this.user.id;
+    
     // Proveri da li je korisnik član taska
     this.taskService.isUserOnTask(taskId, userId).subscribe(
       (isMember) => {
         if (isMember) {
+          console.log(isMember)
           // Ako je korisnik član, ažuriraj status
           this.selectedTask.status = status;
           this.taskService.updateTaskStatus(taskId, status).subscribe(
@@ -265,6 +267,7 @@ export class ProjectDetailsComponent {
             }
           );
         } else {
+
           // Ako korisnik nije član, prikaži alert
           alert('You are not a member of this task and cannot update its status.');
         }
@@ -421,6 +424,23 @@ addSelectedUsersToTask() {
 
 
   showTaskDetails(task: any) {
+     // Proveri da li je korisnik član taska
+     this.taskService.isUserOnTask(task.id, this.user.id).subscribe(
+      (isMember) => {
+        if (isMember) {
+          document.querySelector('#status-block')?.setAttribute('style', "display: block");
+        } else {
+          document.querySelector('#status-block')?.setAttribute('style', "display: none");
+          // Ako korisnik nije član, prikaži alert
+          //alert('You are not a member of this task and cannot update its status.');
+        }
+      },
+      (error) => {
+        console.error('Error checking task membership:', error);
+        alert('An error occurred while checking task membership.');
+      }
+    );
+
     console.log("Selected task:", task);
     this.selectedTask = task;
     this.isTaskDetailsVisible = true;
