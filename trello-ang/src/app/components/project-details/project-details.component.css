@@ -129,13 +129,16 @@ body {
   background-color: #f8f9fa;  /* Light background */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
-.status-item.to-do ul:hover {
+.status-item.to-do ul li:hover {
   transform: scale(1.03); /* Skalira element za 5% na hover */
 }
 .status-item.to-do p {
   color: black; /* Black text for "Pending" title */
 }
-
+.status-item ul {
+  transform: none !important;
+  transition: none !important;
+}
 .status-item.to-do ul {
   list-style-type: none;
   padding-left: 0;
@@ -191,7 +194,7 @@ body {
   font-size: 18px;
   color: #333;
 }
-.status-item.in-progress ul:hover {
+.status-item.in-progress ul li:hover {
   transform: scale(1.03); /* Skalira element za 5% na hover */
 }
 .status-item.in-progress li {
@@ -224,7 +227,7 @@ body {
 .status-item.done p {
   color: black; /* Green text for "Done" */
 }
-.status-item.done ul:hover {
+.status-item.done ul li:hover {
   transform: scale(1.03); /* Skalira element za 5% na hover */
 }
 .status-item.done ul {

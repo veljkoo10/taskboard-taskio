@@ -31,10 +31,9 @@ export class LoginComponent {
 
       this.authService.login(userCredentials).subscribe(
         (response) => {
-          const { access_token, role,user_id } = response;
+          const { access_token, role } = response;
           localStorage.setItem('access_token', access_token);
           localStorage.setItem('role', role);
-          localStorage.setItem('user_id',user_id.toString());
           this.router.navigate(['/dashboard']);
         },
         (error) => {

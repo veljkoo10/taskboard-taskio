@@ -30,7 +30,7 @@ export class ProjectDetailsComponent {
   doneTasks: any[] = [];
   taskUsers: any[] = [];
   user: any;
-  
+
 
   constructor(
     private taskService: TaskService,
@@ -198,16 +198,16 @@ export class ProjectDetailsComponent {
   closeTasksDoneModal(){
     document.querySelector('.all-tasks-done-modal')?.setAttribute("style", "display:none; opacity: 100%; margin-top: 20px")
   }
-  
+
   showTasksDoneModal(){
     document.querySelector('.all-tasks-done-modal')?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
   }
 
   addSelectedUsersToProject() {
     const project = this.project as any;
-    
+
     if (project && this.selectedUsers.length > 0) {
-  
+
       // Provera da li je projekat aktivan pre nego što dodate korisnike
       this.projectService.isProjectActive(project.id).subscribe(
         (isActive) => {
@@ -216,10 +216,10 @@ export class ProjectDetailsComponent {
             this.selectedUsers = [];
             return;
           }
-  
+
           // Ako je projekat aktivan, nastavljamo sa dodavanjem korisnika
           const userIds = this.selectedUsers.map(user => user.id);
-  
+
           this.projectService.addMemberToProject(project.id, userIds).subscribe(
             (response) => {
               console.log('Users successfully added:', response);
@@ -242,14 +242,14 @@ export class ProjectDetailsComponent {
       alert('No users selected.');
     }
   }
-  
-  
+
+
 
   updateTaskStatus(status: string) {
   if (this.selectedTask) {
     const taskId = this.selectedTask.id;
     const userId = this.user.id;
-    
+
     // Proveri da li je korisnik član taska
     this.taskService.isUserOnTask(taskId, userId).subscribe(
       (isMember) => {
@@ -281,7 +281,7 @@ export class ProjectDetailsComponent {
 }
 
 
-  isAddTaskUserVisible: boolean = false; 
+  isAddTaskUserVisible: boolean = false;
 selectedTaskUsers: any[] = []; // Stores selected users for the task
 
 showAddTaskUserModal(task: any) {
@@ -316,12 +316,12 @@ addSelectedUsersToTask() {
     userIds.forEach(userId => {
       // Proveri da li je korisnik već dodeljen ovom tasku
       const isAlreadyAssigned = this.taskUsers.some(user => user.id === userId);
-      
+
       if (!isAlreadyAssigned) {
         this.taskService.addUserToTask(taskId, userId).subscribe(
           response => {
             console.log(`User ${userId} added to task ${taskId}:`, response);
-            
+
             // Ažuriraj lokalni niz taskUsers
             const addedUser = this.projectUsers.find(user => user.id === userId);
             if (addedUser) {
@@ -366,7 +366,7 @@ addSelectedUsersToTask() {
     const project = this.project as any;
     if (project && user) {
       console.log(`Dodavanje korisnika ${user.name} u projekat ${project.name}`);
-        
+
       this.projectService.addMemberToProject(project.id, user.id).subscribe(
         (response) => {
           console.log('User added to project:', response);
@@ -468,11 +468,11 @@ addSelectedUsersToTask() {
     this.taskService.removeUserFromTask(this.selectedTask.id, userId).subscribe(
       (response) => {
         console.log('User removed from task successfully:', response);
-  
+
         // Ukloni korisnika iz lokalne liste korisnika na tasku
         const removedUser = this.taskUsers.find(user => user.id === userId);
         this.taskUsers = this.taskUsers.filter(user => user.id !== userId);
-  
+
         // Vraćanje korisnika u listu dostupnih korisnika na projektu
         if (removedUser) {
           this.projectUsers.push(removedUser);
@@ -488,14 +488,14 @@ addSelectedUsersToTask() {
     alert("Cant remove member from done task!")
   }
   }
-  
+
   closeAddMember() {
     this.isAddMemberFormVisible = false;
     this.selectedUsers = [];
   }
   closeCreateTask(){
     this.isCreateTaskFormVisible=false;
-  }  
+  }
 
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
@@ -514,7 +514,7 @@ addSelectedUsersToTask() {
       console.error('Project ID is missing.');
       return;
     }
-    
+
     if(this.project.min_people <= this.projectUsers.length - 1){
     console.log(this.projectUsers.length - 1)
 
@@ -523,7 +523,7 @@ addSelectedUsersToTask() {
         console.log('User removed successfully:', response);
         // Uklanjanje korisnika iz lokalne liste korisnika na projektu
         this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
-        
+
         // Ažuriraj project.users ručno
         if (this.project?.users) {
           this.project.users = this.project.users.filter(user => user.id !== userId);
@@ -560,8 +560,8 @@ addSelectedUsersToTask() {
   showMaxPeople(){
     document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
   }
-  
-  
+
+
 
 }
 

@@ -18,7 +18,7 @@
   <div class="form-section">
     <h2>Profile Settings</h2>
     <form *ngIf="user">
-        <label for="name">First Name:</label>
+      <label for="name">First Name:</label>
       <input type="text" id="name"  value= {{user.name}} readonly>
 
       <label for="surname">Last Name:</label>
@@ -84,24 +84,24 @@
 
 
   <!-- Modal for Success Message -->
-<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': successMessage }" style="display: block;" *ngIf="successMessage">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Success</h5>
-        <button style="display: none;" type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p>{{ successMessage }}</p>
-      </div>
-      <div class="modal-footer">
-        <button style="background-color: green;" type="button" class="btn btn-primary" (click)="closeModalAndRefresh()">OK</button>
+  <div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': successMessage }" style="display: block;" *ngIf="successMessage">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Success</h5>
+          <button style="display: none;" type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>{{ successMessage }}</p>
+        </div>
+        <div class="modal-footer">
+          <button style="background-color: green;" type="button" class="btn btn-primary" (click)="closeModalAndRefresh()">OK</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
 </div>
 
@@ -140,8 +140,23 @@
         <p>{{ accountDeleteMessage }}</p>
       </div>
       <div class="modal-footer">
-        <button style="background-color: red;" type="button" class="btn btn-danger" (click)="deleteUserAccount()">Yes, Delete</button>
-        <button style="background-color: grey;" type="button" class="btn btn-secondary" (click)="closeDeleteAccountModal()">Cancel</button>
+        <button
+          style="background-color: red;"
+          type="button"
+          class="btn btn-danger"
+          *ngIf="canDeleteAccount()"
+          (click)="deleteUserAccount()">
+          Yes, Delete
+        </button>
+        <button
+          style="background-color: grey;"
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeDeleteAccountModal()">
+          Cancel
+        </button>
+
+
       </div>
     </div>
   </div>

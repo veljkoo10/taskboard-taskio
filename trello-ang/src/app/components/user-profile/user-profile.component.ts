@@ -50,12 +50,19 @@ export class UserProfileComponent implements OnInit {
     this.loadProjects()
   }
   onDeleteAccount(): void {
+    this.accountDeleteMessage = 'Are you sure you want to delete your account?';
     this.deleteAccountModalVisible = true;
+  }
+
+  canDeleteAccount(): boolean {
+    return this.accountDeleteMessage === 'Are you sure you want to delete your account?';
   }
 
   closeDeleteAccountModal(): void {
     this.deleteAccountModalVisible = false;
+    this.accountDeleteMessage = 'Are you sure you want to delete your account?';
   }
+
   closeModalAndRefresh(){
     window.location.reload();
   }
