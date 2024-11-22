@@ -16,7 +16,7 @@
       <ul>
         <!-- Display all pending tasks -->
         <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
-          <button type="button" class="btn-close" (click)="closeTaskDetails()"></button>
+
           <span class="task-icon">⏳</span>
           {{ task.name }}
         </li>
@@ -242,5 +242,24 @@
   <div class="modal-content">
     <p>Can't add these people to project, no available slots.</p>
     <button (click)="closeMaxPeople()">OK</button>
+  </div>
+</div>
+
+<div class="add-user-error-modal" (click)="closeAddUserErrorModal()">
+  <div class="modal-content">
+    <p>Error adding user to the task. Please try again later.</p>
+    <button (click)="closeAddUserErrorModal()">OK</button>
+  </div>
+</div>
+<div class="no-users-selected-modal" (click)="closeNoUsersSelectedModal()">
+  <div class="modal-content">
+    <p>No users selected. Please select at least one user to add to the task.</p>
+    <button (click)="closeNoUsersSelectedModal()">OK</button>
+  </div>
+</div>
+<div class="user-already-added-modal" (click)="closeUserAlreadyAddedModal()">
+  <div class="modal-content">
+    <p>User is already added to this task.</p>
+    <button (click)="closeUserAlreadyAddedModal()">OK</button>
   </div>
 </div>

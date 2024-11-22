@@ -12,6 +12,19 @@ body {
   background-color: #e9ecef; /* Svetlija boja na hover */
 
 }
+.user-item label {
+  display: flex; /* Omogućava poravnavanje checkbox-a i teksta */
+  align-items: center; /* Vertikalno poravnanje checkbox-a i teksta */
+  padding: 10px; /* Proširuje klik zonu */
+  border: 1px solid #ccc; /* Dodaje okvir oko cele oblasti */
+  border-radius: 5px; /* Zaobljeni uglovi */
+  cursor: pointer; /* Indikuje da je područje klikabilno */
+  width: 100%; /* Širina da obuhvati celu širinu */
+}
+.user-item label:hover {
+  background-color: #f9f9f9; /* Vizuelni efekat na hover */
+}
+
 .project-title .project-name {
   color: black; /* Zelena boja */
   font-weight: bold; /* Podebljan tekst */
@@ -135,10 +148,7 @@ body {
 .status-item.to-do p {
   color: black; /* Black text for "Pending" title */
 }
-.status-item ul {
-  transform: none !important;
-  transition: none !important;
-}
+
 .status-item.to-do ul {
   list-style-type: none;
   padding-left: 0;
@@ -159,7 +169,7 @@ body {
 }
 
 .status-item.to-do li .task-icon {
-  margin-right: 10px;
+  margin-left: 0px;
   color: #f39c12; /* Yellow for Pending */
   font-size: 20px;
 }
@@ -558,4 +568,47 @@ body {
 }
 .modal-title {
   font-weight: bold;
+}
+.no-users-selected-modal,
+.add-user-error-modal,
+.user-already-added-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  display: none; /* Modal je inicijalno sakriven */
+  justify-content: center;
+  align-items: center;
+  margin-top: 300px;
+  z-index: 1050;
+}
+
+.no-users-selected-modal .modal-content,
+.add-user-error-modal .modal-content,
+.user-already-added-modal .modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+  width: auto;
+}
+
+.no-users-selected-modal button,
+.add-user-error-modal button,
+.user-already-added-modal button {
+  padding: 10px 20px;
+  background-color: #216e4e;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin: auto;
+  width: 20%;
+}
+
+.no-users-selected-modal button:hover,
+.add-user-error-modal button:hover,
+.user-already-added-modal button:hover {
+  background-color: #1a5a40;
 }

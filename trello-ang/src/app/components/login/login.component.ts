@@ -22,28 +22,48 @@ export class LoginComponent {
   resetMessageMagic:string='';
   message:string='';
   isSuccess: boolean = false;
+
   user: User = new User('', '', '', '', '', '','');
+  recaptchaResponse: string = '';
   constructor(private router: Router, private authService: AuthService,private userService:UserService,private elRef: ElementRef) {}
 
-  login() {
-    if (this.username && this.password) {
-      const userCredentials = { username: this.username, password: this.password };
 
-      this.authService.login(userCredentials).subscribe(
-        (response) => {
-          const { access_token, role } = response;
-          localStorage.setItem('access_token', access_token);
-          localStorage.setItem('role', role);
-          this.router.navigate(['/dashboard']);
-        },
-        (error) => {
+  login() {
+    const recaptchaResponse = (window as any).grecaptcha.getResponse();
+
+    // Provera CAPTCHA
+    if (!recaptchaResponse) {
+      this.loginError = 'Please solve the CAPTCHA.';
+      return;
+    }
+
+    // Provera username-a i password-a
+    if (!this.username || !this.password) {
+      this.loginError = 'Please enter both username and password.';
+      return;
+    }
+
+    const userCredentials = { username: this.username, password: this.password, recaptchaResponse };
+
+    this.authService.login(userCredentials).subscribe(
+      (response) => {
+        const { access_token, role, user_id } = response;
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('role', role);
+        localStorage.setItem('user_id', user_id.toString());
+        this.router.navigate(['/dashboard']);
+      },
+      (error) => {
+        // Proveri grešku sa servera i prikaži odgovarajuću poruku
+        if (error.error === 'reCAPTCHA verification failed') {
+          this.loginError = 'CAPTCHA verification failed. Please try again.';
+        } else {
           this.loginError = 'Invalid username or password. Please try again.';
         }
-      );
-    } else {
-      this.loginError = 'Please enter both username and password.';
-    }
+      }
+    );
   }
+
   sendMagicLink() {
     if (!this.email || !this.magicLinkUsername) {
       this.message = 'Molimo vas da unesete email adresu i korisničko ime.';

@@ -291,11 +291,11 @@ showAddTaskUserModal(task: any) {
   this.isTaskDetailsVisible = false;
 }
 
-closeAddTaskUserModal() {
-  this.isAddTaskUserVisible = false;
-  this.selectedTaskUsers = []; // Reset selected users
-}
-
+  closeAddTaskUserModal() {
+    this.isAddTaskUserVisible = false;
+    this.selectedTaskUsers = [];
+    this.isTaskDetailsVisible=true;
+  }
 
 // Toggle User Selection for Task
 toggleTaskUserSelection(user: any) {
@@ -333,18 +333,59 @@ addSelectedUsersToTask() {
           },
           error => {
             console.error(`Error adding user ${userId} to task ${taskId}:`, error);
+            this.showAddUserErrorModal();
           }
         );
       } else {
-        alert(`User: ${username} is already assigned to the task.`);
+        this.showUserAlreadyAddedModal();
       }
     });
 
   } else {
-    alert("No users selected.");
+    this.showNoUsersSelectedModal();
   }
 }
 
+  showNoUsersSelectedModal() {
+    const modal = document.querySelector('.no-users-selected-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+
+  closeNoUsersSelectedModal() {
+    const modal = document.querySelector('.no-users-selected-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
+
+  showAddUserErrorModal() {
+    const modal = document.querySelector('.add-user-error-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+
+  closeAddUserErrorModal() {
+    const modal = document.querySelector('.add-user-error-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
+  showUserAlreadyAddedModal() {
+    const modal = document.querySelector('.user-already-added-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+
+  closeUserAlreadyAddedModal() {
+    const modal = document.querySelector('.user-already-added-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
 
 
   showCreateTaskForm() {

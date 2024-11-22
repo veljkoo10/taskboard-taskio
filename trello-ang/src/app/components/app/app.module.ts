@@ -15,6 +15,7 @@ import { AuthGuard } from "../../guards/auth.guard";
 import { AuthInterceptor } from '../../interceptor/auth.interceptor';
 import { appRoutes } from "../../app.routes";
 import { RouterModule } from "@angular/router";
+import {RecaptchaModule} from "ng-recaptcha";
 
 @NgModule({
   declarations: [
@@ -32,7 +33,8 @@ import { RouterModule } from "@angular/router";
     HttpClientModule,
     FormsModule,
     RegisterComponent,
-    RouterModule.forRoot(appRoutes)
+    RouterModule.forRoot(appRoutes),
+    RecaptchaModule
   ],
   providers: [
     AuthGuard,

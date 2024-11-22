@@ -1,10 +1,9 @@
 <section class="vh-100">
-  <div class="container py-5 h-100">
+  <div class="container h-100" style="padding-top: 20px;"> <!-- Smanjen padding sa py-5 na 20px -->
     <div class="row d-flex align-items-center justify-content-center h-100">
-      <div class="col-md-8 col-lg-7 col-xl-6" style="margin-top: -50px;">
+      <div class="col-md-8 col-lg-7 col-xl-6" style="margin-top: -30px;"> <!-- Manji negativni margin -->
         <img [src]="imagePath" class="img-fluid mb-2" alt="Login illustration">
       </div>
-
       <div class="col-md-7 col-lg-5 col-xl-5 offset-xl-1">
         <!-- Card for login -->
         <div class="card shadow" style="border-radius: 25px;">
@@ -40,11 +39,22 @@
                   (keydown.enter)="login()"
                 />
               </div>
+              <div id="recaptcha-wrapper" class="form-outline mb-4">
+                <re-captcha
+                  [(ngModel)]="recaptchaResponse"
+                  [siteKey]="'6Lc-H4cqAAAAAEj_CmimLwrR1Np2XhPUFhX4TGKT'"
+                  name="re-captcha">
+                </re-captcha>
+              </div>
+
+
+
 
               <!-- Error message -->
-              <div *ngIf="loginError" class="text-danger mb-3">
+              <div *ngIf="loginError" class="text-danger text-center mb-3">
                 {{ loginError }}
               </div>
+
 
               <!-- Sign in button -->
               <div class="btn-container">
@@ -120,6 +130,7 @@
       </div>
     </div>
   </div>
+
   <!-- Modal for forgot password -->
   <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog">

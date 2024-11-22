@@ -15,6 +15,19 @@
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
+#recaptcha-wrapper {
+  display: flex;
+  justify-content: center; /* Centriraj horizontalno */
+  margin-top: 20px; /* Opcionalni razmak iznad */
+}
+.vh-100 .container {
+  padding-top: 15px; /* Smanjen padding od vrha */
+}
+
+.vh-100 .row > div:first-child {
+  margin-top: -30px; /* Smanjen negativni razmak slike */
+}
+
 
 .custom-btn:hover {
   background-color: #45a049;
