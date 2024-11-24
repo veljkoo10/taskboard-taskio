@@ -112,7 +112,7 @@ export class AppComponent {
     }
 
     // Check if a project with the same title already exists
-    this.projectService.checkProjectByTitle(this.project.title).subscribe(
+    this.projectService.checkProjectByTitle(this.project.title, managerId).subscribe(
       (response: string) => {
         if (response === 'Project exists') {
           this.errorMessage = 'A project with this title already exists.';
@@ -144,8 +144,12 @@ export class AppComponent {
               }
             },
             (error) => {
-              console.error('Error creating project:', error);
-              this.errorMessage = 'There was an error creating the project.';
+              if (error.status === 500 && error.error === 'Project with this name already exists\n') {
+                this.errorMessage = 'A project with this title already exists.';
+              } else {
+                console.error('Error creating project:', error);
+                this.errorMessage = 'There was an error creating the project.';
+              }
             }
           );
         }

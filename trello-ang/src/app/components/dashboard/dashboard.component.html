@@ -1,7 +1,7 @@
 <div class="sidebar">
   <ul class="project-list">
     <li *ngFor="let project of projects" (click)="selectProject(project)">
-      {{ project.title }}
+      {{ project.title | capitalize }}
     </li>
   </ul>
 </div>

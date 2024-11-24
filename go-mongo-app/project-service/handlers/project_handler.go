@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"project-service/models"
 	"project-service/service"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -177,21 +178,37 @@ func RemoveUsersFromProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	managerID := vars["managerId"]
+
 	var requestBody struct {
 		Title string `json:"title"`
 	}
 
+	// Parsiranje JSON tela zahteva
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	exists, err := service.GetProjectByTitle(requestBody.Title)
+	if managerID == "" {
+		http.Error(w, "Manager ID is required", http.StatusBadRequest)
+		return
+	}
+
+	normalizedTitle := strings.ToLower(requestBody.Title)
+
+	fmt.Println("Original Title:", requestBody.Title)
+	fmt.Println("Normalized Title:", normalizedTitle)
+
+	// Poziv funkcije za proveru postojanja projekta u bazi
+	exists, err := service.GetProjectByTitleAndManager(normalizedTitle, managerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Slanje odgovora klijentu
 	if exists {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Project exists"))

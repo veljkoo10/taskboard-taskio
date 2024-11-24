@@ -36,6 +36,7 @@ export class TaskService {
 
   // Create a new task for a specific project
   createTask(projectId: string, task: { name: string; description: string }): Observable<Task> {
+    console.log(`ID PROJEKTA U SERVISU JE: ${projectId}`);
     return this.http.post<Task>(`${this.taskUrl}/create/${projectId}`, task).pipe(
       catchError((error) => {
         if (error.status === 409) {
@@ -50,7 +51,7 @@ export class TaskService {
   addUserToTask(taskId: string, userId: string): Observable<any> {
     // Log the request to see the taskId and userId being passed
     console.log(`Adding user ${userId} to task ${taskId}`);
-  
+
     // Send the PUT request with taskId and userId as URL parameters
     return this.http.put<any>(`${this.taskUrl}/${taskId}/users/${userId}`, {}).pipe(
       catchError((error) => {
@@ -63,8 +64,8 @@ export class TaskService {
   getUsersForTask(taskId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.taskUrl}/${taskId}/users`);
   }
-  
-  
+
+
 
   // Remove a user from a task
   removeUserFromTask(taskId: string, userId: string): Observable<any> {
@@ -79,7 +80,7 @@ export class TaskService {
   isUserOnTask(taskId: string, userId: string): Observable<boolean> {
     const url = `${this.taskUrl}/${taskId}/member-of/${userId}`;
     console.log(url);
-    
+
     return this.http.get<{ isMember: boolean }>(url).pipe(
       // Ekstraktovanje vrednosti result direktno
       map(response => response.isMember),  // direktno dobijanje true/false iz odgovora

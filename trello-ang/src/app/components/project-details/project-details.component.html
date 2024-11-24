@@ -18,7 +18,7 @@
         <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
 
           <span class="task-icon">⏳</span>
-          {{ task.name }}
+          {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
@@ -29,7 +29,7 @@
         <!-- Display all tasks with 'in-progress' status -->
         <li *ngFor="let task of inProgressTasks" (click)="showTaskDetails(task)">
           <span class="task-icon">🔄</span>
-          {{ task.name }}
+          {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
@@ -40,7 +40,7 @@
         <!-- Display all tasks with 'done' status -->
         <li *ngFor="let task of doneTasks" (click)="showTaskDetails(task)">
           <span class="task-icon">✔️</span>
-          {{ task.name }}
+          {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
@@ -183,9 +183,9 @@
 
       </div>
       <div class="modal-footer">
-        <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Add User</button>
-        <button  *ngIf="isManager()" class="btn btn-danger">Delete Task</button>
         <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
+        <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Add User</button>
+
       </div>
     </div>
   </div>
@@ -238,8 +238,9 @@
   </div>
 </div>
 
-<div class="max-people-error-modal" (click)="closeMaxPeople()">
+<div id="AddMaxPeopleProject" class="max-people-error-modal" (click)="closeMaxPeople()">
   <div class="modal-content">
+    <h2>You need selected less people</h2>
     <p>Can't add these people to project, no available slots.</p>
     <button (click)="closeMaxPeople()">OK</button>
   </div>
@@ -251,15 +252,25 @@
     <button (click)="closeAddUserErrorModal()">OK</button>
   </div>
 </div>
+
 <div class="no-users-selected-modal" (click)="closeNoUsersSelectedModal()">
   <div class="modal-content">
     <p>No users selected. Please select at least one user to add to the task.</p>
     <button (click)="closeNoUsersSelectedModal()">OK</button>
   </div>
 </div>
+
 <div class="user-already-added-modal" (click)="closeUserAlreadyAddedModal()">
   <div class="modal-content">
     <p>User is already added to this task.</p>
     <button (click)="closeUserAlreadyAddedModal()">OK</button>
+  </div>
+</div>
+
+<div id="addMemberToProject" class="custom-modal no-users-selected-modal-project" style="display: none;">
+  <div class="modal-content">
+    <h2>No Users Selected</h2>
+    <p>Please select at least one user to add to the task or project.</p>
+    <button (click)="closeNoUsersProjectSelectedModal()">OK</button>
   </div>
 </div>

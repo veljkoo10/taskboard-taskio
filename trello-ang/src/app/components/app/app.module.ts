@@ -16,6 +16,7 @@ import { AuthInterceptor } from '../../interceptor/auth.interceptor';
 import { appRoutes } from "../../app.routes";
 import { RouterModule } from "@angular/router";
 import {RecaptchaModule} from "ng-recaptcha";
+import {CapitalizePipe} from "../../pipe/capitalize.pipe";
 
 @NgModule({
   declarations: [
@@ -25,7 +26,8 @@ import {RecaptchaModule} from "ng-recaptcha";
     ProjectDetailsComponent,
     UserProfileComponent,
     MagicLinkComponent,
-    VerifyMagicLinkComponent
+    VerifyMagicLinkComponent,
+    CapitalizePipe
   ],
   imports: [
     BrowserModule,

@@ -206,12 +206,28 @@ func GetTasksByProjectID(projectID string) ([]models.Task, error) {
 	return tasks, nil
 }
 
-// CreateTask creates a new Task with the provided name, description, initial status "pending", and an empty user list.
 func CreateTask(projectID, name, description string) (*models.Task, error) {
 	// Validate projectID format
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return nil, errors.New("invalid project ID format")
+	}
+
+	// Connect to MongoDB collection
+	collection := db.Client.Database("testdb").Collection("tasks")
+
+	// Check if a task with the same name already exists in the project (case-sensitive)
+	var existingTask models.Task
+	err = collection.FindOne(context.TODO(), bson.M{
+		"name":       name,
+		"project_id": projectObjectID.Hex(),
+	}).Decode(&existingTask)
+
+	if err != mongo.ErrNoDocuments {
+		if err != nil {
+			return nil, fmt.Errorf("error checking for existing task: %v", err)
+		}
+		return nil, errors.New("a task with the same name already exists in this project")
 	}
 
 	// Create a new task with the given name and description
@@ -224,14 +240,13 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		Project_ID:  projectObjectID.Hex(),
 	}
 
-	// Connect to MongoDB collection and insert the task
-	collection := db.Client.Database("testdb").Collection("tasks")
+	// Insert the new task into the database
 	_, err = collection.InsertOne(context.TODO(), task)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create task: %v", err)
 	}
 
-	// JSON payload to send to project-service
+	// Notify the project-service about the new task
 	payload := map[string]string{
 		"task_id":     task.ID.Hex(),
 		"project_id":  projectObjectID.Hex(),
@@ -240,30 +255,25 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to serialize task payload: %v", err)
 	}
 
-	// Define the URL for the request to project-service
 	projectServiceURL := fmt.Sprintf("http://project-service:8080/projects/%s/tasks/%s", projectObjectID.Hex(), task.ID.Hex())
-
-	// Create the HTTP PUT request
 	req, err := http.NewRequest("PUT", projectServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request to project-service: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// Send the request to project-service
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send request to project-service: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Verify that project-service successfully updated the project
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to update project with new task details")
+		return nil, errors.New("project-service failed to update with new task details")
 	}
 
 	// Return the created task

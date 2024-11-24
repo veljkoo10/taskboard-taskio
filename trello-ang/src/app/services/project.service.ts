@@ -51,12 +51,22 @@ export class ProjectService {
     return this.http.get<Project[]>(this.baseUrl);
   }
 
-  checkProjectByTitle(title: string): Observable<string> {
-    return this.http.post<string>(`${this.baseUrl}/title`, { title: title }, { responseType: 'text' as 'json' });
+  checkProjectByTitle(title: string, managerId: string): Observable<string> {
+    console.log('Manager ID:', managerId); // Provera ID-a menadžera
+    console.log('Title:', title);         // Provera naslova projekta
+
+    const url = `${this.baseUrl}/title/${managerId}`; // Dodaj managerId u URL
+
+    return this.http.post<string>(
+      url,
+      { title },                          // Telo zahteva sadrži samo title
+      { responseType: 'text' as 'json' } // Specifikacija tipa odgovora
+    );
   }
 
+
   createTask(projectId: string, task: { name: string, description: string }): Observable<Task> {
-    console.log('Project ID pre slanja:', projectId);
+    console.log('Project ID u servisu:', projectId);
     return this.http.post<any>(`${this.taskUrl}/create/${projectId}`, task).pipe(
       catchError((error) => {
         if (error.status === 409) {
@@ -105,7 +115,7 @@ export class ProjectService {
   isProjectActive(projectId: string): Observable<boolean> {
     const url = `${this.baseUrl}/isActive/${projectId}`;
     console.log(url);
-    
+
     return this.http.get<{ result: boolean }>(url).pipe(
       // Ekstraktovanje vrednosti result direktno
       map(response => response.result),  // direktno dobijanje true/false iz odgovora
@@ -115,5 +125,5 @@ export class ProjectService {
       })
     );
   }
-  
+
 }

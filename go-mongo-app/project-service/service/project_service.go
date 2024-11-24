@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"project-service/db"
 	"project-service/models"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -147,8 +148,31 @@ func GetAllProjects() ([]models.Project, error) {
 
 	return projects, nil
 }
+func GetProjectByTitleAndManager(title string, managerID string) (bool, error) {
+	collection := db.Client.Database("testdb").Collection("projects")
+	var project models.Project
 
+	normalizedTitle := strings.ToLower(title)
+
+	filter := bson.M{
+		"title":     normalizedTitle,
+		"managerId": managerID,
+	}
+
+	err := collection.FindOne(context.TODO(), filter).Decode(&project)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
 func CreateProject(project models.Project) (string, error) {
+	// Normalize the title to lowercase
+	project.Title = strings.ToLower(project.Title)
+
 	expectedEndDate, err := time.Parse("2006-01-02", project.ExpectedEndDate)
 	if err != nil {
 		return "", errors.New("invalid expected end date format, must be YYYY-MM-DD")
@@ -158,6 +182,7 @@ func CreateProject(project models.Project) (string, error) {
 		return "", err
 	}
 
+	// Save project with the normalized title
 	collection := db.Client.Database("testdb").Collection("projects")
 	_, err = collection.InsertOne(context.TODO(), project)
 	if err != nil {

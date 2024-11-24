@@ -40,12 +40,19 @@ export class ProjectDetailsComponent {
   ) {}
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
+      const newProject = changes['project'].currentValue;
+
+      if (newProject.title) {
+        this.getProjectIDByTitle(newProject.title);
+      }
+
       this.resetAddMemberForm();
       this.resetCreateTaskForm();
       this.loadTasks();
       this.loadUsersForProject();
     }
   }
+
   getAvailableSpots(): number {
     if (!this.project) {
       return 0;
@@ -74,7 +81,6 @@ export class ProjectDetailsComponent {
 
   getUserInfoFromToken(): any {
     const token = localStorage.getItem('access_token');
-    console.log("Token:", token);
     if (token) {
       try {
         const payloadBase64 = token.split('.')[1];
@@ -239,7 +245,7 @@ export class ProjectDetailsComponent {
         }
       );
     } else {
-      alert('No users selected.');
+      this.showNoUsersProjectSelectedModal();
     }
   }
 
@@ -382,6 +388,19 @@ addSelectedUsersToTask() {
 
   closeUserAlreadyAddedModal() {
     const modal = document.querySelector('.user-already-added-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
+  showNoUsersProjectSelectedModal() {
+    const modal = document.querySelector('.no-users-selected-modal-project');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+
+  closeNoUsersProjectSelectedModal() {
+    const modal = document.querySelector('.no-users-selected-modal-project');
     if (modal) {
       modal.setAttribute('style', 'display: none; opacity: 0;');
     }
@@ -584,8 +603,7 @@ addSelectedUsersToTask() {
   }
 
   isProjectActive(): boolean {
-    // Ako su svi zadaci u statusu "done", projekat je neaktivan
-    //Ako nema ni jedan task, onda daje da se dodaju useri (nov projekat)
+
     if(this.pendingTasks.length === 0 && this.inProgressTasks.length === 0 && this.doneTasks.length !== 0){
       return false;
     }

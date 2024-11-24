@@ -347,7 +347,74 @@ body {
   padding: 20px;
   background-color: white;
   border-radius: 5px;
+
 }
+#addMemberModal{
+  text-align: center;
+}
+#addMemberToProject {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.7); /* Darker background for better contrast */
+  z-index: 1050;
+}
+
+#addMemberToProject .modal-content {
+  background-color: #ffffff; /* White background for the content */
+  padding: 30px;
+  border-radius: 10px; /* Rounded corners for a softer look */
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Subtle shadow effect */
+  max-width: 400px;
+  width: 90%;
+  transition: transform 0.3s ease, opacity 0.3s ease; /* Smooth transition effects */
+}
+
+#addMemberToProject .modal-content h2 {
+  font-size: 1.8rem; /* Larger header font size */
+  color: red; /* Green color for the header */
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+#addMemberToProject .modal-content p {
+  font-size: 1rem; /* Slightly larger text for the paragraph */
+  color: #555; /* Darker gray text for better readability */
+  margin-bottom: 30px; /* Space between text and button */
+}
+
+#addMemberToProject button {
+  padding: 12px 25px;
+  background-color: #191b1f; /* Green background for the button */
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+#addMemberToProject button:hover {
+  background-color: black; /* Darker green when hovered */
+}
+
+/* Optional: If you want to add a fade-in effect */
+.modal-content.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.modal-content.hide {
+  transform: translateY(-50px);
+  opacity: 0;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between; /* Raspoređuje naslov i dugme na krajeve */
@@ -543,8 +610,11 @@ body {
   align-items: center;
   margin-top: 300px;
   z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
 }
-
+.max-people-error-modal .modal-content h2{
+  color:red;
+}
 .max-people-error-modal .modal-content {
   background-color: white;
   padding: 20px;
@@ -555,7 +625,7 @@ body {
 
 .max-people-error-modal button {
   padding: 10px 20px;
-  background-color: #216e4e;
+  background-color:#191b1f;
   color: white;
   border: none;
   cursor: pointer;
@@ -564,7 +634,7 @@ body {
 }
 
 .max-people-error-modal button:hover {
-  background-color: #1a5a40;
+  background-color:  black;
 }
 .modal-title {
   font-weight: bold;
