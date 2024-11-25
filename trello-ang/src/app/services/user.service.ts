@@ -12,16 +12,24 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
+  // Dodata sanitizacija korisničkog unosa
+  private sanitizeInput(input: string): string {
+    return input.replace(/<[^>]*>/g, ''); // Uklanja HTML tagove
+  }
+
   checkUsernameExists(username: string): Observable<{ exists: boolean }> {
-    return this.http.get<{ exists: boolean }>(`${this.baseUrl}/check-username?username=${username}`);
+    const sanitizedUsername = this.sanitizeInput(username);
+    return this.http.get<{ exists: boolean }>(`${this.baseUrl}/check-username?username=${encodeURIComponent(sanitizedUsername)}`);
   }
 
   checkEmailExists(email: string): Observable<{ exists: boolean }> {
-    return this.http.get<{ exists: boolean }>(`${this.checkEmailUrl}?email=${email}`);
+    const sanitizedEmail = this.sanitizeInput(email);
+    return this.http.get<{ exists: boolean }>(`${this.checkEmailUrl}?email=${encodeURIComponent(sanitizedEmail)}`);
   }
 
   requestPasswordReset(email: string): Observable<any> {
-    return this.http.post<any>(this.resetPasswordUrl, { email }, {
+    const sanitizedEmail = this.sanitizeInput(email);
+    return this.http.post<any>(this.resetPasswordUrl, { email: sanitizedEmail }, {
       headers: new HttpHeaders({
         'Content-Type': 'application/json'
       })

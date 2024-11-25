@@ -16,16 +16,43 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
-  // Registracija korisnika
-  register(user: any): Observable<any> {
-    return this.http.post<any>(this.registerUrl, user, {
-      headers: new HttpHeaders({'Content-Type': 'application/json'})
-    });
+  // Helper funkcija za sanitizaciju unosa
+  private sanitizeInput(input: string): string {
+    return input.replace(/<[^>]*>/g, ''); // Uklanja HTML tagove
   }
 
-  // Funkcija za prijavu korisnika i čuvanje tokena
+  // Registracija korisnika sa sanitizacijom
+  register(user: any): Observable<any> {
+    console.log(user)
+    const sanitizedUser = {
+      username: this.sanitizeInput(user.username),
+      email: this.sanitizeInput(user.email),
+      password: user.password, // Lozinka se ne sanitizuje zbog mogućnosti specijalnih karaktera
+      name: user.name,
+      surname: user.surname,
+      role: user.role,
+      id: user.id,
+      isActive: user.isActive
+    };
+
+    return this.http.post<any>(this.registerUrl, sanitizedUser, {
+      headers: new HttpHeaders({'Content-Type': 'application/json'})
+    }).pipe(
+      catchError(error => {
+        console.error('Registration error:', error);
+        return throwError('Registration failed. Please try again.');
+      })
+    );
+  }
+
+  // Funkcija za prijavu korisnika sa sanitizacijom
   login(credentials: { username: string, password: string }): Observable<any> {
-    return this.http.post<any>(this.loginUrl, credentials, {
+    const sanitizedCredentials = {
+      username: this.sanitizeInput(credentials.username),
+      password: credentials.password
+    };
+
+    return this.http.post<any>(this.loginUrl, sanitizedCredentials, {
       headers: new HttpHeaders({
         'Content-Type': 'application/json'
       })
@@ -37,14 +64,17 @@ export class AuthService {
     );
   }
 
-  // Čuvanje tokena u localStorage
+  // Čuvanje tokena u localStorage sa dodatnim koracima
   saveToken(token: string): void {
+    // Preporučuje se enkripcija tokena pre čuvanja
     localStorage.setItem('access_token', token);
   }
 
-  // Resetovanje lozinke
+  // Resetovanje lozinke sa sanitizacijom email-a
   resetPassword(email: string): Observable<any> {
-    return this.http.post<any>(this.resetPasswordUrl, { email }, {
+    const sanitizedEmail = this.sanitizeInput(email);
+
+    return this.http.post<any>(this.resetPasswordUrl, { email: sanitizedEmail }, {
       headers: new HttpHeaders({'Content-Type': 'application/json'})
     }).pipe(
       catchError(error => {
@@ -54,13 +84,12 @@ export class AuthService {
     );
   }
 
-  // Odlazak korisnika (logout)
-  logout(): void {
-    localStorage.removeItem('access_token');
-  }
-
+  // Slanje magic linka sa sanitizacijom
   sendMagicLink(email: string, username: string): Observable<any> {
-    return this.http.post<any>(this.magicUrl, { email, username }, {
+    const sanitizedEmail = this.sanitizeInput(email);
+    const sanitizedUsername = this.sanitizeInput(username);
+
+    return this.http.post<any>(this.magicUrl, { email: sanitizedEmail, username: sanitizedUsername }, {
       headers: new HttpHeaders({'Content-Type': 'application/json'})
     }).pipe(
       catchError(error => {
@@ -70,7 +99,13 @@ export class AuthService {
     );
   }
 
+  // Provera da li je korisnik autentifikovan
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('authToken');
+    return !!localStorage.getItem('access_token');
+  }
+
+  // Logout korisnika
+  logout(): void {
+    localStorage.removeItem('access_token');
   }
 }

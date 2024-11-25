@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"regexp"
+	"strings"
 	"time"
 	"user-service/db"
 	"user-service/models"
@@ -15,6 +17,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// sanitizeInput uklanja potencijalno opasne HTML tagove
+func sanitizeInput(input string) string {
+	sanitized := html.EscapeString(strings.TrimSpace(input))
+	return sanitized
+}
 
 // validateUsername proverava da li username sadrži samo dozvoljene karaktere
 func validateUsername(username string) (string, error) {
@@ -202,6 +210,11 @@ func UsernameExists(username string) (bool, error) {
 	return true, nil
 }
 func RegisterUser(user models.User) (string, error) {
+	user.Username = sanitizeInput(user.Username)
+	user.Email = sanitizeInput(user.Email)
+	user.Name = sanitizeInput(user.Name)
+	user.Surname = sanitizeInput(user.Surname)
+
 	// Validacija korisničkog imena
 	sanitizedUsername, err := validateUsername(user.Username)
 	if err != nil {
