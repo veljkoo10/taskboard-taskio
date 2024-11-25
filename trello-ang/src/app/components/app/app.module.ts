@@ -17,6 +17,7 @@ import { appRoutes } from "../../app.routes";
 import { RouterModule } from "@angular/router";
 import {RecaptchaModule} from "ng-recaptcha";
 import {CapitalizePipe} from "../../pipe/capitalize.pipe";
+import {RecaptchaValueAccessor} from "../../recaptcha/recaptcha-value-accessor.directive";
 
 @NgModule({
   declarations: [
@@ -27,7 +28,8 @@ import {CapitalizePipe} from "../../pipe/capitalize.pipe";
     UserProfileComponent,
     MagicLinkComponent,
     VerifyMagicLinkComponent,
-    CapitalizePipe
+    CapitalizePipe,
+    RecaptchaValueAccessor
   ],
   imports: [
     BrowserModule,

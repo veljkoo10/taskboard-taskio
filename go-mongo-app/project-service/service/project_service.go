@@ -199,21 +199,27 @@ func validateProject(project models.Project, expectedEndDate time.Time) error {
 	if expectedEndDate.Before(time.Now()) {
 		return errors.New("Expected date must be in the future")
 	}
-	exists, err := projectExists(project.Title)
+	exists, err := projectExists(project.Title, project.ManagerID)
 	if err != nil {
 		return err // Return any error encountered during the check
 	}
 	if exists {
-		return errors.New("Project with this name already exists")
+		return errors.New("Project with this name already exists for the same manager")
 	}
 
 	return nil
 }
-func projectExists(title string) (bool, error) {
+
+func projectExists(title, managerID string) (bool, error) {
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project
 
-	err := collection.FindOne(context.TODO(), bson.M{"title": title}).Decode(&project)
+	filter := bson.M{
+		"title":      title,
+		"manager_id": managerID,
+	}
+
+	err := collection.FindOne(context.TODO(), filter).Decode(&project)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return false, nil

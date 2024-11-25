@@ -188,6 +188,9 @@ export class ProjectDetailsComponent {
 
 
 
+  isSelected(user: any): boolean {
+    return this.selectedUsers.includes(user);
+  }
 
   toggleSelection(user: any) {
     const index = this.selectedUsers.indexOf(user);
@@ -196,6 +199,7 @@ export class ProjectDetailsComponent {
     } else {
       this.selectedUsers.splice(index, 1);
     }
+    this.cdRef.detectChanges();
   }
   sortUsersAlphabetically(users: any[]): any[] {
     return users.sort((a, b) => a.username.localeCompare(b.username));
@@ -576,31 +580,44 @@ addSelectedUsersToTask() {
     }
 
     if(this.project.min_people <= this.projectUsers.length - 1){
-    console.log(this.projectUsers.length - 1)
+      console.log(this.projectUsers.length - 1)
 
-    this.projectService.removeMemberToProject(this.project.id, [userId]).subscribe(
-      (response) => {
-        console.log('User removed successfully:', response);
-        // Uklanjanje korisnika iz lokalne liste korisnika na projektu
-        this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+      this.projectService.removeMemberToProject(this.project.id, [userId]).subscribe(
+        (response) => {
+          console.log('User removed successfully:', response);
+          // Uklanjanje korisnika iz lokalne liste korisnika na projektu
+          this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
 
-        // Ažuriraj project.users ručno
-        if (this.project?.users) {
-          this.project.users = this.project.users.filter(user => user.id !== userId);
+          // Ažuriraj project.users ručno
+          if (this.project?.users) {
+            this.project.users = this.project.users.filter(user => user.id !== userId);
+          }
+          // Osvežavanje liste dostupnih korisnika
+          this.loadActiveUsers();
+        },
+        (error) => {
+          console.error('Error removing user:', error);
         }
-        // Osvežavanje liste dostupnih korisnika
-        this.loadActiveUsers();
-      },
-      (error) => {
-        console.error('Error removing user:', error);
-      }
-    );
+      );
+    }
+    else{
+      console.log(this.project.users.length )
+      this.showDeletePeopleProjectModal();  // Show modal instead of alert
+    }
   }
-  else{
-    console.log(this.project.users.length - 1)
-    alert(`Can't remove more pople, minimum number of people is:  ${this.project.min_people}`)
+  showDeletePeopleProjectModal() {
+    const modal = document.querySelector('.delete-people-project-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
   }
+  closeDeletePeopleProjectModal() {
+    const modal = document.querySelector('.delete-people-project-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
   }
+
 
   isProjectActive(): boolean {
 
@@ -613,6 +630,8 @@ addSelectedUsersToTask() {
   }
 
   closeMaxPeople(){
+    this.selectedUsers = [];
+
     document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:none; opacity: 100%; margin-top: 20px")
   }
 

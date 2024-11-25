@@ -93,7 +93,7 @@
         <h3 class="modal-title">
           Manager:
 
-          <span *ngFor="let user of projectManagers; let isLast = last">
+          <span *ngFor="let user of projectManagers; let isLast = last" class="manager-name">
             {{ user.username | titlecase }}<span *ngIf="!isLast">, </span>
 
           </span>
@@ -111,11 +111,13 @@
         <ul class="user-list">
           <li *ngFor="let user of users" class="user-item">
             <label>
-              <input type="checkbox" (change)="toggleSelection(user)" />
+              <!-- Use the 'checked' binding and 'isSelected()' method to determine the checkbox state -->
+              <input type="checkbox" [checked]="isSelected(user)" (change)="toggleSelection(user)" />
               {{ user.username | titlecase }}
             </label>
           </li>
         </ul>
+
 
 
         <!-- Prikaz korisnika koji su već na projektu -->
@@ -231,12 +233,30 @@
 </div>
 
 
-<div class="all-tasks-done-modal" (click)="closeTasksDoneModal()">
+<div class="all-tasks-done-modal" (click)="closeTasksDoneModal()"  >
   <div class="modal-content">
-    <p>You cannot add users to the project because all tasks are marked as done.</p>
+    <h2>Can't add people to project</h2>
+    <p>You cannot add users to the project because the project is inactive .</p>
     <button (click)="closeTasksDoneModal()">OK</button>
   </div>
 </div>
+
+<div id="addMemberToProject" class="custom-modal no-users-selected-modal-project" >
+  <div class="modal-content">
+    <h2>No Users Selected</h2>
+    <p>Please select at least one user to add to the project.</p>
+    <button (click)="closeNoUsersProjectSelectedModal()">OK</button>
+  </div>
+</div>
+<!-- Delete People Project Modal -->
+<div class="delete-people-project-modal" style="display: none;">
+  <div class="modal-content">
+    <h2>Cannot Remove Members</h2>
+    <p *ngIf="project">Can't remove more people. Minimum number of people in project is: {{ project.min_people ? project.min_people -1 : 0 }}</p>
+    <button (click)="closeDeletePeopleProjectModal()">Close</button>
+  </div>
+</div>
+
 
 <div id="AddMaxPeopleProject" class="max-people-error-modal" (click)="closeMaxPeople()">
   <div class="modal-content">
@@ -267,10 +287,3 @@
   </div>
 </div>
 
-<div id="addMemberToProject" class="custom-modal no-users-selected-modal-project" style="display: none;">
-  <div class="modal-content">
-    <h2>No Users Selected</h2>
-    <p>Please select at least one user to add to the task or project.</p>
-    <button (click)="closeNoUsersProjectSelectedModal()">OK</button>
-  </div>
-</div>

@@ -125,7 +125,6 @@ body {
   height: auto; /* Allow status item to grow based on content */
   box-sizing: border-box;
   margin-bottom: 20px; /* Space between items */
-  transition: transform 0.3s ease;
   font-weight: bold;
 
 }
@@ -341,13 +340,16 @@ body {
 
 .modal-dialog {
   width: 50%;
+  max-height: 80vh;  /* Ograničava visinu modala na 80% visine ekrana */
+  overflow: hidden !important;
+
 }
 
 .modal-content {
   padding: 20px;
   background-color: white;
   border-radius: 5px;
-
+  height: 100% !important;
 }
 #addMemberModal{
   text-align: center;
@@ -358,10 +360,10 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  display: flex;
+  display: none;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.7); /* Darker background for better contrast */
+  background-color: rgba(0, 0, 0, 0.5); /* Darker background for better contrast */
   z-index: 1050;
 }
 
@@ -391,7 +393,7 @@ body {
 
 #addMemberToProject button {
   padding: 12px 25px;
-  background-color: #191b1f; /* Green background for the button */
+  background-color: #2a2d34; /* Green background for the button */
   color: white;
   border: none;
   cursor: pointer;
@@ -447,8 +449,17 @@ body {
   display: grid;
   gap: 10px; /* Razmak između korisnika */
   font-weight: bold;
+  max-height: 200px; /* Ograničava visinu liste korisnika */
+  overflow-y: auto; /* Omogućava skrolovanje unutar liste korisnika */
 
 }
+
+
+/* Add this to your styles.css or component's CSS file */
+.manager-name {
+  color: #2a8a68;
+}
+
 .project-title.highlight {
   font-size: 2.3rem; /* Veća veličina fonta */
   color: #2a8a68;    /* Zelena boja */
@@ -471,9 +482,16 @@ body {
 }
 .user-item label {
   display: flex;
-  align-items: center; /* Poravnanje checkboxa sa tekstom */
-  gap: 8px; /* Razmak između checkboxa i korisničkog imena */
+  align-items: center; /* Align the checkbox with the text */
+  gap: 8px; /* Space between the checkbox and the text */
 }
+
+.user-item label:hover {
+  background-color: #e9ecef;
+  transform: scale(1.02);
+
+}
+
 
 .user-item input[type="checkbox"] {
   margin: 0; /* Uklonite podrazumevane margine */
@@ -483,15 +501,10 @@ body {
 }
 
 .user-item:hover {
-  background-color: #e9ecef; /* Svetlija boja na hover */
+  background-color: #f8f9fa; /* Svetlija boja na hover */
 }
 
-.user-item input[type="checkbox"] {
-  margin: 0; /* Uklonite podrazumevane margine */
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
+
 
 .username {
   font-size: 1rem;
@@ -563,6 +576,8 @@ body {
 }
 
 .all-tasks-done-modal {
+  margin-top: 0 !important;
+  flex: none;
   position: fixed;
   top: 0;
   left: 0;
@@ -572,32 +587,39 @@ body {
   display: none;
   justify-content: center;
   align-items: center;
-  margin-top: 300px;
+  margin-top: 0;
   z-index: 1050;
+
 }
 
 .all-tasks-done-modal .modal-content {
-  background-color: white;
-  padding: 20px;
-  border-radius: 5px;
+  background-color: #ffffff; /* White background for the content */
+  padding: 30px;
+  border-radius: 10px; /* Rounded corners for a softer look */
   text-align: center;
-  width: 50%;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Subtle shadow effect */
+  max-width: 400px;
+  width: 90%;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .all-tasks-done-modal button {
   padding: 10px 20px;
-  background-color: #216e4e;
+  background-color: #2a2d34;
   color: white;
   border: none;
   cursor: pointer;
   margin:auto;
   width: 30%;
+  border-radius: 5px;
 }
 
 .all-tasks-done-modal button:hover {
-  background-color: #1a5a40;
+  background-color: black;
 }
-
+.all-tasks-done-modal h2 {
+  color:red;
+}
 .max-people-error-modal {
   position: fixed;
   top: 0;
@@ -625,7 +647,7 @@ body {
 
 .max-people-error-modal button {
   padding: 10px 20px;
-  background-color:#191b1f;
+  background-color:#2a2d34;
   color: white;
   border: none;
   cursor: pointer;
@@ -682,3 +704,40 @@ body {
 .user-already-added-modal button:hover {
   background-color: #1a5a40;
 }
+.delete-people-project-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.delete-people-project-modal .modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+  width: auto;
+}
+.delete-people-project-modal .modal-content h2{
+  color:Red;
+}
+.delete-people-project-modal button {
+  padding: 10px 20px;
+  background-color:#2a2d34;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin:auto;
+  width: 20%;
+}
+.delete-people-project-modal button:hover {
+  background-color: black;
+}
+

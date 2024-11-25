@@ -144,7 +144,7 @@ export class AppComponent {
               }
             },
             (error) => {
-              if (error.status === 500 && error.error === 'Project with this name already exists\n') {
+              if (error.status === 500 && error.error === 'Project with this name already exists for the same manager\n') {
                 this.errorMessage = 'A project with this title already exists.';
               } else {
                 console.error('Error creating project:', error);
