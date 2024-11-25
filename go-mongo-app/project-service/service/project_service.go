@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"project-service/db"
 	"project-service/models"
+	"regexp"
 	"strings"
 	"time"
 
@@ -62,6 +63,14 @@ func GetUsersForProject(projectID string) ([]string, error) {
 	return project.Users, nil
 }
 func GetProjectIDByTitle(title string) (string, error) {
+	// Sanitizacija unosa
+	title = sanitizeInput(title)
+
+	// Validacija unosa
+	if !isValidRegexInput(title) {
+		return "", errors.New("invalid title format")
+	}
+
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project
 
@@ -149,6 +158,8 @@ func GetAllProjects() ([]models.Project, error) {
 	return projects, nil
 }
 func GetProjectByTitleAndManager(title string, managerID string) (bool, error) {
+	title = sanitizeInput(title)
+
 	collection := db.Client.Database("testdb").Collection("projects")
 	var project models.Project
 
@@ -170,21 +181,45 @@ func GetProjectByTitleAndManager(title string, managerID string) (bool, error) {
 	return true, nil
 }
 func CreateProject(project models.Project) (string, error) {
-	// Normalize the title to lowercase
-	project.Title = strings.ToLower(project.Title)
+	// Sanitizacija i normalizacija
+	project.Title = sanitizeInput(strings.ToLower(project.Title))
+	project.Description = sanitizeInput(project.Description)
 
+	// Validacija ulaza
+	if !isValidTitle(project.Title) {
+		return "", errors.New("invalid project title format")
+	}
+	if len(project.Title) > 100 {
+		return "", errors.New("title exceeds maximum length of 100 characters")
+	}
+	if len(project.Description) > 1000 {
+		return "", errors.New("description exceeds maximum length of 1000 characters")
+	}
+
+	// Validacija datuma
 	expectedEndDate, err := time.Parse("2006-01-02", project.ExpectedEndDate)
 	if err != nil {
 		return "", errors.New("invalid expected end date format, must be YYYY-MM-DD")
 	}
 
+	// Provera dodatnih pravila
 	if err := validateProject(project, expectedEndDate); err != nil {
 		return "", err
 	}
 
-	// Save project with the normalized title
+	// Spremanje u bazu sa sanitizovanim podacima
 	collection := db.Client.Database("testdb").Collection("projects")
-	_, err = collection.InsertOne(context.TODO(), project)
+	safeProject := bson.M{
+		"title":           project.Title,
+		"description":     project.Description,
+		"expectedEndDate": project.ExpectedEndDate,
+		"managerId":       project.ManagerID,
+		"users":           project.Users,
+		"minPeople":       project.MinPeople,
+		"maxPeople":       project.MaxPeople,
+		"createdAt":       time.Now(),
+	}
+	_, err = collection.InsertOne(context.TODO(), safeProject)
 	if err != nil {
 		return "", err
 	}
@@ -485,4 +520,23 @@ func getTaskStatus(taskID string) (string, error) {
 	}
 
 	return responseBody.Status, nil
+}
+
+func sanitizeInput(input string) string {
+	input = strings.TrimSpace(input)
+	input = strings.ReplaceAll(input, "<", "&lt;")
+	input = strings.ReplaceAll(input, ">", "&gt;")
+	input = strings.ReplaceAll(input, "&", "&amp;")
+	input = strings.ReplaceAll(input, `"`, "&quot;")
+	input = strings.ReplaceAll(input, `'`, "&#39;")
+	return input
+}
+
+func isValidRegexInput(input string) bool {
+	// Proverite da li unos sadrži samo dozvoljene karaktere
+	return regexp.MustCompile(`^[a-zA-Z0-9\s]+$`).MatchString(input)
+}
+
+func isValidTitle(title string) bool {
+	return regexp.MustCompile(`^[a-zA-Z0-9\s]+$`).MatchString(title)
 }
