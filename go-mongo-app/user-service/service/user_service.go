@@ -16,6 +16,29 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// validateUsername proverava da li username sadrži samo dozvoljene karaktere
+func validateUsername(username string) (string, error) {
+	// Dozvoljeni karakteri: slova, brojevi, donja crta i tačka, dužine 3-20 karaktera
+	validUsernameRegex := regexp.MustCompile(`^[a-zA-Z0-9_.]{3,20}$`)
+
+	if !validUsernameRegex.MatchString(username) {
+		return "", errors.New("invalid username format: only letters, numbers, underscores, and dots are allowed (3-20 characters)")
+	}
+
+	return username, nil
+}
+
+// sanitizeEmail proverava da li email sadrži samo validne karaktere
+func sanitizeEmail(email string) string {
+	// Regularni izraz za dozvoljene karaktere u email adresi
+	validEmailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-@]+$`)
+
+	if validEmailRegex.MatchString(email) {
+		return email // Email je validan, nema potrebe za promenama
+	}
+	return "" // Ako email sadrži nedozvoljene karaktere, vraćamo praznu vrednost
+}
+
 var emailConfig = notification.EmailConfig{
 	From:     "taskio2024@gmail.com",
 	Password: "znnbgxgvshvythfq",
@@ -179,6 +202,20 @@ func UsernameExists(username string) (bool, error) {
 	return true, nil
 }
 func RegisterUser(user models.User) (string, error) {
+	// Validacija korisničkog imena
+	sanitizedUsername, err := validateUsername(user.Username)
+	if err != nil {
+		return "", err
+	}
+	user.Username = sanitizedUsername
+
+	// Sanitizacija emaila
+	sanitizedEmail := sanitizeEmail(user.Email)
+	if sanitizedEmail == "" {
+		return "", errors.New("invalid email format")
+	}
+	user.Email = sanitizedEmail
+
 	if err := validateUser(user); err != nil {
 		return "", err
 	}
@@ -211,17 +248,26 @@ func RegisterUser(user models.User) (string, error) {
 }
 
 func FindUserByUsername(username string) (models.User, error) {
+	// Validacija korisničkog imena
+	validatedUsername, err := validateUsername(username) // Koristi novu validaciju
+	if err != nil {
+		return models.User{}, err // Vraća grešku ako username nije validan
+	}
+
 	collection := db.Client.Database("testdb").Collection("users")
 	var user models.User
-	err := collection.FindOne(context.TODO(), map[string]interface{}{"username": username}).Decode(&user)
+
+	err = collection.FindOne(context.TODO(), bson.M{"username": validatedUsername}).Decode(&user)
 	if err == mongo.ErrNoDocuments {
-		return models.User{}, nil
+		return models.User{}, nil // Korisnik nije pronađen
 	}
 	if err != nil {
-		return models.User{}, err
+		return models.User{}, err // Druga greška pri pretrazi baze
 	}
+
 	return user, nil
 }
+
 func FindUserByEmail(email string) (models.User, error) {
 	collection := db.Client.Database("testdb").Collection("users")
 	var user models.User
