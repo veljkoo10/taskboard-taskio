@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"task-service/db"
 	"task-service/models"
 	"time"
@@ -17,12 +19,49 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// isValidUserID proverava da li korisnički ID sadrži samo dozvoljene karaktere
+func isValidUserID(userID string) bool {
+	// Ovaj primer dopušta samo alfanumeričke karaktere i crtica (možete prilagoditi prema potrebama)
+	for _, char := range userID {
+		if !(char >= 'a' && char <= 'z') && !(char >= 'A' && char <= 'Z') && !(char >= '0' && char <= '9') && char != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+// Funkcija koja escapuje HTML kako bi sprečila XSS napade prilikom prikaza unosa
+func EscapeHTML(input string) string {
+	// Koristi standardnu funkciju za escape HTML-a
+	return strings.ReplaceAll(input, "<", "&lt;")
+}
+
+// UpdateTaskStatus ažurira status zadatka u bazi podataka
 func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
+	// Validacija taskID-a
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return nil, errors.New("invalid task ID format")
 	}
 
+	// Sanitizacija statusa da bi se sprečili XSS napadi
+	status = SanitizeInput(status) // pozivanje funkcije za sanitizaciju unosa
+
+	// Validacija da status bude jedan od dozvoljenih
+	allowedStatuses := []string{"pending", "in-progress", "completed"}
+	isValidStatus := false
+	for _, s := range allowedStatuses {
+		if status == s {
+			isValidStatus = true
+			break
+		}
+	}
+
+	if !isValidStatus {
+		return nil, errors.New("invalid status value")
+	}
+
+	// Pretraga zadatka u bazi
 	collection := db.Client.Database("testdb").Collection("tasks")
 	var task models.Task
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
@@ -32,6 +71,7 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 		return nil, err
 	}
 
+	// Ažuriranje statusa zadatka
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
@@ -41,6 +81,7 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 		return nil, err
 	}
 
+	// Povratak ažuriranog zadatka iz baze
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
 	if err != nil {
 		return nil, err
@@ -48,42 +89,59 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 
 	return &task, nil
 }
-func userExists(userID string) (bool, error) {
-	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
-	fmt.Println(userID)
-	fmt.Println("Requesting URL:", url) // Debug log
 
+// userExists proverava da li korisnik sa datim userID postoji
+func userExists(userID string) (bool, error) {
+	// Sanitizacija korisničkog ID-a da bismo sprečili XSS napade
+	userID = SanitizeInput(userID)
+
+	// Validacija userID-a da ne sadrži neprihvatljive karaktere
+	if !isValidUserID(userID) {
+		return false, errors.New("invalid user ID format")
+	}
+
+	// Korišćenje URL encoding-a za sigurnost
+	encodedUserID := url.QueryEscape(userID)
+
+	// Kreiranje URL-a za poziv user-service
+	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", encodedUserID)
+
+	// Logovanje za debugging
+	fmt.Println("Requesting URL:", url)
+
+	// Slanje HTTP GET zahteva
 	resp, err := http.Get(url)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %v", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("Response Status Code:", resp.StatusCode) // Debug log
+	// Provera statusnog koda odgovora
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return false, fmt.Errorf("received non-OK response: %s", body)
+	}
 
+	// Čitanje tela odgovora
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("failed to read response body: %v", err)
 	}
-	fmt.Printf("URL: %s, Response: %s\n", url, string(body))
 
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("received non-OK response: %s", body)
-	}
-
-	fmt.Println("Response Body:", string(body))
-
+	// Parsiranje odgovora u mapu
 	var result map[string]bool
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse response body: %v", err)
 	}
 
+	// Provera da li postoji "exists" polje u odgovoru
 	exists, ok := result["exists"]
 	if !ok {
 		return false, fmt.Errorf("response missing 'exists' field")
 	}
 
+	// Povratak rezultata
 	return exists, nil
 }
 
@@ -167,6 +225,7 @@ func GetTasks() ([]models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Upit za sve zadatke (bez filtera)
 	cursor, err := collection.Find(ctx, map[string]interface{}{})
 	if err != nil {
 		return nil, err
@@ -179,12 +238,13 @@ func GetTasks() ([]models.Task, error) {
 	return tasks, nil
 }
 
-// GetTasksByProjectID returns tasks for a specific project.
 func GetTasksByProjectID(projectID string) ([]models.Task, error) {
 	collection := db.Client.Database("testdb").Collection("tasks")
 	var tasks []models.Task
 
-	// Convert the projectID to an ObjectID
+	projectID = SanitizeInput(projectID)
+
+	// Validacija ObjectID formata za projekt ID
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return nil, errors.New("invalid project ID format")
@@ -193,8 +253,8 @@ func GetTasksByProjectID(projectID string) ([]models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Query the database for tasks that match the projectID
-	cursor, err := collection.Find(ctx, bson.M{"project_id": projectObjectID.Hex()})
+	// Upit za zadatke koji odgovaraju projectID-u
+	cursor, err := collection.Find(ctx, bson.M{"project_id": projectObjectID})
 	if err != nil {
 		return nil, err
 	}
@@ -206,17 +266,30 @@ func GetTasksByProjectID(projectID string) ([]models.Task, error) {
 	return tasks, nil
 }
 
+func SanitizeInput(input string) string {
+	input = strings.ReplaceAll(input, "<", "&lt;")
+	input = strings.ReplaceAll(input, ">", "&gt;")
+	input = strings.ReplaceAll(input, `"`, "&quot;")
+	input = strings.ReplaceAll(input, "'", "&#39;")
+	return input
+}
+
 func CreateTask(projectID, name, description string) (*models.Task, error) {
-	// Validate projectID format
+	// Sanitizacija unosa za zaštitu od XSS
+	projectID = SanitizeInput(projectID)
+	name = SanitizeInput(name)
+	description = SanitizeInput(description)
+
+	// Validacija formata projectID-a
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return nil, errors.New("invalid project ID format")
 	}
 
-	// Connect to MongoDB collection
+	// Povezivanje sa MongoDB kolekcijom
 	collection := db.Client.Database("testdb").Collection("tasks")
 
-	// Check if a task with the same name already exists in the project (case-sensitive)
+	// Provera da li zadatak sa istim imenom već postoji u projektu
 	var existingTask models.Task
 	err = collection.FindOne(context.TODO(), bson.M{
 		"name":       name,
@@ -230,23 +303,23 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		return nil, errors.New("a task with the same name already exists in this project")
 	}
 
-	// Create a new task with the given name and description
+	// Kreiranje novog zadatka sa datim imenom i opisom
 	task := models.Task{
 		ID:          primitive.NewObjectID(),
 		Name:        name,
 		Description: description,
 		Status:      "pending",
-		Users:       []string{}, // Empty list of users
+		Users:       []string{}, // Prazna lista korisnika
 		Project_ID:  projectObjectID.Hex(),
 	}
 
-	// Insert the new task into the database
+	// Ubacivanje novog zadatka u bazu podataka
 	_, err = collection.InsertOne(context.TODO(), task)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %v", err)
 	}
 
-	// Notify the project-service about the new task
+	// Obavestiti project-service o novom zadatku
 	payload := map[string]string{
 		"task_id":     task.ID.Hex(),
 		"project_id":  projectObjectID.Hex(),
@@ -258,6 +331,7 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		return nil, fmt.Errorf("failed to serialize task payload: %v", err)
 	}
 
+	// URL za pozivanje project-service-a
 	projectServiceURL := fmt.Sprintf("http://project-service:8080/projects/%s/tasks/%s", projectObjectID.Hex(), task.ID.Hex())
 	req, err := http.NewRequest("PUT", projectServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -276,12 +350,16 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		return nil, errors.New("project-service failed to update with new task details")
 	}
 
-	// Return the created task
+	// Vraćanje kreiranog zadatka
 	return &task, nil
 }
 
 func AddUserToTask(taskID string, userID string) error {
+	// Sanitizacija unosa kako bi se sprečili XSS napadi
+	taskID = SanitizeInput(taskID)
+	userID = SanitizeInput(userID)
 
+	// Provera da li korisnik postoji
 	userExists, err := userExists(userID)
 	if err != nil {
 		return err
@@ -290,20 +368,24 @@ func AddUserToTask(taskID string, userID string) error {
 		return errors.New("user not found")
 	}
 
+	// Validacija formata taskID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return errors.New("invalid task ID format")
 	}
 
 	collection := db.Client.Database("testdb").Collection("tasks")
-	var project models.Project
-	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&project)
+
+	// Provera da li zadatak postoji
+	var task models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
 	if err == mongo.ErrNoDocuments {
-		return errors.New("project not found")
+		return errors.New("task not found")
 	} else if err != nil {
 		return err
 	}
 
+	// Dodavanje korisnika u zadatak
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
@@ -315,7 +397,11 @@ func AddUserToTask(taskID string, userID string) error {
 
 	return nil
 }
+
 func RemoveUserFromTask(taskID string, userID string) error {
+	taskID = SanitizeInput(taskID)
+	userID = SanitizeInput(userID)
+
 	userExists, err := userExists(userID)
 	if err != nil {
 		return err
@@ -324,12 +410,15 @@ func RemoveUserFromTask(taskID string, userID string) error {
 		return errors.New("user not found")
 	}
 
+	// Validacija formata taskID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return errors.New("invalid task ID format")
 	}
 
 	collection := db.Client.Database("testdb").Collection("tasks")
+
+	// Provera da li zadatak postoji
 	var task models.Task
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
 	if err == mongo.ErrNoDocuments {
@@ -338,6 +427,7 @@ func RemoveUserFromTask(taskID string, userID string) error {
 		return err
 	}
 
+	// Provera da li je korisnik već dodeljen zadatku
 	userFound := false
 	for _, existingUserID := range task.Users {
 		if existingUserID == userID {
@@ -349,6 +439,7 @@ func RemoveUserFromTask(taskID string, userID string) error {
 		return errors.New("user is not a member of this task")
 	}
 
+	// Uklanjanje korisnika sa zadatka
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
@@ -360,7 +451,11 @@ func RemoveUserFromTask(taskID string, userID string) error {
 
 	return nil
 }
+
 func GetUsersForTask(taskID string) ([]models.User, error) {
+	// Sanitizacija unosa
+	taskID = SanitizeInput(taskID)
+
 	// Konvertuj task ID u ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
@@ -411,7 +506,11 @@ func GetUsersForTask(taskID string) ([]models.User, error) {
 	return users, nil
 }
 
+// GetTaskByID vraća zadatak sa zadatim ID-jem
 func GetTaskByID(taskID string) (*models.Task, error) {
+	// Sanitizacija unosa
+	taskID = SanitizeInput(taskID)
+
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return nil, errors.New("invalid task ID")
@@ -429,7 +528,12 @@ func GetTaskByID(taskID string) (*models.Task, error) {
 	return &task, nil
 }
 
+// IsUserInTask proverava da li je korisnik dodeljen zadatku
 func IsUserInTask(taskID string, userID string) (bool, error) {
+	// Sanitizacija unosa
+	taskID = SanitizeInput(taskID)
+	userID = SanitizeInput(userID)
+
 	// Parsiranje taskID-a u ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {

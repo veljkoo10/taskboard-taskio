@@ -210,14 +210,14 @@ func CreateProject(project models.Project) (string, error) {
 	// Spremanje u bazu sa sanitizovanim podacima
 	collection := db.Client.Database("testdb").Collection("projects")
 	safeProject := bson.M{
-		"title":           project.Title,
-		"description":     project.Description,
-		"expectedEndDate": project.ExpectedEndDate,
-		"managerId":       project.ManagerID,
-		"users":           project.Users,
-		"minPeople":       project.MinPeople,
-		"maxPeople":       project.MaxPeople,
-		"createdAt":       time.Now(),
+		"title":             project.Title,
+		"description":       project.Description,
+		"expected_end_date": project.ExpectedEndDate,
+		"manager_id":        project.ManagerID,
+		"users":             project.Users,
+		"min_people":        project.MinPeople,
+		"max_people":        project.MaxPeople,
+		"createdAt":         time.Now(),
 	}
 	_, err = collection.InsertOne(context.TODO(), safeProject)
 	if err != nil {
