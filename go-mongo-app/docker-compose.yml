@@ -12,6 +12,8 @@ services:
       - ENABLE_BOOTSTRAP=true
     networks:
       - app-network
+    volumes:
+      - user-mongo_store:/data/db
 
   project-service:
     build: ./project-service
@@ -25,6 +27,8 @@ services:
       - ENABLE_BOOTSTRAP=true
     networks:
       - app-network
+    volumes:
+      - project-mongo_store:/data/db
 
   task-service:
     build: ./task-service
@@ -37,6 +41,8 @@ services:
       - ENABLE_BOOTSTRAP=true
     networks:
       - app-network
+    volumes:
+      - task-mongo_store:/data/db
 
   mongo:
     image: mongo:latest
@@ -55,9 +61,49 @@ services:
       - user-service
       - project-service
       - task-service
+      - notification-service
     networks:
       - app-network
+
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8083:8080"
+    environment:
+      - CASS_DB=cassandra:9042
+      - ENABLE_BOOTSTRAP=true
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - cass_store:/var/lib/cassandra/data
+
+
+
+  cassandra:
+    image: cassandra
+    restart: always
+    ports:
+      - "9042:9042"
+    # Docker healtcheck - checks if database is "alive"
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster'"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+    volumes:
+      - cass_store:/var/lib/cassandra/data
+
+volumes:
+  task-mongo_store:
+  project-mongo_store:
+  user-mongo_store:
+  cass_store:
 
 networks:
   app-network:
     driver: bridge
+
