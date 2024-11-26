@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"task-service/service"
 
 	"github.com/gorilla/mux"
@@ -67,6 +68,9 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	// Transform the task name to lowercase
+	taskInput.Name = strings.ToLower(taskInput.Name)
 
 	// Fetch all tasks for the given project to check for duplicate names
 	tasks, err := service.GetTasksByProjectID(projectID)

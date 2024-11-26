@@ -146,6 +146,7 @@ body {
 }
 .status-item.to-do p {
   color: black; /* Black text for "Pending" title */
+
 }
 
 .status-item.to-do ul {
@@ -168,7 +169,7 @@ body {
 }
 
 .status-item.to-do li .task-icon {
-  margin-left: 0px;
+  margin-right: 10px;
   color: #f39c12; /* Yellow for Pending */
   font-size: 20px;
 }
@@ -340,16 +341,13 @@ body {
 
 .modal-dialog {
   width: 50%;
-  max-height: 80vh;  /* Ograničava visinu modala na 80% visine ekrana */
   overflow: hidden !important;
 
 }
 
 .modal-content {
-  padding: 20px;
   background-color: white;
   border-radius: 5px;
-  height: 100% !important;
 }
 #addMemberModal{
   text-align: center;
@@ -741,3 +739,50 @@ body {
   background-color: black;
 }
 
+.exist-task-name {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.exist-task-name .modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+  width: auto;
+}
+.exist-task-name .modal-content h2{
+  color:Red;
+}
+.exist-task-name button {
+  padding: 10px 20px;
+  background-color:#2a2d34;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin:auto;
+}
+.exist-task-name button:hover {
+  background-color: black;
+}
+.error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+}
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  border-radius: 4px;
+  margin-top: 10px;
+}

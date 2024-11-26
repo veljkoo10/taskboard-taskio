@@ -73,6 +73,9 @@
 
               </div>
             </form>
+            <div class="error-message" *ngIf="taskFormError">
+              {{ taskFormError }}
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" (click)="cancelCreateTask()">Cancel</button>
@@ -186,13 +189,14 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
-        <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Add User</button>
+        <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Menage member</button>
 
       </div>
     </div>
   </div>
 </div>
 
+<div class="modal-background" *ngIf="isAddTaskUserVisible" (click)="closeAddUserToTask()"></div>
 
 <!-- Add Users to Task Modal -->
 <div id="addTaskUserModal" class="modal" *ngIf="isAddTaskUserVisible">
@@ -204,6 +208,9 @@
       </div>
 
       <div class="modal-body">
+        <div *ngIf="message" class="alert" [ngClass]="{ 'alert-danger': !isSuccessMessage }">
+          {{ message }}
+        </div>
         <!-- Lista korisnika dostupnih za dodavanje na task -->
         <h4>Select a user to add to the task:</h4>
         <ul class="user-list">
@@ -263,6 +270,14 @@
     <h2>You need selected less people</h2>
     <p>Can't add these people to project, no available slots.</p>
     <button (click)="closeMaxPeople()">OK</button>
+  </div>
+</div>
+
+<div id="missingProjectIdModal" class="exist-task-name" style="display: none;">
+  <div class="modal-content">
+    <h2>Warning</h2>
+    <p>Project ID is missing. Could not create task .</p>
+    <button (click)="closeMissingProjectIdModal()">Close</button>
   </div>
 </div>
 

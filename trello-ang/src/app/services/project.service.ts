@@ -68,12 +68,6 @@ export class ProjectService {
   createTask(projectId: string, task: { name: string, description: string }): Observable<Task> {
     console.log('Project ID u servisu:', projectId);
     return this.http.post<any>(`${this.taskUrl}/create/${projectId}`, task).pipe(
-      catchError((error) => {
-        if (error.status === 409) {
-          alert('A task with that name already exists!');
-        }
-        throw error;
-      })
     );
   }
 

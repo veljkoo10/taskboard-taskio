@@ -286,6 +286,9 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		return nil, errors.New("invalid project ID format")
 	}
 
+	// Convert name to lowercase
+	name = strings.ToLower(name)
+
 	// Povezivanje sa MongoDB kolekcijom
 	collection := db.Client.Database("testdb").Collection("tasks")
 
@@ -534,7 +537,26 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 	taskID = SanitizeInput(taskID)
 	userID = SanitizeInput(userID)
 
+	url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
+	fmt.Println("Requesting URL:", url) // Debug log
+
+	// Pozivamo user-service
+	resp, err := http.Get(url)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user info: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Dekodiramo odgovor u objekat user
+	var user models.User
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return false, fmt.Errorf("failed to decode user info: %v", err)
+	}
+
+	fmt.Printf("Fetched User: %+v\n", user) // Debug log
+
 	// Parsiranje taskID-a u ObjectID
+
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return false, errors.New("invalid task ID format")
@@ -553,7 +575,7 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 
 	// Provera da li userID postoji u listi users
 	for _, id := range task.Users {
-		if id == userID {
+		if id == userID || user.Role == "Manager" {
 			return true, nil
 		}
 	}

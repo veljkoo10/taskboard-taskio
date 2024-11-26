@@ -30,7 +30,9 @@ export class ProjectDetailsComponent {
   doneTasks: any[] = [];
   taskUsers: any[] = [];
   user: any;
-
+  taskFormError: string = '';
+  message: string | null = null;
+  isSuccessMessage: boolean = true;
 
   constructor(
     private taskService: TaskService,
@@ -287,38 +289,40 @@ export class ProjectDetailsComponent {
         alert('An error occurred while checking task membership.');
       }
     );
+    }
   }
-}
 
 
   isAddTaskUserVisible: boolean = false;
-selectedTaskUsers: any[] = []; // Stores selected users for the task
+  selectedTaskUsers: any[] = []; // Stores selected users for the task
 
-showAddTaskUserModal(task: any) {
-  console.log('Opening Add Task User Modal:', task);
-  this.selectedTask = task; // Ensure task is valid
-  this.isAddTaskUserVisible = true; // Toggle visibility
-  this.isTaskDetailsVisible = false;
-}
+  showAddTaskUserModal(task: any) {
+    console.log('Opening Add Task User Modal:', task);
+    this.selectedTask = task; // Ensure task is valid
+    this.isAddTaskUserVisible = true; // Toggle visibility
+    this.isTaskDetailsVisible = false;
+  }
 
   closeAddTaskUserModal() {
     this.isAddTaskUserVisible = false;
     this.selectedTaskUsers = [];
     this.isTaskDetailsVisible=true;
+    this.message = null;
+
   }
 
-// Toggle User Selection for Task
-toggleTaskUserSelection(user: any) {
-  const index = this.selectedTaskUsers.indexOf(user);
-  if (index === -1) {
-    this.selectedTaskUsers.push(user);
-  } else {
-    this.selectedTaskUsers.splice(index, 1);
+  // Toggle User Selection for Task
+  toggleTaskUserSelection(user: any) {
+    const index = this.selectedTaskUsers.indexOf(user);
+    if (index === -1) {
+      this.selectedTaskUsers.push(user);
+    } else {
+      this.selectedTaskUsers.splice(index, 1);
+    }
   }
-}
 
-addSelectedUsersToTask() {
-  if (this.selectedTask && this.selectedTaskUsers.length > 0) {
+  addSelectedUsersToTask() {
+    if (this.selectedTask && this.selectedTaskUsers.length > 0) {
     const taskId = this.selectedTask.id;
     const userIds = this.selectedTaskUsers.map(user => user.id);
     const username = this.selectedTaskUsers.map(user => user.username)
@@ -338,7 +342,7 @@ addSelectedUsersToTask() {
               // Dodaj korisnika u taskUsers
               this.taskUsers.push(addedUser);
               // Ukloni korisnika iz projectUsers
-              //this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+              this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
             }
           },
           error => {
@@ -347,12 +351,12 @@ addSelectedUsersToTask() {
           }
         );
       } else {
-        this.showUserAlreadyAddedModal();
+          this.showUserAlreadyAddedModal();
       }
     });
 
   } else {
-    this.showNoUsersSelectedModal();
+      this.showNoUsersSelectedModal();
   }
 }
 
@@ -448,6 +452,8 @@ addSelectedUsersToTask() {
     this.isCreateTaskFormVisible = false;
     this.taskName = '';
     this.taskDescription = '';
+    this.taskFormError = '';
+
   }
   cancelAddMember() {
     this.isAddMemberFormVisible = false;
@@ -456,7 +462,7 @@ addSelectedUsersToTask() {
 
   createTask() {
     if (!this.taskName || !this.taskDescription) {
-      alert('Please fill in all fields before creating the task.');
+      this.taskFormError = 'Please fill in all fields before creating the task.';
       return;
     }
 
@@ -475,17 +481,33 @@ addSelectedUsersToTask() {
           this.pendingTasks.push(response.name);
           this.loadTasks();
           this.cancelCreateTask();
+          this.taskFormError = '';
         },
         (error) => {
-          console.error('Error creating task:', error);
+          if (error.status === 409) {
+            this.showMissingProjectIdModal();
+          } else {
+            console.error('Error creating task:', error);
+          }
         }
       );
     } else {
       console.error('Project ID is missing');
-      alert('Project ID is missing. Could not create task.');
     }
   }
 
+  showMissingProjectIdModal() {
+    const modal = document.querySelector('.exist-task-name');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 1;');
+    }
+  }
+  closeMissingProjectIdModal() {
+    const modal = document.querySelector('.exist-task-name');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
 
   showTaskDetails(task: any) {
      // Proveri da li je korisnik član taska
@@ -548,9 +570,11 @@ addSelectedUsersToTask() {
       }
     );
   }
-  else{
-    alert("Cant remove member from done task!")
-  }
+    else{
+      this.message = "Cant remove member from done task!";
+      this.isSuccessMessage = false;
+
+    }
   }
 
   closeAddMember() {
@@ -579,7 +603,7 @@ addSelectedUsersToTask() {
       return;
     }
 
-    if(this.project.min_people <= this.projectUsers.length - 1){
+    if(this.project.min_people <= this.projectUsers.length ){
       console.log(this.projectUsers.length - 1)
 
       this.projectService.removeMemberToProject(this.project.id, [userId]).subscribe(
