@@ -23,7 +23,7 @@ export class AppComponent {
   errorMessage: string = '';
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService, private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
   isLoggedIn() {
-    return localStorage.getItem('access_token') != null;
+    return this.authService.getDecryptedData('access_token') != null;
   }
   goToDashboard() {
     if (window.location.pathname === '/dashboard') {
@@ -39,7 +39,7 @@ export class AppComponent {
     this.router.navigate(['/login']);
   }
   isManager(): boolean {
-    return localStorage.getItem('role') === 'Manager';
+    return this.authService.getDecryptedData('role') === 'Manager';
   }
   goToProfile(): void {
     this.isProfileMenuOpen = false;
@@ -105,7 +105,7 @@ export class AppComponent {
     // Clear any previous error messages
     this.errorMessage = '';
 
-    const managerId = localStorage.getItem('user_id');
+    const managerId = this.authService.getDecryptedData('user_id');
     if (!managerId) {
       this.errorMessage = 'Manager ID is missing. Please log in again.';
       return;

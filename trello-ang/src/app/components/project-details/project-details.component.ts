@@ -4,7 +4,7 @@ import { ProjectService } from 'src/app/services/project.service';
 import { UserService } from 'src/app/services/user.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { TaskService } from 'src/app/services/task.service'; // Import TaskService
-
+import {AuthService} from "../../services/auth.service";
 
 @Component({
   selector: 'app-project-details',
@@ -38,7 +38,8 @@ export class ProjectDetailsComponent {
     private taskService: TaskService,
     private projectService: ProjectService,
     private userService: UserService,
-    private cdRef: ChangeDetectorRef
+    private cdRef: ChangeDetectorRef,
+    private authService: AuthService
   ) {}
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
@@ -82,7 +83,7 @@ export class ProjectDetailsComponent {
   }
 
   getUserInfoFromToken(): any {
-    const token = localStorage.getItem('access_token');
+    const token = this.authService.getDecryptedData('access_token');
     if (token) {
       try {
         const payloadBase64 = token.split('.')[1];
@@ -138,7 +139,7 @@ export class ProjectDetailsComponent {
 
 
   isManager(): boolean {
-    return localStorage.getItem('role') === 'Manager';
+    return this.authService.getDecryptedData('role') === 'Manager';
   }
   loadTasks() {
     if (this.project) {

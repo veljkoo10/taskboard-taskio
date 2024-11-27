@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { catchError, Observable, throwError } from 'rxjs';
+import * as CryptoJS from 'crypto-js';
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +14,8 @@ export class AuthService {
   private readonly profileUrl = `${this.baseUrl}/profile`;
   private readonly verifyUrl = `${this.baseUrl}/verify-magic-link`;
   private readonly magicUrl = `${this.baseUrl}/send-magic-link`;
+
+  SECRET_KEY = 'my-secret-key-12345';
 
   constructor(private http: HttpClient) {}
 
@@ -101,11 +104,24 @@ export class AuthService {
 
   // Provera da li je korisnik autentifikovan
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('access_token');
+    return !!this.getDecryptedData('access_token');
   }
 
   // Logout korisnika
   logout(): void {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('_grecaptcha');
   }
+
+  // Funkcija za dekriptovanje podataka iz localStorage
+getDecryptedData(key: string): string {
+  const encryptedData = localStorage.getItem(key);
+  if (encryptedData) {
+    const bytes = CryptoJS.AES.decrypt(encryptedData, this.SECRET_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8); // Dekodira u originalni string
+  }
+  return '';
+}
 }
