@@ -81,6 +81,18 @@ services:
     volumes:
       - cass_store:/var/lib/cassandra/data
 
+  trello-ang:
+    build: ../trello-ang
+    ports:
+      - "4200:80" # Map Angular's container port 80 to localhost 4200
+    depends_on:
+      - user-service
+      - project-service
+      - task-service
+    networks:
+      - app-network
+    
+
 
 
   cassandra:

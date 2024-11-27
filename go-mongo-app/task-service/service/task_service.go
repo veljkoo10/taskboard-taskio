@@ -48,7 +48,7 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 	status = SanitizeInput(status) // pozivanje funkcije za sanitizaciju unosa
 
 	// Validacija da status bude jedan od dozvoljenih
-	allowedStatuses := []string{"pending", "in-progress", "completed"}
+	allowedStatuses := []string{"pending", "work in progress", "done"}
 	isValidStatus := false
 	for _, s := range allowedStatuses {
 		if status == s {
