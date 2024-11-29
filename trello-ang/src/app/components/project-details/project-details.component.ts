@@ -33,6 +33,7 @@ export class ProjectDetailsComponent {
   taskFormError: string = '';
   message: string | null = null;
   isSuccessMessage: boolean = true;
+  taskAvUsers: any[] = []
 
   constructor(
     private taskService: TaskService,
@@ -122,6 +123,7 @@ export class ProjectDetailsComponent {
       }
     );
   }
+  
   loadUsersForProject() {
     if (this.project && this.project.id) {
       this.projectService.getUsersForProject(this.project.id).subscribe(
@@ -302,6 +304,13 @@ export class ProjectDetailsComponent {
     this.selectedTask = task; // Ensure task is valid
     this.isAddTaskUserVisible = true; // Toggle visibility
     this.isTaskDetailsVisible = false;
+    this.loadUsersForProject()
+    //const C = A.filter(item => !B.i`ncludes(item));
+    console.log(this.selectedTask.users)
+    this.taskAvUsers = this.projectUsers.filter(
+      item => !this.selectedTask.users.includes(item.id)
+    );
+    console.log(this.taskAvUsers)
   }
 
   closeAddTaskUserModal() {
@@ -338,12 +347,12 @@ export class ProjectDetailsComponent {
             console.log(`User ${userId} added to task ${taskId}:`, response);
 
             // Ažuriraj lokalni niz taskUsers
-            const addedUser = this.projectUsers.find(user => user.id === userId);
+            const addedUser = this.taskAvUsers.find(user => user.id === userId);
             if (addedUser) {
               // Dodaj korisnika u taskUsers
               this.taskUsers.push(addedUser);
               // Ukloni korisnika iz projectUsers
-              this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
+              this.taskAvUsers = this.taskAvUsers.filter(user => user.id !== userId);
             }
           },
           error => {
@@ -562,8 +571,8 @@ export class ProjectDetailsComponent {
 
         // Vraćanje korisnika u listu dostupnih korisnika na projektu
         if (removedUser) {
-          this.projectUsers.push(removedUser);
-          this.projectUsers = this.sortUsersAlphabetically(this.projectUsers);
+          this.taskAvUsers.push(removedUser);
+          this.taskAvUsers = this.sortUsersAlphabetically(this.taskAvUsers);
         }
       },
       (error) => {

@@ -214,7 +214,7 @@
         <!-- Lista korisnika dostupnih za dodavanje na task -->
         <h4>Select a user to add to the task:</h4>
         <ul class="user-list">
-          <li *ngFor="let user of projectUsers" class="user-item">
+          <li *ngFor="let user of taskAvUsers" class="user-item">
             <label>
               <input type="checkbox" (change)="toggleTaskUserSelection(user)" />
               {{ user.username | titlecase }}
