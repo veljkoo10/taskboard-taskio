@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"task-service/service"
@@ -26,12 +27,60 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pronađi zadatak
+	task, err := service.GetTaskByID(taskID)
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	// Provera za status "Work in Progress"
+	if requestBody.Status == "work in progress" {
+		// Proveri da li su svi zavisni zadaci u statusu "Work in Progress"
+		for _, dependencyID := range task.DependsOn {
+			dependencyIDStr := dependencyID.Hex() // Konvertuj ObjectID u string
+			dependency, err := service.GetTaskByID(dependencyIDStr)
+			if err != nil {
+				http.Error(w, "Dependency not found", http.StatusInternalServerError)
+				return
+			}
+
+			if dependency.Status != "work in progress" {
+				msg := fmt.Sprintf("Cannot mark task as 'Work in Progress'. Dependency '%s' is not in 'work in progress' state.", dependency.Name)
+				http.Error(w, msg, http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
+	// Provera za status "Done" i zavisnosti
+	if requestBody.Status == "done" {
+		// Proveri da li su svi zavisni zadaci u statusu "Done"
+		for _, dependencyID := range task.DependsOn {
+			dependencyIDStr := dependencyID.Hex() // Konvertuj ObjectID u string
+			dependency, err := service.GetTaskByID(dependencyIDStr)
+			if err != nil {
+				http.Error(w, "Dependency not found", http.StatusInternalServerError)
+				return
+			}
+
+			// Ako je zavisni zadatak u statusu "Work in Progress", onda može preći u "Done"
+			if dependency.Status != "done" {
+				msg := fmt.Sprintf("Cannot mark task as 'Done'. Dependency '%s' is not in 'done' state.", dependency.Name)
+				http.Error(w, msg, http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
+	// Ako zadatak nema zavisnosti ili je uslov za status ispunjen, nastavi sa ažuriranjem statusa
 	updatedTask, err := service.UpdateTaskStatus(taskID, requestBody.Status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Vraćanje odgovora sa ažuriranim zadatkom
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(updatedTask); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -58,10 +107,11 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse the request body to get name and description
+	// Parse the request body to get name, description, and dependsOn
 	var taskInput struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		DependsOn   []string `json:"dependsOn"` // List of task IDs this task depends on
 	}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&taskInput); err != nil {
@@ -71,6 +121,7 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Transform the task name to lowercase
 	taskInput.Name = strings.ToLower(taskInput.Name)
+	// Sanitizacija unosa
 
 	// Fetch all tasks for the given project to check for duplicate names
 	tasks, err := service.GetTasksByProjectID(projectID)
@@ -79,7 +130,7 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if a task with the same name already exists
+	// Check if a task with the same name already exists in the project
 	for _, task := range tasks {
 		if task.Name == taskInput.Name {
 			http.Error(w, "A task with this name already exists in the project", http.StatusConflict)
@@ -87,8 +138,8 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Create the task using the service, passing projectID, name, and description
-	task, err := service.CreateTask(projectID, taskInput.Name, taskInput.Description)
+	// Create the task using the service, passing projectID, name, description, and dependsOn
+	task, err := service.CreateTask(projectID, taskInput.Name, taskInput.Description, taskInput.DependsOn)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -192,4 +243,50 @@ func CheckUserInTaskHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
+}
+func AddDependencyHandler(w http.ResponseWriter, r *http.Request) {
+	// Parsiranje URL parametara
+	vars := mux.Vars(r)
+	taskID := vars["task_id"]
+	dependencyID := vars["dependency_id"]
+
+	// Logovanje primljenih vrednosti
+	fmt.Println("Received Task ID:", taskID)
+	fmt.Println("Received Dependency ID:", dependencyID)
+
+	// Pozivanje funkcije za dodavanje zavisnosti
+	err := service.AddDependencyToTask(taskID, dependencyID)
+	if err != nil {
+		fmt.Println("Error adding dependency:", err) // Dodaj log za grešku
+		http.Error(w, fmt.Sprintf("Error adding dependency: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Vraćanje uspešnog odgovora
+	response := map[string]string{
+		"message":       "Dependency added successfully",
+		"task_id":       taskID,
+		"dependency_id": dependencyID,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+func GetTasksForProjectHandler(w http.ResponseWriter, r *http.Request) {
+	// Parsiranje URL parametra (projectID)
+	vars := mux.Vars(r)
+	projectID := vars["project_id"]
+
+	// Pozivanje funkcije koja vraća ID-eve taskova za projekat
+	taskIDs, err := service.GetTaskIDsForProject(projectID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching task IDs: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Vraćanje uspešnog odgovora sa listom ID-eva taskova
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(taskIDs)
 }

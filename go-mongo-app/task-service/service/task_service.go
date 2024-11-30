@@ -274,11 +274,17 @@ func SanitizeInput(input string) string {
 	return input
 }
 
-func CreateTask(projectID, name, description string) (*models.Task, error) {
-	// Sanitizacija unosa za zaštitu od XSS
+func CreateTask(projectID, name, description string, dependsOn []string) (*models.Task, error) {
+	// Sanitizacija unosa
 	projectID = SanitizeInput(projectID)
 	name = SanitizeInput(name)
 	description = SanitizeInput(description)
+
+	// Sanitizacija svakog ID-a u dependsOn listi
+	var sanitizedDependsOn []string
+	for _, dep := range dependsOn {
+		sanitizedDependsOn = append(sanitizedDependsOn, SanitizeInput(dep))
+	}
 
 	// Validacija formata projectID-a
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
@@ -286,16 +292,13 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		return nil, errors.New("invalid project ID format")
 	}
 
-	// Convert name to lowercase
-	name = strings.ToLower(name)
-
 	// Povezivanje sa MongoDB kolekcijom
 	collection := db.Client.Database("testdb").Collection("tasks")
 
 	// Provera da li zadatak sa istim imenom već postoji u projektu
 	var existingTask models.Task
 	err = collection.FindOne(context.TODO(), bson.M{
-		"name":       name,
+		"name":       strings.ToLower(name),
 		"project_id": projectObjectID.Hex(),
 	}).Decode(&existingTask)
 
@@ -306,14 +309,25 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 		return nil, errors.New("a task with the same name already exists in this project")
 	}
 
-	// Kreiranje novog zadatka sa datim imenom i opisom
+	// Kreiranje ObjectID liste za zavisnosti
+	var dependsOnObjectIDs []primitive.ObjectID
+	for _, dep := range sanitizedDependsOn {
+		depID, err := primitive.ObjectIDFromHex(dep)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dependsOn ID format: %v", err)
+		}
+		dependsOnObjectIDs = append(dependsOnObjectIDs, depID)
+	}
+
+	// Kreiranje novog zadatka
 	task := models.Task{
 		ID:          primitive.NewObjectID(),
-		Name:        name,
+		Name:        strings.ToLower(name),
 		Description: description,
 		Status:      "pending",
 		Users:       []string{}, // Prazna lista korisnika
 		Project_ID:  projectObjectID.Hex(),
+		DependsOn:   dependsOnObjectIDs,
 	}
 
 	// Ubacivanje novog zadatka u bazu podataka
@@ -323,12 +337,14 @@ func CreateTask(projectID, name, description string) (*models.Task, error) {
 	}
 
 	// Obavestiti project-service o novom zadatku
-	payload := map[string]string{
+	payload := map[string]interface{}{
 		"task_id":     task.ID.Hex(),
 		"project_id":  projectObjectID.Hex(),
 		"name":        name,
 		"description": description,
+		"depends_on":  dependsOn,
 	}
+
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize task payload: %v", err)
@@ -581,4 +597,86 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 	}
 
 	return false, nil
+}
+func AddDependencyToTask(taskIDStr, dependencyIDStr string) error {
+	// Logovanje vrednosti ID-ova
+	fmt.Println("Task ID:", taskIDStr)
+	fmt.Println("Dependency ID:", dependencyIDStr)
+
+	if len(dependencyIDStr) != 24 {
+		return fmt.Errorf("dependency ID must be 24 characters long, but got %d characters", len(dependencyIDStr))
+	}
+
+	taskID, err := primitive.ObjectIDFromHex(taskIDStr)
+	if err != nil {
+		fmt.Println("Error converting taskID:", err)
+		return fmt.Errorf("invalid task ID format: %v", err)
+	}
+
+	dependencyID, err := primitive.ObjectIDFromHex(dependencyIDStr)
+	if err != nil {
+		fmt.Println("Error converting dependencyID:", err) // Log error
+		return fmt.Errorf("invalid dependency ID format: %v", err)
+	}
+
+	// Povezivanje sa MongoDB kolekcijom
+	collection := db.Client.Database("testdb").Collection("tasks")
+
+	// Pronalaženje taska u bazi
+	var task models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskID}).Decode(&task)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("task not found")
+		}
+		return fmt.Errorf("failed to find task: %v", err)
+	}
+
+	// Proveriti da li zavisnost već postoji
+	for _, dep := range task.DependsOn {
+		if dep == dependencyID {
+			return fmt.Errorf("task is already dependent on this task")
+		}
+	}
+
+	// Dodavanje nove zavisnosti
+	task.DependsOn = append(task.DependsOn, dependencyID)
+
+	// Ažuriranje taska u bazi sa novom zavisnošću
+	update := bson.M{"$set": bson.M{"dependsOn": task.DependsOn}}
+	_, err = collection.UpdateOne(context.TODO(), bson.M{"_id": taskID}, update)
+	if err != nil {
+		return fmt.Errorf("failed to update task with new dependency: %v", err)
+	}
+
+	return nil
+}
+func GetTaskIDsForProject(projectID string) ([]string, error) {
+	// URL za pozivanje project-service-a
+	url := fmt.Sprintf("http://project-service:8080/projects/%s", projectID)
+
+	// HTTP GET zahtev za project-service
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project from project-service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Proveri statusni kod
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch project, status: %d", resp.StatusCode)
+	}
+
+	// Definiši strukturu za odgovor
+	var project struct {
+		Tasks []string `json:"tasks"`
+	}
+
+	// Parsiraj odgovor
+	err = json.NewDecoder(resp.Body).Decode(&project)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse task IDs: %v", err)
+	}
+
+	return project.Tasks, nil
 }

@@ -11,6 +11,7 @@ import {Observable, Subject, throwError} from 'rxjs';
 })
 export class TaskService {
   private taskUrl = 'http://localhost:8082/tasks'; // Base URL for task endpoints
+  private taskUrl2 = 'http://localhost:8082'; // Base URL for task endpoints
 
   constructor(private http: HttpClient) {}
 
@@ -65,7 +66,9 @@ export class TaskService {
     return this.http.get<any[]>(`${this.taskUrl}/${taskId}/users`);
   }
 
-
+  getTaskById(taskId: string): Observable<{ id: string; name: string }> {
+    return this.http.get<{ id: string; name: string }>(`${this.taskUrl}/${taskId}`);
+  }
 
   // Remove a user from a task
   removeUserFromTask(taskId: string, userId: string): Observable<any> {
@@ -75,6 +78,10 @@ export class TaskService {
         throw error;
       })
     );
+  }
+
+  getTasksByProjectId(projectId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.taskUrl2}/projects/${projectId}/tasks`);
   }
 
   isUserOnTask(taskId: string, userId: string): Observable<boolean> {

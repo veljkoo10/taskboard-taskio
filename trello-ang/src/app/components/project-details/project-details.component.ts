@@ -5,6 +5,7 @@ import { UserService } from 'src/app/services/user.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { TaskService } from 'src/app/services/task.service'; // Import TaskService
 import {AuthService} from "../../services/auth.service";
+import {forkJoin} from "rxjs";
 
 @Component({
   selector: 'app-project-details',
@@ -34,7 +35,11 @@ export class ProjectDetailsComponent {
   message: string | null = null;
   isSuccessMessage: boolean = true;
   taskAvUsers: any[] = []
-
+  selectedDependencies: string[] = [];
+  existingTasks: any[] = [];
+  dependencyMessage: string | null = null;
+  originalStatus: string | null = null;
+  taskDependencies: any[]=[];
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
@@ -75,11 +80,30 @@ export class ProjectDetailsComponent {
     this.taskDescription = '';
   }
   ngOnInit() {
+    // Dobijanje korisničkih podataka iz tokena
     this.user = this.getUserInfoFromToken();
+    console.log('User Info:', this.user);
+
+    // Učitavanje zadataka i aktivnih korisnika
     this.loadTasks();
-    this.loadActiveUsers()
+    this.loadActiveUsers();
+
+    // Provera da li projekt postoji i ima validan ID
+    if (this.project && this.project.id) {
+      this.projectId = this.project.id;  // Postavi projectId
+      console.log('Project ID set to:', this.projectId);
+      //this.loadTasksDepend();  // Pozovi funkciju nakon što je projectId postavljen
+    } else {
+      console.error('Project ID is missing!');
+    }
+
+
+    // Provera da li projekt ima title
     if (this.project && this.project.title) {
+      console.log('Project Title:', this.project.title);
       this.getProjectIDByTitle(this.project.title);
+    } else {
+      console.error('Project Title is missing!');
     }
   }
 
@@ -123,7 +147,7 @@ export class ProjectDetailsComponent {
       }
     );
   }
-  
+
   loadUsersForProject() {
     if (this.project && this.project.id) {
       this.projectService.getUsersForProject(this.project.id).subscribe(
@@ -261,40 +285,63 @@ export class ProjectDetailsComponent {
 
 
   updateTaskStatus(status: string) {
-  if (this.selectedTask) {
-    const taskId = this.selectedTask.id;
-    const userId = this.user.id;
+    if (this.selectedTask) {
+      const taskId = this.selectedTask.id;
+      const userId = this.user.id;
 
-    // Proveri da li je korisnik član taska
-    this.taskService.isUserOnTask(taskId, userId).subscribe(
-      (isMember) => {
-        if (isMember) {
-          console.log(isMember)
-          // Ako je korisnik član, ažuriraj status
-          this.selectedTask.status = status;
-          this.taskService.updateTaskStatus(taskId, status).subscribe(
-            (response) => {
-              console.log('Task status updated successfully:', response);
-              this.loadTasks();
-            },
-            (error) => {
-              console.error('Error updating task status:', error);
-            }
-          );
-        } else {
+      // Proveri da li je korisnik član taska
+      this.taskService.isUserOnTask(taskId, userId).subscribe(
+        (isMember) => {
+          if (isMember) {
+            // Ako je korisnik član, ažuriraj status
+            this.selectedTask.status = status;
 
-          // Ako korisnik nije član, prikaži alert
-          alert('You are not a member of this task and cannot update its status.');
+            // Pozivanje servisa za ažuriranje statusa
+            this.taskService.updateTaskStatus(taskId, status).subscribe(
+              (response) => {
+                console.log('Task status updated successfully:', response);
+                this.loadTasks();
+                // Resetovanje poruke o zavisnostima
+                this.dependencyMessage = null;
+              },
+              (error) => {
+                console.error('Error updating task status:', error);
+
+                // Prikazivanje lepše greške u slučaju HTTP greške 400
+                if (error.status === 400) {
+                  const errorMessage = error.error?.message || 'First, it updates the status of the main task';
+                  this.dependencyMessage = `Error: ${errorMessage}`;
+                } else {
+                  // Prikazivanje opšte greške za ostale status kodove
+                  this.dependencyMessage = 'An unexpected error occurred. Please try again later.';
+                }
+              }
+            );
+          } else {
+            this.dependencyMessage = 'You are not a member of this task and cannot update its status.';
+          }
+        },
+        (error) => {
+          console.error('Error checking task membership:', error);
+          this.dependencyMessage = 'An error occurred while checking task membership.';
         }
-      },
-      (error) => {
-        console.error('Error checking task membership:', error);
-        alert('An error occurred while checking task membership.');
-      }
-    );
+      );
     }
   }
 
+  isStatusDisabled(status: string): boolean {
+    if (this.selectedTask) {
+      if (status === 'done' && this.selectedTask.status !== 'work in progress') {
+        // Može da postavi "done" samo ako je "work in progress"
+        return true;
+      }
+      if (status === 'work in progress' && this.selectedTask.status !== 'pending') {
+        // Može da postavi "work in progress" samo ako je "pending"
+        return true;
+      }
+    }
+    return false;
+  }
 
   isAddTaskUserVisible: boolean = false;
   selectedTaskUsers: any[] = []; // Stores selected users for the task
@@ -427,6 +474,7 @@ export class ProjectDetailsComponent {
 
   showCreateTaskForm() {
     const projectId = this.project as any;
+    this.loadTasksDepend();
     console.log(projectId);
     this.isCreateTaskFormVisible = true;
     this.cdRef.detectChanges();
@@ -477,28 +525,23 @@ export class ProjectDetailsComponent {
     }
 
     if (this.projectId) {
-      const projectIdStr = String(this.projectId);
-      console.log('Project ID je:', projectIdStr);
-
       const newTask = {
         name: this.taskName,
-        description: this.taskDescription
+        description: this.taskDescription,
+        dependsOn: this.selectedDependencies, // Dodaj zavisnosti
       };
 
-      this.projectService.createTask(projectIdStr, newTask).subscribe(
+      this.projectService.createTask(this.projectId, newTask).subscribe(
         (response) => {
           console.log('Task successfully created:', response);
-          this.pendingTasks.push(response.name);
-          this.loadTasks();
+
           this.cancelCreateTask();
           this.taskFormError = '';
+
+          this.loadTasks()
         },
         (error) => {
-          if (error.status === 409) {
-            this.showMissingProjectIdModal();
-          } else {
-            console.error('Error creating task:', error);
-          }
+          console.error('Error creating task:', error);
         }
       );
     } else {
@@ -520,8 +563,10 @@ export class ProjectDetailsComponent {
   }
 
   showTaskDetails(task: any) {
-     // Proveri da li je korisnik član taska
-     this.taskService.isUserOnTask(task.id, this.user.id).subscribe(
+    this.dependencyMessage = null;
+
+    // Proveri da li je korisnik član taska
+    this.taskService.isUserOnTask(task.id, this.user.id).subscribe(
       (isMember) => {
         if (isMember) {
           document.querySelector('#status-block')?.setAttribute('style', "display: block");
@@ -540,18 +585,20 @@ export class ProjectDetailsComponent {
     console.log("Selected task:", task);
     this.selectedTask = task;
     this.isTaskDetailsVisible = true;
+    this.selectedTask = { ...task };
+    this.originalStatus = task.status;
     this.cdRef.detectChanges();
     document.querySelector('#taskModal')?.setAttribute('style', 'display:block; opacity: 100%; margin-top:20px');
 
     // Učitajte korisnike na tasku
-  this.taskService.getUsersForTask(task.id).subscribe(
-    (users) => {
-      this.taskUsers = this.sortUsersAlphabetically(users);
-    },
-    (error) => {
-      console.error('Error loading users for task:', error);
-    }
-  );
+    this.taskService.getUsersForTask(task.id).subscribe(
+      (users) => {
+        this.taskUsers = this.sortUsersAlphabetically(users);
+      },
+      (error) => {
+        console.error('Error loading users for task:', error);
+      }
+    );
   }
 
   removeUserFromTask(userId: string): void {
@@ -598,6 +645,11 @@ export class ProjectDetailsComponent {
   closeTaskDetails() {
     this.isTaskDetailsVisible = false;
     this.selectedTask = null;
+    this.dependencyMessage = null;
+    if (this.selectedTask) {
+      this.selectedTask.status = this.originalStatus; // Vraća status na originalnu vrednost
+    }
+
   }
   closeAddUserToTask(){
     this.isAddTaskUserVisible=false;
@@ -672,7 +724,50 @@ export class ProjectDetailsComponent {
   showMaxPeople(){
     document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
   }
+  loadTasksDepend() {
+    if (!this.projectId) {
+      console.error('Project ID is missing!');
+      return;
+    }
 
+    // Resetujemo postojeće zadatke pre nego što učitamo nove
+    this.existingTasks = [];
+
+    console.log('Fetching tasks for project ID:', this.projectId);
+
+    // Pozivamo servis za učitavanje ID-ova zadataka vezanih za trenutni projekat
+    this.taskService.getTasksByProjectId(this.projectId).subscribe(
+      (taskIds) => {
+        if (taskIds && taskIds.length > 0) {
+          // Pozivamo servis za detalje zadatka prema ID-ovima
+          const taskDetailsRequests = taskIds.map((taskId) =>
+            this.taskService.getTaskById(taskId)
+          );
+
+          // Paralelno izvršavamo sve API pozive za detalje zadataka
+          forkJoin(taskDetailsRequests).subscribe(
+            (taskDetails) => {
+              // Mapiranje i filtriranje samo onih zadataka koji pripadaju trenutnom projektu
+              this.existingTasks = taskDetails.map((task) => ({
+                id: task.id,
+                name: task.name,
+              }));
+              console.log('Tasks loaded:', this.existingTasks);
+              this.cdRef.detectChanges();
+            },
+            (error) => {
+              console.error('Error fetching task details:', error);
+            }
+          );
+        } else {
+          console.log('No tasks found for this project.');
+        }
+      },
+      (error) => {
+        console.error('Error loading task IDs:', error);
+      }
+    );
+  }
 
 
 }

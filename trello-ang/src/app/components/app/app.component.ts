@@ -23,7 +23,7 @@ export class AppComponent {
   errorMessage: string = '';
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService, private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
   isLoggedIn() {
-    return this.authService.getDecryptedData('access_token') != null;
+    return this.authService.getDecryptedData('access_token') != '';
   }
   goToDashboard() {
     if (window.location.pathname === '/dashboard') {
