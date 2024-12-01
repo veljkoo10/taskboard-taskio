@@ -7,6 +7,7 @@ import { UserProfileComponent } from './components/user-profile/user-profile.com
 import { MagicLinkComponent } from './components/magic-login/magic-login.component';
 import { VerifyMagicLinkComponent } from './components/verify-magic-link/verify-magic-link.component';
 import { AuthGuard } from './guards/auth.guard';
+import {NotificationComponent} from "./components/notification/notification.component";
 
 export const appRoutes: Routes = [
   {
@@ -28,6 +29,12 @@ export const appRoutes: Routes = [
   {
     path: 'project-details',
     component: ProjectDetailsComponent,
+    canActivate: [AuthGuard],
+    data: { roles: ['Manager','Member'] }
+  },
+  {
+    path: 'notification',
+    component: NotificationComponent,
     canActivate: [AuthGuard],
     data: { roles: ['Manager','Member'] }
   },

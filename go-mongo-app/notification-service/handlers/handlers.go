@@ -1,16 +1,17 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gocql/gocql"
+	"github.com/gorilla/mux"
+	"github.com/nats-io/nats.go"
 	"log"
 	"net/http"
 	"notification-service/models"
 	"notification-service/repoNotification"
+	"strings"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 // KeyNotification je ključ za kontekst
@@ -19,190 +20,355 @@ type KeyNotification struct{}
 // NotificationHandler struktura
 type NotificationHandler struct {
 	logger *log.Logger
-	repo   *repoNotification.NotificationRepo // Reference na NotificationRepo iz repoNotification
+	repo   *repoNotification.NotificationRepo
 }
 
-// NewNotificationHandler kreira novi NotificationHandler sa prosleđenim logerom i repo-om
+// NewNotificationHandler kreira novi NotificationHandler
 func NewNotificationHandler(l *log.Logger, r *repoNotification.NotificationRepo) *NotificationHandler {
 	return &NotificationHandler{logger: l, repo: r}
 }
 
-// CreateUserHandler unosi novog korisnika u bazu
-func (nh *NotificationHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		FirstName string    `json:"first_name"`
-		LastName  string    `json:"last_name"`
-		Email     string    `json:"email"`
-		CreatedAt time.Time `json:"created_at"`
-	}
+func (n *NotificationHandler) CreateNotification(rw http.ResponseWriter, h *http.Request) {
+	var notification models.Notification
 
-	// Parsiraj JSON telo zahteva
-	err := json.NewDecoder(r.Body).Decode(&req)
+	decoder := json.NewDecoder(h.Body)
+	err := decoder.Decode(&notification)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		http.Error(rw, "Unable to decode json", http.StatusBadRequest)
+		n.logger.Fatal(err)
 		return
 	}
 
-	// Kreiraj User objekat
-	user := models.User{
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Email:     req.Email,
-		CreatedAt: req.CreatedAt,
-	}
-
-	// Pozovi repo za unos korisnika u bazu
-	err = nh.repo.InsertUser(&user)
-	if err != nil {
-		http.Error(w, "Failed to insert user", http.StatusInternalServerError)
+	if err := notification.Validate(); err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Uspešan odgovor
-	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "User created",
-	})
+	err = n.repo.Create(&notification)
 	if err != nil {
-		http.Error(w, "Unable to encode response", http.StatusInternalServerError)
+		http.Error(rw, "Failed to create notification", http.StatusInternalServerError)
+		n.logger.Print("Error inserting notification:", err)
+		return
+	}
+
+	rw.WriteHeader(http.StatusCreated)
+	rw.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(rw).Encode(notification)
+	if err != nil {
+		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
 	}
 }
 
-// Middleware za deserializaciju
-func (n *NotificationHandler) MiddlewareNotificationDeserialization(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, h *http.Request) {
-		notification := &models.Notification{} // Use pointer here
-		err := json.NewDecoder(h.Body).Decode(notification)
-		if err != nil {
-			http.Error(rw, "Unable to decode JSON", http.StatusBadRequest)
-			n.logger.Fatal(err)
-			return
-		}
-		ctx := context.WithValue(h.Context(), KeyNotification{}, notification)
-		h = h.WithContext(ctx)
-		next.ServeHTTP(rw, h)
-	})
-}
-
-// Middleware za postavljanje Content-Type header-a
-func (n *NotificationHandler) MiddlewareContentTypeSet(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, h *http.Request) {
-		rw.Header().Add("Content-Type", "application/json")
-		next.ServeHTTP(rw, h)
-	})
-}
-
-// GetNotifications vraća sve notifikacije za korisnika
-func (n *NotificationHandler) GetNotifications(rw http.ResponseWriter, h *http.Request) {
+func (n *NotificationHandler) GetNotificationByID(rw http.ResponseWriter, h *http.Request) {
 	vars := mux.Vars(h)
-	userIDStr := vars["user_id"]
+	id := vars["id"]
 
-	// Konvertuj userID u gocql.UUID
-	userID, err := gocql.ParseUUID(userIDStr)
+	notificationID, err := gocql.ParseUUID(id)
 	if err != nil {
-		n.logger.Println("Invalid user ID format:", err)
-		http.Error(rw, "Invalid user ID format", http.StatusBadRequest)
+		http.Error(rw, "Invalid UUID format", http.StatusBadRequest)
+		n.logger.Println("Invalid UUID format:", err)
 		return
 	}
 
-	// Pozovi repo da dobijemo notifikacije za korisnika
-	notifications, err := n.repo.GetNotificationsByUser(userID)
+	notification, err := n.repo.GetByID(notificationID)
 	if err != nil {
-		n.logger.Println("Database exception:", err)
-		http.Error(rw, "Unable to fetch notifications", http.StatusInternalServerError)
+		http.Error(rw, "Notification not found", http.StatusNotFound)
+		n.logger.Println("Error fetching notification:", err)
 		return
 	}
 
-	// Pošaljemo notifikacije kao JSON odgovor
+	rw.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(rw).Encode(notification)
+	if err != nil {
+		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
+	}
+}
+
+func (n *NotificationHandler) GetNotificationsByUserID(rw http.ResponseWriter, h *http.Request) {
+	vars := mux.Vars(h)
+	userID := vars["id"]
+
+	n.logger.Println("User ID:", userID)
+
+	notifications, err := n.repo.GetByUserID(userID)
+	if err != nil {
+		http.Error(rw, "Error fetching notifications", http.StatusInternalServerError)
+		n.logger.Println("Error fetching notifications:", err)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(rw).Encode(notifications)
 	if err != nil {
-		n.logger.Println("Unable to encode notifications to JSON:", err)
-		http.Error(rw, "Unable to encode notifications", http.StatusInternalServerError)
-		return
+		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
 	}
 }
 
-// CreateNotificationHandler kreira novu notifikaciju
-func (nh *NotificationHandler) CreateNotificationHandler(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		UserID    string    `json:"user_id"`
-		Message   string    `json:"message"`
-		IsActive  bool      `json:"is_active"`
-		CreatedAt time.Time `json:"created_at"` // Koristi time.Time
-	}
+func (n *NotificationHandler) UpdateNotificationStatus(rw http.ResponseWriter, h *http.Request) {
+	vars := mux.Vars(h)
+	id := vars["id"]
 
-	// Parsiraj JSON telo zahteva
-	err := json.NewDecoder(r.Body).Decode(&req)
+	notificationID, err := gocql.ParseUUID(id)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		http.Error(rw, "Invalid UUID format", http.StatusBadRequest)
+		n.logger.Println("Invalid UUID format:", err)
 		return
 	}
 
-	// Konvertuj UserID iz string u gocql.UUID
-	userID, err := gocql.ParseUUID(req.UserID)
+	type statusRequest struct {
+		Status    models.NotificationStatus `json:"status"`
+		CreatedAt time.Time                 `json:"created_at"`
+	}
+
+	var req statusRequest
+	decoder := json.NewDecoder(h.Body)
+	err = decoder.Decode(&req)
 	if err != nil {
-		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		http.Error(rw, "Unable to decode JSON", http.StatusBadRequest)
+		n.logger.Println("Error decoding JSON:", err)
 		return
 	}
 
-	// Kreiraj Notification objekat
-	notification := models.Notification{
-		UserID:    userID,
-		Message:   req.Message,
-		IsActive:  req.IsActive,
-		CreatedAt: req.CreatedAt, // Direktno koristi time.Time iz req
-	}
-
-	// Pozovi repo za unos notifikacije u bazu
-	err = nh.repo.InsertNotification(&notification)
-	if err != nil {
-		http.Error(w, "Failed to insert notification", http.StatusInternalServerError)
+	if req.Status != models.Unread && req.Status != models.Read {
+		http.Error(rw, "Invalid status value", http.StatusBadRequest)
 		return
 	}
 
-	// Generisanje UUID za novu notifikaciju
-	notificationID, _ := gocql.RandomUUID()
+	userID, ok := h.Context().Value(KeyNotification{}).(string)
+	if !ok {
+		n.logger.Println("User id not found in context")
+		http.Error(rw, "User id not found in context", http.StatusUnauthorized)
+		return
+	}
 
-	// Uspešan odgovor sa statusom i ID-em kreirane notifikacije
-	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "Notification created",
-		"id":     notificationID, // Vraćanje ID-a nove notifikacije
+	err = n.repo.UpdateStatus(req.CreatedAt, userID, notificationID, req.Status)
+	if err != nil {
+		http.Error(rw, "Error updating notification status", http.StatusInternalServerError)
+		n.logger.Println("Error updating notification status:", err)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+}
+func (n *NotificationHandler) GetAllNotifications(rw http.ResponseWriter, r *http.Request) {
+	notifications, err := n.repo.GetAllNotifications()
+	if err != nil {
+		http.Error(rw, "Error fetching all notifications", http.StatusInternalServerError)
+		n.logger.Println("Error fetching all notifications:", err)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(rw).Encode(notifications)
+	if err != nil {
+		http.Error(rw, "Unable to convert notifications to JSON", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
+	}
+}
+func (n *NotificationHandler) NotificationListener() {
+	n.logger.Println("method started")
+	nc, err := Conn()
+	if err != nil {
+		log.Fatal("Error connecting to NATS:", err)
+	}
+	defer nc.Close()
+
+	subjectJoined := "project.joined"
+	_, err = nc.Subscribe(subjectJoined, func(msg *nats.Msg) {
+		fmt.Printf("User received notification: %s\n", string(msg.Data))
+
+		var data struct {
+			UserID      string `json:"userId"`
+			ProjectName string `json:"projectName"`
+		}
+
+		err := json.Unmarshal(msg.Data, &data)
+		if err != nil {
+			log.Println("Error unmarshalling message:", err)
+			return
+		}
+
+		fmt.Printf("User ID: %s, Project Name: %s\n", data.UserID, data.ProjectName)
+
+		message := fmt.Sprintf("You have been added to the \"%s\" project", strings.Title(data.ProjectName))
+
+		notification := models.Notification{
+			UserID:    data.UserID,
+			Message:   message,
+			CreatedAt: time.Now(),
+			Status:    models.Unread,
+		}
+
+		err = n.repo.Create(&notification)
+		if err != nil {
+			n.logger.Print("Error inserting notification:", err)
+			return
+		}
+	})
+
+	if err != nil {
+		log.Println("Error subscribing to NATS subject:", err)
+	}
+
+	taskJoined := "task.joined"
+	_, err = nc.Subscribe(taskJoined, func(msg *nats.Msg) {
+		fmt.Printf("User received notification: %s\n", string(msg.Data))
+
+		var data struct {
+			UserID   string `json:"userId"`
+			TaskName string `json:"taskName"`
+		}
+
+		err := json.Unmarshal(msg.Data, &data)
+		if err != nil {
+			log.Println("Error unmarshalling message:", err)
+			return
+		}
+
+		fmt.Printf("User ID: %s, Task Name: %s\n", data.UserID, data.TaskName)
+
+		message := fmt.Sprintf("You have been added to the \"%s\" task", strings.Title(data.TaskName))
+
+		notification := models.Notification{
+			UserID:    data.UserID,
+			Message:   message,
+			CreatedAt: time.Now(),
+			Status:    models.Unread,
+		}
+
+		err = n.repo.Create(&notification)
+		if err != nil {
+			n.logger.Print("Error inserting notification:", err)
+			return
+		}
+	})
+
+	if err != nil {
+		log.Println("Error subscribing to NATS subject:", err)
+	}
+
+	subjectRemoved := "project.removed"
+	_, err = nc.Subscribe(subjectRemoved, func(msg *nats.Msg) {
+		fmt.Printf("User received removal notification: %s\n", string(msg.Data))
+
+		var data struct {
+			UserID      string `json:"userId"`
+			ProjectName string `json:"projectName"`
+		}
+
+		err := json.Unmarshal(msg.Data, &data)
+		if err != nil {
+			log.Println("Error unmarshalling message:", err)
+			return
+		}
+
+		fmt.Printf("User ID: %s, Project Name: %s\n", data.UserID, data.ProjectName)
+
+		message := fmt.Sprintf("You have been removed from the \"%s\" project", strings.Title(data.ProjectName))
+
+		notification := models.Notification{
+			UserID:    data.UserID,
+			Message:   message,
+			CreatedAt: time.Now(),
+			Status:    models.Unread,
+		}
+
+		err = n.repo.Create(&notification)
+		if err != nil {
+			n.logger.Print("Error inserting notification:", err)
+			return
+		}
+	})
+
+	if err != nil {
+		log.Println("Error subscribing to NATS subject:", err)
+	}
+
+	taskRemoved := "task.removed"
+	_, err = nc.Subscribe(taskRemoved, func(msg *nats.Msg) {
+		fmt.Printf("User received removal notification: %s\n", string(msg.Data))
+
+		var data struct {
+			UserID   string `json:"userId"`
+			TaskName string `json:"taskName"`
+		}
+
+		err := json.Unmarshal(msg.Data, &data)
+		if err != nil {
+			log.Println("Error unmarshalling message:", err)
+			return
+		}
+
+		fmt.Printf("User ID: %s, Task Name: %s\n", data.UserID, data.TaskName)
+
+		message := fmt.Sprintf("You have been removed from the \"%s\" task", strings.Title(data.TaskName))
+
+		notification := models.Notification{
+			UserID:    data.UserID,
+			Message:   message,
+			CreatedAt: time.Now(),
+			Status:    models.Unread,
+		}
+
+		err = n.repo.Create(&notification)
+		if err != nil {
+			n.logger.Print("Error inserting notification:", err)
+			return
+		}
 	})
 	if err != nil {
-		http.Error(w, "Unable to encode response", http.StatusInternalServerError)
-		return
+		log.Println("Error subscribing to NATS subject:", err)
 	}
+
+	statusUpdate := "task.status.update"
+	_, err = nc.Subscribe(statusUpdate, func(msg *nats.Msg) {
+		fmt.Printf("User received notification: %s\n", string(msg.Data))
+
+		var update struct {
+			TaskName   string   `json:"taskName"`
+			TaskStatus string   `json:"taskStatus"`
+			MemberIds  []string `json:"memberIds"`
+		}
+
+		if err := json.Unmarshal(msg.Data, &update); err != nil {
+			n.logger.Printf("Error unmarshalling task status update message: %v", err)
+			return
+		}
+		fmt.Printf("Received status update for Task %s: %s\n", update.TaskName, update.TaskStatus)
+
+		message := fmt.Sprintf("The status of the \"%s\" task has been changed to \"%s\"", strings.Title(update.TaskName), strings.Title(update.TaskStatus))
+
+		for _, memberID := range update.MemberIds {
+			notification := models.Notification{
+				UserID:    memberID,
+				Message:   message,
+				CreatedAt: time.Now(),
+				Status:    models.Unread,
+			}
+
+			if err := n.repo.Create(&notification); err != nil {
+				n.logger.Printf("Error inserting notification for user %s: %v", memberID, err)
+				continue
+			}
+
+			n.logger.Printf("Notification sent to user %s\n", memberID)
+		}
+	})
+	if err != nil {
+		log.Println("Error subscribing to NATS subject:", err)
+	}
+
+	select {}
 }
 
-// GetAllNotificationsHandler vraća sve notifikacije
-func (h *NotificationHandler) GetAllNotificationsHandler(w http.ResponseWriter, r *http.Request) {
-	h.logger.Println("Received GET request for /notifications/GetAll")
-
-	// Dobijanje notifikacija iz repozitorijuma
-	notifications, err := h.repo.GetAllNotifications()
+func Conn() (*nats.Conn, error) {
+	conn, err := nats.Connect("nats://nats:4222")
 	if err != nil {
-		h.logger.Printf("Error fetching notifications: %v", err)
-		http.Error(w, "Failed to fetch notifications", http.StatusInternalServerError)
-		return
+		log.Fatal(err)
+		return nil, err
 	}
-
-	// Proveravamo da li ima notifikacija
-	if len(notifications) == 0 {
-		h.logger.Println("No notifications found")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[]`)) // Prazan JSON niz ako nema podataka
-		return
-	}
-
-	h.logger.Printf("Returning %d notifications", len(notifications))
-
-	// Postavljanje zaglavlja i vraćanje podataka u JSON formatu
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(notifications); err != nil {
-		h.logger.Printf("Error encoding notifications to JSON: %v", err)
-		http.Error(w, "Failed to encode notifications", http.StatusInternalServerError)
-	}
+	return conn, nil
 }

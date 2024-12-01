@@ -17,3 +17,11 @@ func ConnectToMongo() error {
 	Client, err = mongo.Connect(context.TODO(), clientOptions)
 	return err
 }
+
+type ProjectRepo struct {
+	cli *mongo.Client
+}
+
+func NewProjectRepo(client *mongo.Client) *ProjectRepo {
+	return &ProjectRepo{cli: client}
+}

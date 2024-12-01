@@ -10,19 +10,16 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gocql/gocql"
 	"github.com/gorilla/mux"
 )
 
 func main() {
-	// Port na kojem API treba da sluša
+	// Port na kojem API treba da sluÅ¡a
 	port := os.Getenv("PORT")
 	if len(port) == 0 {
-		port = "8084"
+		port = "8080"
 	}
-
-	// Kontekst za graceful shutdown
-	timeoutContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 
 	// Inicijalizacija logera
 	logger := log.New(os.Stdout, "[notification-api] ", log.LstdFlags)
@@ -35,32 +32,50 @@ func main() {
 	}
 	defer store.CloseSession()
 
-	// Kreiranje potrebnih tabela
+	cluster := gocql.NewCluster("cassandra") // or your cassandra host
+	cluster.Keyspace = "notifications"
+	cluster.Consistency = gocql.Quorum
+
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Fatal("Error connecting to Cassandra:", err)
+	}
+	defer session.Close()
+
+	err = session.Query("TRUNCATE notifications").Exec()
+	if err != nil {
+		log.Fatal("Error truncating notifications table:", err)
+	}
+
 	store.CreateTables()
 
 	// Kreiramo NotificationHandler sa logerom i repozitorijumom
 	notificationHandler := handlers.NewNotificationHandler(logger, store)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Println("Recovered in NotificationListener:", r)
+			}
+		}()
+		notificationHandler.NotificationListener()
+		logger.Println("NotificationListener invoked successfully")
+	}()
 
-	// Postavljamo rute za API
-	router := mux.NewRouter()
+	r := mux.NewRouter()
+	r.HandleFunc("/notifications/user/{id}", notificationHandler.GetNotificationsByUserID).Methods("GET", "OPTIONS")
+	r.HandleFunc("/notifications", notificationHandler.CreateNotification).Methods("POST")
+	r.HandleFunc("/notifications/all", notificationHandler.GetAllNotifications).Methods("GET")
 
-	// Dodajemo rute
-	router.HandleFunc("/notifications/GetAll", notificationHandler.GetAllNotificationsHandler).Methods("GET")
-	router.HandleFunc("/notifications/create", notificationHandler.CreateNotificationHandler).Methods("POST")
+	r.Use(CORS)
 
-	// Dodajemo CORS middleware
-	router.Use(CORS)
-
-	// Kreiranje HTTP servera
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      router,
+		Handler:      r,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Pokretanje servera u gorutini
 	go func() {
 		logger.Printf("Starting server on port %s...\n", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -68,26 +83,23 @@ func main() {
 		}
 	}()
 
-	// Čekamo na signal za prekid
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, os.Kill)
 
 	sig := <-sigCh
 	logger.Printf("Received signal %s, shutting down...\n", sig)
 
-	// Graceful shutdown
-	if err := server.Shutdown(timeoutContext); err != nil {
+	if err := server.Shutdown(context.Background()); err != nil {
 		logger.Fatalf("Could not gracefully shutdown the server: %v\n", err)
 	}
 	logger.Println("Server stopped gracefully")
 }
 
-// CORS middleware
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Postavljanje CORS headera
+		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)

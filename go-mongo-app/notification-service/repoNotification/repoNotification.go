@@ -2,180 +2,215 @@ package repoNotification
 
 import (
 	"fmt"
+	"github.com/gocql/gocql"
 	"log"
 	"notification-service/models"
 	"os"
+	"strconv"
 	"time"
-
-	// NoSQL: module containing Cassandra api client
-	"github.com/gocql/gocql"
 )
 
-// NotificationRepo struct encapsulating Cassandra api client for notifications
 type NotificationRepo struct {
 	session *gocql.Session
 	logger  *log.Logger
 }
 
 func New(logger *log.Logger) (*NotificationRepo, error) {
-	logger.Println("Initializing notification service...")
 
-	// Čitanje IP adrese iz okruženja
-	db := os.Getenv("CASS_DB")
-	if db == "" {
-		logger.Println("CASS_DB environment variable is not set")
-		return nil, fmt.Errorf("CASS_DB environment variable is not set")
+	dbHost := os.Getenv("CASSANDRA_HOST")
+	if dbHost == "" {
+		dbHost = "cassandra"
 	}
 
-	// Konfigurišemo klaster za povezivanje sa Cassandrom
-	cluster := gocql.NewCluster(db)
-	cluster.Keyspace = "system" // Početno se povezuje sa 'system' keyspace-om
-	cluster.Consistency = gocql.One
-
-	var session *gocql.Session
-	var err error
-
-	// Pokušaj povezivanja sa Cassandra bazom (retry logika)
-	for i := 0; i < 5; i++ {
-		logger.Printf("Attempting to connect to Cassandra, try %d...\n", i+1)
-		session, err = cluster.CreateSession()
-		if err == nil {
-			logger.Println("Successfully connected to Cassandra!")
-			break
-		}
-
-		// Ako se ne poveže, loguj grešku i pokušaj ponovo
-		logger.Printf("Attempt %d: Failed to connect to Cassandra: %v\n", i+1, err)
-		time.Sleep(10 * time.Second)
+	dbPort := os.Getenv("CASSANDRA_PORT")
+	if dbPort == "" {
+		dbPort = "9042"
 	}
 
-	// Ako konekcija nije uspela nakon 5 pokušaja, vrati grešku
+	port, err := strconv.Atoi(dbPort)
 	if err != nil {
-		logger.Println("Failed to connect to Cassandra after 5 attempts.")
+		logger.Println("Invalid Cassandra port:", dbPort)
+		return nil, fmt.Errorf("Invalid Cassandra port: %s", dbPort)
+	}
+
+	cluster := gocql.NewCluster(dbHost)
+	cluster.Port = port
+	cluster.Keyspace = "system"
+	session, err := cluster.CreateSession()
+	if err != nil {
+		logger.Println("Error connecting to Cassandra:", err)
 		return nil, err
 	}
 
-	// Kreiraj 'notifications' keyspace ako ne postoji
-	logger.Println("Creating keyspace 'notifications' if it does not exist...")
-	err = session.Query(`
-		CREATE KEYSPACE IF NOT EXISTS notifications 
-		WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}
-	`).Exec()
+	err = session.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS notifications
+	WITH replication = {'class' : 'SimpleStrategy', 'replication_factor' : 3}`)).Exec()
 	if err != nil {
 		logger.Println("Error creating keyspace:", err)
+		return nil, err
 	}
+	session.Close()
 
-	// Sada se poveži sa 'notifications' keyspace-om
 	cluster.Keyspace = "notifications"
+	cluster.Consistency = gocql.One
 	session, err = cluster.CreateSession()
 	if err != nil {
 		logger.Println("Error connecting to notifications keyspace:", err)
 		return nil, err
 	}
 
-	// Uspešno povezivanje sa 'notifications' keyspace-om
-	logger.Println("Successfully connected to 'notifications' keyspace!")
-
-	// Vraćamo repo objekat
 	return &NotificationRepo{
 		session: session,
 		logger:  logger,
 	}, nil
 }
 
-// Disconnect from database
-func (nr *NotificationRepo) CloseSession() {
-	nr.session.Close()
+func (repo *NotificationRepo) DropKeyspace() error {
+	dropKeyspaceQuery := fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", "notifications")
+	if err := repo.session.Query(dropKeyspaceQuery).Exec(); err != nil {
+		repo.logger.Println("Error dropping keyspace:", err)
+		return err
+	}
+	repo.logger.Println("Keyspace dropped successfully.")
+	return nil
 }
-func (nr *NotificationRepo) GetAllNotifications() ([]models.Notification, error) {
+
+func (repo *NotificationRepo) GetNotificationsByUser(userID gocql.UUID) ([]models.Notification, error) {
 	var notifications []models.Notification
 
-	// Selektujemo sve notifikacije iz tabele
-	query := "SELECT id, user_id, message, is_active, created_at FROM notifications"
-	nr.logger.Println("Executing query:", query) // Dodajemo log za upit
-
-	iter := nr.session.Query(query).Iter()
+	iter := repo.session.Query(`
+		SELECT id, message, created_at, status FROM notifications WHERE user_id = ?`, userID).Iter()
 
 	var notification models.Notification
-	for iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.IsActive, &notification.CreatedAt) {
-		// Logujemo svaku uspešno učitanu notifikaciju
-		nr.logger.Printf("Fetched notification: %+v", notification)
+	for iter.Scan(&notification.ID, &notification.Message, &notification.CreatedAt, &notification.Status) {
 		notifications = append(notifications, notification)
 	}
 
-	// Proveravamo grešku tokom iteracije
 	if err := iter.Close(); err != nil {
-		nr.logger.Printf("Failed to close iterator: %v", err)
+		repo.logger.Println("Error fetching notifications:", err)
 		return nil, err
 	}
 
-	nr.logger.Printf("Returning %d notifications", len(notifications)) // Log za broj notifikacija
 	return notifications, nil
 }
 
-// Create notifications table
-func (nr *NotificationRepo) CreateTables() {
-	err := nr.session.Query(
-		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s 
-					(id UUID, user_id UUID, message text, is_active boolean, created_at timestamp, 
-					PRIMARY KEY (user_id, created_at))`, "notifications")).Exec()
-	if err != nil {
-		nr.logger.Println(err)
-	}
+func (repo *NotificationRepo) CloseSession() {
+	repo.session.Close()
 }
 
-// Insert new notification
-func (nr *NotificationRepo) InsertNotification(notification *models.Notification) error {
-	// Generisanje novog UUID-a za 'id'
-	notificationID, _ := gocql.RandomUUID()
+func (repo *NotificationRepo) CreateTables() {
 
-	// Direktno korišćenje notification.UserID jer je već gocql.UUID
-	err := nr.session.Query(
-		`INSERT INTO notifications (id, user_id, message, is_active, created_at) 
-		VALUES (?, ?, ?, ?, ?)`,
-		notificationID, notification.UserID, notification.Message, notification.IsActive, notification.CreatedAt).Exec()
+	err := repo.session.Query(`CREATE TABLE IF NOT EXISTS notifications (
+		user_id TEXT,
+		created_at TIMESTAMP,
+		id UUID,
+		message TEXT,
+		status TEXT,
+		PRIMARY KEY (user_id, created_at, id)
+	) WITH CLUSTERING ORDER BY (created_at DESC);`).Exec()
 	if err != nil {
-		nr.logger.Println(err)
-		return err
+		repo.logger.Println("Error creating notifications table with clustering:", err)
+		return
 	}
 
+}
+
+func (repo NotificationRepo) Create(notification *models.Notification) error {
+
+	notification.CreatedAt = time.Now()
+
+	notification.ID, _ = gocql.RandomUUID()
+
+	err := repo.session.Query(
+		`INSERT INTO notifications (id, user_id, message, created_at, status)
+	VALUES (?, ?, ?, ?, ?)`,
+		notification.ID, notification.UserID, notification.Message, notification.CreatedAt, notification.Status).Exec()
+
+	if err != nil {
+		repo.logger.Println("Error inserting notification:", err)
+		return err
+	}
 	return nil
 }
 
-// Get notifications by user ID
-func (nr *NotificationRepo) GetNotificationsByUser(userID gocql.UUID) ([]models.Notification, error) {
-	scanner := nr.session.Query(`SELECT id, user_id, message, is_active, created_at FROM notifications WHERE user_id = ?`,
-		userID).Iter().Scanner()
+func (repo *NotificationRepo) GetByID(id gocql.UUID) (*models.Notification, error) {
+	var notification models.Notification
+	err := repo.session.Query(`
+		SELECT id, user_id, message, created_at, status
+		FROM notifications WHERE id = ?`, id).Consistency(gocql.One).Scan(
+		&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status)
 
-	var notifications []models.Notification
-	for scanner.Next() {
-		var notification models.Notification
-		err := scanner.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.IsActive, &notification.CreatedAt)
-		if err != nil {
-			nr.logger.Println(err)
-			return nil, err
+	if err != nil {
+		if err == gocql.ErrNotFound {
+			return nil, fmt.Errorf("notification with ID %v not found", id)
 		}
+		repo.logger.Println("Error fetching notification:", err)
+		return nil, err
+	}
+
+	location, err := time.LoadLocation("Europe/Budapest")
+	if err != nil {
+		log.Println("Error loading time zone:", err)
+		return nil, err
+	}
+
+	notification.CreatedAt = notification.CreatedAt.In(location)
+
+	return &notification, nil
+}
+
+func (repo *NotificationRepo) GetByUserID(userID string) ([]*models.Notification, error) {
+	var notifications []*models.Notification
+
+	iter := repo.session.Query(`
+        SELECT id, user_id, message, created_at, status
+        FROM notifications 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC`, userID).Iter()
+
+	for {
+		var notification models.Notification
+		if !iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status) {
+			break
+		}
+		notifications = append(notifications, &notification)
+	}
+
+	if err := iter.Close(); err != nil {
+		repo.logger.Println("Error closing iterator:", err)
+		return nil, err
+	}
+
+	return notifications, nil
+}
+
+func (repo *NotificationRepo) UpdateStatus(createdAt time.Time, userID string, id gocql.UUID, status models.NotificationStatus) error {
+	err := repo.session.Query(`
+        UPDATE notifications 
+        SET status = ? 
+        WHERE user_id = ? AND created_at = ? AND id = ?`,
+		status, userID, createdAt, id).Exec()
+
+	if err != nil {
+		repo.logger.Println("Error updating notification status:", err)
+		return err
+	}
+	return nil
+}
+func (repo *NotificationRepo) GetAllNotifications() ([]models.Notification, error) {
+	var notifications []models.Notification
+
+	iter := repo.session.Query(`
+		SELECT id, user_id, message, created_at, status FROM notifications`).Iter()
+
+	var notification models.Notification
+	for iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status) {
 		notifications = append(notifications, notification)
 	}
-	if err := scanner.Err(); err != nil {
-		nr.logger.Println(err)
+
+	if err := iter.Close(); err != nil {
+		repo.logger.Println("Error fetching all notifications:", err)
 		return nil, err
 	}
+
 	return notifications, nil
-}
-
-// InsertUser unosi novog korisnika u bazu
-func (nr *NotificationRepo) InsertUser(user *models.User) error {
-	userID, _ := gocql.RandomUUID() // Generisanje UUID za korisnika
-
-	err := nr.session.Query(`
-		INSERT INTO users (id, first_name, last_name, email, created_at)
-		VALUES (?, ?, ?, ?, ?)
-	`, userID, user.FirstName, user.LastName, user.Email, user.CreatedAt).Exec()
-
-	if err != nil {
-		nr.logger.Println("Failed to insert user:", err)
-		return err
-	}
-	return nil
 }

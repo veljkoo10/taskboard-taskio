@@ -24,7 +24,7 @@ func InsertInitialUsers() {
 	}
 
 	if count > 0 {
-		return
+		return // Skip if users already exist
 	}
 
 	var users []interface{}
@@ -40,7 +40,6 @@ func InsertInitialUsers() {
 		}
 		users = append(users, user)
 	}
-
 
 	_, err = collection.InsertMany(context.TODO(), users)
 	if err != nil {

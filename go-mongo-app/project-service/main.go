@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/nats-io/nats.go"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -26,6 +28,19 @@ func main() {
 	bootstrap.ClearProjects()
 	bootstrap.InsertInitialProjects()
 
+	natsURL := os.Getenv("NATS_URL")
+	if natsURL == "" {
+		natsURL = "nats://nats:4222"
+	}
+	nc, err := nats.Connect(natsURL)
+	if err != nil {
+		log.Fatalf("Error connecting to NATS: %v", err)
+	}
+	defer nc.Close()
+	projectRepo := db.NewProjectRepo(db.Client)
+	logger := log.New(os.Stdout, "[product-api] ", log.LstdFlags)
+	projectsHandler := handlers.NewProjectsHandler(logger, projectRepo, nc)
+
 	router := mux.NewRouter()
 	router.HandleFunc("/projects/{projectId}/users", handlers.GetUsersForProjectHandler).Methods("GET")
 	router.HandleFunc("/projects/title/id", handlers.GetProjectIDByTitle).Methods("POST")
@@ -33,8 +48,8 @@ func main() {
 	router.HandleFunc("/projects", handlers.GetProjects).Methods("GET")
 	router.HandleFunc("/projects/create/{managerId}", handlers.CreateProject).Methods("POST")
 	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET", "OPTIONS")
-	router.HandleFunc("/projects/{projectId}/add-users", handlers.AddUsersToProject).Methods("PUT")
-	router.HandleFunc("/projects/{projectId}/remove-users", handlers.RemoveUsersFromProject).Methods("PUT")
+	router.HandleFunc("/projects/{projectId}/add-users", projectsHandler.AddUsersToProject).Methods("PUT")
+	router.HandleFunc("/projects/{projectId}/remove-users", projectsHandler.RemoveUsersFromProject).Methods("PUT")
 	router.HandleFunc("/projects/title/{managerId}", handlers.HandleCheckProjectByTitle).Methods("POST")
 	router.HandleFunc("/projects/{projectID}/tasks/{taskID}", handlers.AddTaskToProjectHandler).Methods("PUT", "OPTIONS")
 	router.HandleFunc("/projects/isActive/{projectId}", handlers.IsActiveProject).Methods("GET")

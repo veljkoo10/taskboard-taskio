@@ -32,7 +32,10 @@ export class AppComponent {
       this.router.navigate(['/dashboard']);
     }
   }
-
+  goToNotifications(): void {
+    this.isProfileMenuOpen = false;
+    this.router.navigate(['/notification']);
+  }
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;

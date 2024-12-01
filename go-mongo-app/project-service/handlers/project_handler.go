@@ -3,7 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nats-io/nats.go"
+	"log"
 	"net/http"
+	"os"
+	"project-service/db"
 	"project-service/models"
 	"project-service/service"
 	"strings"
@@ -11,6 +15,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type ProjectHandler struct {
+	logger   *log.Logger
+	repo     *db.ProjectRepo
+	natsConn *nats.Conn
+}
+
+func NewProjectsHandler(l *log.Logger, r *db.ProjectRepo, natsConn *nats.Conn) *ProjectHandler {
+	return &ProjectHandler{l, r, natsConn}
+}
 func GetUsersForProjectHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
@@ -118,7 +131,7 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(createdProject)
 }
 
-func AddUsersToProject(w http.ResponseWriter, r *http.Request) {
+func (p *ProjectHandler) AddUsersToProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
@@ -136,8 +149,56 @@ func AddUsersToProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	project, err := service.GetProjectByID(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nc, err := Conn()
+	if err != nil {
+		http.Error(w, "Failed to connect to message broker", http.StatusInternalServerError)
+		p.logger.Println("Error connecting to NATS:", err)
+		return
+	}
+	defer nc.Close()
+
+	for _, uid := range requestBody.UserIDs {
+		subject := "project.joined"
+
+		message := struct {
+			UserID      string `json:"userId"`
+			ProjectName string `json:"projectName"`
+		}{
+			UserID:      uid,
+			ProjectName: project.Title,
+		}
+
+		jsonMessage, err := json.Marshal(message)
+		if err != nil {
+			log.Println("Error marshalling message:", err)
+			continue
+		}
+
+		err = nc.Publish(subject, jsonMessage)
+		if err != nil {
+			log.Println("Error publishing message to NATS:", err)
+		}
+	}
+	p.logger.Println("a message has been sent")
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Users successfully added to project"))
+}
+
+func Conn() (*nats.Conn, error) {
+	connection := os.Getenv("NATS_URL")
+	conn, err := nats.Connect(connection)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	return conn, nil
 }
 
 func GetProjectByID(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +215,7 @@ func GetProjectByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(project)
 }
 
-func RemoveUsersFromProject(w http.ResponseWriter, r *http.Request) {
+func (p *ProjectHandler) RemoveUsersFromProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
@@ -172,9 +233,56 @@ func RemoveUsersFromProject(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	project, err := service.GetProjectByID(projectID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, uid := range requestBody.UserIDs {
+
+		subject := "project.removed"
+		message := struct {
+			UserID      string `json:"userId"`
+			ProjectName string `json:"projectName"`
+		}{
+			UserID:      uid,
+			ProjectName: project.Title,
+		}
+
+		if err := p.sendNotification(subject, message); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	p.logger.Println("a message has been sent")
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Users successfully removed from project"))
+}
+
+func (p *ProjectHandler) sendNotification(subject string, message interface{}) error {
+	nc, err := Conn()
+	if err != nil {
+		log.Println("Error connecting to NATS:", err)
+		return fmt.Errorf("failed to connect to message broker: %w", err)
+	}
+	defer nc.Close()
+
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling message:", err)
+		return fmt.Errorf("error marshalling message: %w", err)
+	}
+
+	err = nc.Publish(subject, jsonMessage)
+	if err != nil {
+		log.Println("Error publishing message to NATS:", err)
+		return fmt.Errorf("error publishing message to NATS: %w", err)
+	}
+
+	p.logger.Println("Notification sent:", subject)
+	return nil
 }
 
 func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {

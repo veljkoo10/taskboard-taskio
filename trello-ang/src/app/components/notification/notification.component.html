@@ -1,0 +1,19 @@
+<table class="table">
+  <thead class="table-dark">
+  <tr>
+    <th>Messages</th>
+    <th>Created at</th>
+  </tr>
+  </thead>
+  <tbody>
+  <!-- Ako nema notifikacija, prikazujemo poruku -->
+  <tr *ngIf="notifications.length === 0">
+    <td colspan="2" class="text-center">{{ noNotificationsMessage }}</td>
+  </tr>
+  <!-- Ako ima notifikacija, prikazujemo tabelu sa podacima -->
+  <tr *ngFor="let notification of notifications">
+    <td>{{ notification.message }}</td>
+    <td>{{ notification.created_at | date: 'h:mm a dd.MM.yyyy' }}</td>
+  </tr>
+  </tbody>
+</table>

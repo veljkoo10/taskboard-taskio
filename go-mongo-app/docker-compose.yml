@@ -18,11 +18,13 @@ services:
   project-service:
     build: ./project-service
     ports:
-      - "8081:8080" # Expose project service on port 8081
+      - "8081:8080"
     depends_on:
+      - nats
       - mongo
       - user-service
     environment:
+      - NATS_URL=${NATS_URL}
       - MONGO_URI=mongodb://mongo:27017/testdb
       - ENABLE_BOOTSTRAP=true
     networks:
@@ -36,7 +38,9 @@ services:
       - "8082:8080"
     depends_on:
       - mongo
+      - nats
     environment:
+      - NATS_URL=${NATS_URL}
       - MONGO_URI=mongodb://mongo:27017/testdb
       - ENABLE_BOOTSTRAP=true
     networks:
@@ -68,14 +72,18 @@ services:
 
   notification-service:
     build: ./notification-service
+    restart: always
     ports:
       - "8083:8080"
     environment:
-      - CASS_DB=cassandra:9042
-      - ENABLE_BOOTSTRAP=true
+      - CASSANDRA_HOST=cassandra
+      - CASSANDRA_PORT=9042
+      - CASSANDRA_KEYSPACE=notifications
     depends_on:
       cassandra:
         condition: service_healthy
+      nats:
+        condition: service_started
     networks:
       - app-network
     volumes:
@@ -96,18 +104,34 @@ services:
 
 
   cassandra:
-    image: cassandra
+    image: cassandra:4.0
     restart: always
+    container_name: "cassandra"
+    hostname: "cassandra"
     ports:
       - "9042:9042"
-    # Docker healtcheck - checks if database is "alive"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=CassandraCluster
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RAC1
+      - CASSANDRA_LISTENER_RPC_ADDRESS=0.0.0.0
     healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'describe cluster'"]
+      test: ["CMD", "cqlsh", "--username", "cassandra", "--password", "cassandra", "--execute", "describe keyspaces"]
       interval: 15s
-      timeout: 5s
-      retries: 15
+      retries: 5
+      timeout: 15s
     volumes:
-      - cass_store:/var/lib/cassandra/data
+      - cass_store:/var/lib/cassandra
+    networks:
+      - app-network
+  nats:
+    image: 'nats:latest'
+    expose:
+      - ${NATS_PORT}
+    ports:
+      - ${NATS_PORTS}
+    networks:
+      - app-network
 
 volumes:
   task-mongo_store:

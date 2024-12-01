@@ -18,6 +18,7 @@ import { RouterModule } from "@angular/router";
 import {RecaptchaModule} from "ng-recaptcha";
 import {CapitalizePipe} from "../../pipe/capitalize.pipe";
 import {RecaptchaValueAccessor} from "../../recaptcha/recaptcha-value-accessor.directive";
+import {NotificationComponent} from "../notification/notification.component";
 
 @NgModule({
   declarations: [
@@ -29,7 +30,8 @@ import {RecaptchaValueAccessor} from "../../recaptcha/recaptcha-value-accessor.d
     MagicLinkComponent,
     VerifyMagicLinkComponent,
     CapitalizePipe,
-    RecaptchaValueAccessor
+    RecaptchaValueAccessor,
+    NotificationComponent
   ],
   imports: [
     BrowserModule,

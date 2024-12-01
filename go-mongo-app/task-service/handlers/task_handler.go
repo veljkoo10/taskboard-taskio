@@ -3,14 +3,26 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nats-io/nats.go"
+	"log"
 	"net/http"
 	"strings"
+	"task-service/db"
 	"task-service/service"
 
 	"github.com/gorilla/mux"
 )
 
-func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
+type TasksHandler struct {
+	logger   *log.Logger
+	repo     *db.TaskRepo
+	natsConn *nats.Conn
+}
+
+func NewTasksHandler(l *log.Logger, r *db.TaskRepo, natsConn *nats.Conn) *TasksHandler {
+	return &TasksHandler{l, r, natsConn}
+}
+func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID, ok := vars["taskId"]
 	if !ok {
@@ -79,6 +91,37 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	nc, err := Conn()
+	if err != nil {
+		log.Println("Error connecting to NATS:", err)
+		http.Error(w, "Failed to connect to message broker", http.StatusInternalServerError)
+		return
+	}
+	defer nc.Close()
+	message := struct {
+		TaskName   string   `json:"taskName"`
+		TaskStatus string   `json:"taskStatus"`
+		MemberIds  []string `json:"memberIds"`
+	}{
+		TaskName:   task.Name,
+		TaskStatus: string(task.Status),
+		MemberIds:  task.Users,
+	}
+
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling message:", err)
+		return
+	}
+
+	subject := "task.status.update"
+	err = nc.Publish(subject, jsonMessage)
+	if err != nil {
+		log.Println("Error publishing message to NATS:", err)
+	}
+
+	t.logger.Println("Task status update message sent to NATS")
 
 	// Vraćanje odgovora sa ažuriranim zadatkom
 	w.Header().Set("Content-Type", "application/json")
@@ -154,7 +197,7 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddUserToTaskHandler handles adding a user to a task.
-func AddUserToTaskHandler(w http.ResponseWriter, r *http.Request) {
+func (t *TasksHandler) AddUserToTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID := vars["taskId"]
 	userID := vars["userId"]
@@ -165,12 +208,56 @@ func AddUserToTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	task, err := service.GetTaskByID(taskID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	nc, err := Conn()
+	if err != nil {
+		log.Println("Error connecting to NATS:", err)
+		http.Error(w, "Failed to connect to message broker", http.StatusInternalServerError)
+		return
+	}
+	defer nc.Close()
+
+	subject := "task.joined"
+
+	message := struct {
+		UserID   string `json:"userId"`
+		TaskName string `json:"taskName"`
+	}{
+		UserID:   userID,
+		TaskName: task.Name,
+	}
+
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling message:", err)
+		return
+	}
+
+	err = nc.Publish(subject, jsonMessage)
+	if err != nil {
+		log.Println("Error publishing message to NATS:", err)
+	}
+
+	t.logger.Println("a message has been sent")
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User added to task successfully"})
 }
+func Conn() (*nats.Conn, error) {
+	conn, err := nats.Connect("nats://nats:4222")
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	return conn, nil
+}
 
 // RemoveUserFromTaskHandler handles removing a user from a task.
-func RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.Request) {
+func (t *TasksHandler) RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID := vars["taskId"]
 	userID := vars["userId"]
@@ -179,6 +266,40 @@ func RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	nc, err := Conn()
+	if err != nil {
+		log.Println("Error connecting to NATS:", err)
+		http.Error(w, "Failed to connect to message broker", http.StatusInternalServerError)
+		return
+	}
+	defer nc.Close()
+
+	task, err := service.GetTaskByID(taskID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	subject := "task.removed"
+
+	message := struct {
+		UserID   string `json:"userId"`
+		TaskName string `json:"taskName"`
+	}{
+		UserID:   userID,
+		TaskName: task.Name,
+	}
+
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling message:", err)
+		return
+	}
+
+	err = nc.Publish(subject, jsonMessage)
+	if err != nil {
+		log.Println("Error publishing message to NATS:", err)
 	}
 
 	w.WriteHeader(http.StatusOK)

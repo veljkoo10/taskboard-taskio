@@ -33,7 +33,6 @@ func InsertInitialProjects() {
 		return // If projects already exist, don't insert again
 	}
 
-	// Fetch user IDs
 	var users []bson.M
 	cursor, err := userCollection.Find(context.TODO(), bson.D{})
 	if err != nil {
@@ -52,11 +51,15 @@ func InsertInitialProjects() {
 		}
 	}
 
+	// Don't display message, just exit if not enough users
+	if len(userIDs) < 2 {
+		return // Exit if not enough users
+	}
+
 	rand.Seed(time.Now().UnixNano())
 
 	var projects []interface{}
 	for i := 1; i <= 10; i++ {
-		// Randomly select 2 to 5 users for each project
 		numUsers := rand.Intn(4) + 2 // Minimum 2, max 5
 		projectUsers := make([]string, numUsers)
 		for j := 0; j < numUsers; j++ {
