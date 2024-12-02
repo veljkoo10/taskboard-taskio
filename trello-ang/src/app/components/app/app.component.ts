@@ -28,19 +28,23 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
+        // Stop notification checking on /notification route
         if (window.location.pathname === '/notification') {
           this.stopNotificationCheck();
-          this.hasNotifications = false;
+          this.hasNotifications = false;  // Reset notification dot
         } else {
-          this.startNotificationCheck();
+          this.startNotificationCheck();  // Start notification check on all other routes
         }
       }
     });
 
-    if (window.location.pathname !== '/notification') {
+    // If not on /notification, start checking for notifications
+    if (!this.isManager() && window.location.pathname !== '/notification') {
       this.startNotificationCheck();
     }
   }
+
+
 
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService,
               private notificationService: NotificationService,
@@ -67,18 +71,21 @@ export class AppComponent implements OnInit, OnDestroy {
   goToNotifications(): void {
     this.isProfileMenuOpen = false;
     this.router.navigate(['/notification']);
-    this.hasNotifications = false;
+    this.hasNotifications = false;  // Reset the notification dot when navigating to notifications page
 
     if (this.notificationCheckInterval) {
-      clearInterval(this.notificationCheckInterval);
+      clearInterval(this.notificationCheckInterval);  // Stop the notification check when in the notifications page
     }
   }
+
 
 
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;
     this.router.navigate(['/login']);
+    this.stopNotificationCheck();
+
   }
 
   isManager(): boolean {
@@ -118,28 +125,38 @@ export class AppComponent implements OnInit, OnDestroy {
     if (userID) {
       this.notificationService.getNotificationsByUserID(userID).subscribe(
         (notifications) => {
-          this.handleNotifications(notifications);
+          if (notifications === null || notifications === undefined) {
+            this.stopNotificationCheck(); // Stop checking if the data is invalid
+          } else {
+            this.handleNotifications(notifications);
+          }
         },
         (error) => {
           console.error('Error fetching notifications', error);
+          this.stopNotificationCheck(); // Stop checking on error
         }
       );
     } else {
-      console.error('User ID is not available');
+      this.stopNotificationCheck();
     }
   }
+
+
 
   handleNotifications(notifications: any[]) {
-    const unreadNotifications = notifications.filter(notification => notification.status === 'unread');
+    if (notifications && Array.isArray(notifications)) {
+      const unreadNotifications = notifications.filter(notification => notification.status === 'unread');
+      this.hasNotifications = unreadNotifications.length > 0;
 
-    if (unreadNotifications.length > 0) {
-      console.log('Unread Notifications:', unreadNotifications);
-      this.hasNotifications = true;
+      // Trigger change detection to update the view
+      this.changeDetectorRef.detectChanges();
     } else {
-      console.log('No unread notifications.');
-      this.hasNotifications = false;
+      console.error('Invalid notifications data:', notifications);
+      this.stopNotificationCheck(); // Stop checking on invalid data
     }
   }
+
+
 
   createProject(): void {
     if (!this.project.title || !this.project.description ||

@@ -786,3 +786,25 @@ body {
   border-radius: 4px;
   margin-top: 10px;
 }
+
+.dependencies-label {
+  font-weight: bold;  /* Make the text bold */
+  text-align: center; /* Center the text */
+  display: block;     /* Ensure the label behaves like a block element */
+  width: 100%;        /* Ensure it takes up the full width for centering */
+  margin-bottom: 10px; /* Space between the label and the select input */
+}
+
+/* Capitalize the first letter of the label */
+.dependencies-label::first-letter {
+  text-transform: uppercase !important; /* Capitalize the first letter */
+  font-weight: bold;  /* Make the text bold */
+
+}
+
+/* Optionally, style the select input */
+#taskDependencies {
+  font-weight: bold !important;  /* Make the text bold */
+  text-align: center; /* Center the text inside the select dropdown */
+}
+

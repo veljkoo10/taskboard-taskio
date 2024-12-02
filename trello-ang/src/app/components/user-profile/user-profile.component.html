@@ -43,6 +43,21 @@
   <form (ngSubmit)="onSubmitChangePassword()">
     <h3 class="form-header">Change Password</h3> <!-- Updated heading with class -->
 
+    <!-- Hidden username field for accessibility -->
+    <div class="form-group visually-hidden">
+      <label for="username">Username</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        [(ngModel)]="user.name"
+        class="form-control"
+        autocomplete="username"
+        aria-hidden="true"
+
+      />
+    </div>
+
     <div class="form-group">
       <label for="oldPassword">Old Password</label>
       <input
@@ -52,6 +67,7 @@
         [(ngModel)]="oldPassword"
         required
         class="form-control"
+        autocomplete="current-password"
       />
     </div>
 
@@ -64,6 +80,7 @@
         [(ngModel)]="newPassword"
         required
         class="form-control"
+        autocomplete="new-password"
       />
     </div>
 
@@ -76,11 +93,14 @@
         [(ngModel)]="confirmPassword"
         required
         class="form-control"
+        autocomplete="confirm-password"
       />
     </div>
+
     <br>
     <button style="background-color: #216e4e;" type="submit" class="btn btn-success">Change Password</button>
   </form>
+
 
 
   <!-- Modal for Success Message -->

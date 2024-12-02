@@ -38,7 +38,9 @@
                   <div class="d-flex flex-row align-items-center mb-4">
                     <img [src]="padlockIcon" class="me-3" alt="Padlock Icon">
                     <div data-mdb-input-init class="form-outline flex-fill mb-0">
-                      <input type="password" [(ngModel)]="user.password" name="password" class="form-control" placeholder="Password" required />
+                      <input type="password" [(ngModel)]="user.password" name="password" class="form-control" placeholder="Password" required
+                             autocomplete="confirm-password"
+                      />
                     </div>
                   </div>
 
