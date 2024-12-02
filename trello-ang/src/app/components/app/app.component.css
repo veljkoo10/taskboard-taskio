@@ -64,10 +64,11 @@
   top: 40px;
   background-color: #216e4e;
   border: 2px solid black;
-  border-radius: 5px;
+  border-radius: 8px;  /* Slightly larger border radius for a rounded look */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  min-width: 150px;
+  min-width: 200px;  /* Increased width for a larger menu */
+  padding: 10px 0;   /* Added padding for a larger overall menu */
 }
 .custom-alert {
   font-weight: 500;
@@ -99,18 +100,23 @@
 
 .profile-menu a {
   display: block;
-  padding: 10px;
+  padding: 15px 20px; /* Increased padding for larger clickable area */
   color: black;
   text-decoration: none;
   text-align: center;
-  transform: scale(1.1);
-  transition: color 0.3s, background-color 0.3s;
+  font-size: 1.5rem;  /* Larger font size */
   font-weight: bold;
-
+  transition: color 0.3s, background-color 0.3s, transform 0.3s ease;
 }
 
 .profile-menu a:hover {
   color: white;
+  transform: scale(1.1); /* Scale the item slightly larger */
+
+}
+
+.profile-menu a:active {
+  transform: scale(0.98);  /* Slight shrink effect on active click */
 }
 
 .add-project-link {
@@ -225,4 +231,18 @@ body {
 
 .project-list li:hover {
   transition: color 0.3s, background-color 0.3s;
+}
+.notification-dot {
+  position: absolute;
+  top: 5px; /* Podesi poziciju u odnosu na profilnu sliku */
+  right: 5px; /* Podesi poziciju u odnosu na profilnu sliku */
+  width: 12px;
+  height: 12px;
+  background-color: #e2f533;
+  border-radius: 50%;
+  border: 2px solid white; /* Da tačkica ima beli okvir */
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+.profile-icon {
+  position: relative;
 }

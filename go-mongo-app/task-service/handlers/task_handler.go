@@ -105,7 +105,7 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		MemberIds  []string `json:"memberIds"`
 	}{
 		TaskName:   task.Name,
-		TaskStatus: string(task.Status),
+		TaskStatus: requestBody.Status,
 		MemberIds:  task.Users,
 	}
 

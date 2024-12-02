@@ -372,3 +372,24 @@ func Conn() (*nats.Conn, error) {
 	}
 	return conn, nil
 }
+func (n *NotificationHandler) MarkAsRead(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+
+	// Validacija userID-a
+	if userID == "" {
+		http.Error(rw, "User ID is required", http.StatusBadRequest)
+		n.logger.Println("User ID is empty")
+		return
+	}
+
+	// Poziv na repo za ažuriranje
+	err := n.repo.MarkAllAsRead(userID)
+	if err != nil {
+		http.Error(rw, "Failed to mark notifications as read", http.StatusInternalServerError)
+		n.logger.Printf("Error marking notifications as read for user %s: %v", userID, err)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+}

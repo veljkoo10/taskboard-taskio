@@ -1,17 +1,18 @@
-import { Component, HostListener, ChangeDetectorRef, ApplicationRef, ViewChild, ElementRef } from '@angular/core';
-import {ProjectService} from "../../services/project.service";
-import {Router} from "@angular/router";
-import {AuthService} from "../../services/auth.service";
-import {Project} from "../../model/project.model";
-import {DashboardComponent} from "../dashboard/dashboard.component"
-import {NgForm} from "@angular/forms";
+import { Component, HostListener, ChangeDetectorRef, ApplicationRef, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { ProjectService } from "../../services/project.service";
+import {NavigationEnd, Router} from "@angular/router";
+import { AuthService } from "../../services/auth.service";
+import { Project } from "../../model/project.model";
+import { DashboardComponent } from "../dashboard/dashboard.component";
+import { NgForm } from "@angular/forms";
+import { NotificationService } from "../../services/notification.service";
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy {
   @ViewChild('projectForm') projectForm!: NgForm;
   logoPath: string = 'assets/trello4.png';
   profilePath: string = 'assets/user3.png';
@@ -21,10 +22,40 @@ export class AppComponent {
   projects: Project[] = [];
   successMessage: string = '';
   errorMessage: string = '';
-  constructor(private projectService: ProjectService, private router: Router, private authService: AuthService, private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
+  hasNotifications: boolean = false;
+  private notificationCheckInterval: any;
+
+  ngOnInit() {
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        if (window.location.pathname === '/notification') {
+          this.stopNotificationCheck();
+          this.hasNotifications = false;
+        } else {
+          this.startNotificationCheck();
+        }
+      }
+    });
+
+    if (window.location.pathname !== '/notification') {
+      this.startNotificationCheck();
+    }
+  }
+
+  constructor(private projectService: ProjectService, private router: Router, private authService: AuthService,
+              private notificationService: NotificationService,
+              private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
+
+  ngOnDestroy() {
+    if (this.notificationCheckInterval) {
+      clearInterval(this.notificationCheckInterval);
+    }
+  }
+
   isLoggedIn() {
     return this.authService.getDecryptedData('access_token') != '';
   }
+
   goToDashboard() {
     if (window.location.pathname === '/dashboard') {
       location.reload();
@@ -32,25 +63,41 @@ export class AppComponent {
       this.router.navigate(['/dashboard']);
     }
   }
+
   goToNotifications(): void {
     this.isProfileMenuOpen = false;
     this.router.navigate(['/notification']);
+    this.hasNotifications = false;
+
+    if (this.notificationCheckInterval) {
+      clearInterval(this.notificationCheckInterval);
+    }
   }
+
+
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;
     this.router.navigate(['/login']);
   }
+
   isManager(): boolean {
     return this.authService.getDecryptedData('role') === 'Manager';
   }
+
+  isMember(): boolean {
+    return this.authService.getDecryptedData('role') === 'Member';
+  }
+
   goToProfile(): void {
     this.isProfileMenuOpen = false;
     this.router.navigate(['/profile']);
   }
+
   toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }
+
   @HostListener('document:click', ['$event'])
   onClick(event: MouseEvent): void {
     const clickedInsideProfileMenu = event.target instanceof HTMLElement && event.target.closest('.profile-menu');
@@ -65,17 +112,43 @@ export class AppComponent {
     }
   }
 
+  checkForNotifications() {
+    const userID = this.authService.getDecryptedData('user_id');
+
+    if (userID) {
+      this.notificationService.getNotificationsByUserID(userID).subscribe(
+        (notifications) => {
+          this.handleNotifications(notifications);
+        },
+        (error) => {
+          console.error('Error fetching notifications', error);
+        }
+      );
+    } else {
+      console.error('User ID is not available');
+    }
+  }
+
+  handleNotifications(notifications: any[]) {
+    const unreadNotifications = notifications.filter(notification => notification.status === 'unread');
+
+    if (unreadNotifications.length > 0) {
+      console.log('Unread Notifications:', unreadNotifications);
+      this.hasNotifications = true;
+    } else {
+      console.log('No unread notifications.');
+      this.hasNotifications = false;
+    }
+  }
 
   createProject(): void {
-    // Check if all fields are filled
     if (!this.project.title || !this.project.description ||
       !this.project.expected_end_date || !this.project.min_people || !this.project.max_people) {
       this.errorMessage = 'All fields must be filled!';
       return;
     }
 
-    // Validate minimum and maximum number of people
-    if (this.project.min_people <1) {
+    if (this.project.min_people < 1) {
       this.errorMessage = 'Minimum number of people must be at least 1.';
       return;
     }
@@ -89,7 +162,6 @@ export class AppComponent {
       this.errorMessage = 'The maximum number of people must be greater than or equal to the minimum number!';
       return;
     }
-
 
     // Check if the number of users exceeds max_people
     if (this.project.users.length > this.project.max_people) {
@@ -166,7 +238,7 @@ export class AppComponent {
 
   resetForm(): void {
     if (this.projectForm) {
-      this.projectForm.resetForm(); // Reset form if the reference is available
+      this.projectForm.resetForm();
     }
     this.project = new Project();
     this.errorMessage = '';
@@ -182,5 +254,17 @@ export class AppComponent {
         console.error('Error fetching projects', error);
       }
     );
+  }
+
+  startNotificationCheck() {
+    this.notificationCheckInterval = setInterval(() => {
+      this.checkForNotifications();
+    }, 1000);
+  }
+
+  stopNotificationCheck() {
+    if (this.notificationCheckInterval) {
+      clearInterval(this.notificationCheckInterval);
+    }
   }
 }

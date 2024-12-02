@@ -289,6 +289,12 @@ export class ProjectDetailsComponent {
       const taskId = this.selectedTask.id;
       const userId = this.user.id;
 
+      // Proveri da li je korisnik menadžer
+      if (this.user.role === 'Manager') {
+        this.dependencyMessage = 'Managers are not allowed to update task status.';
+        return; // Prekida izvršavanje ako je korisnik menadžer
+      }
+
       // Proveri da li je korisnik član taska
       this.taskService.isUserOnTask(taskId, userId).subscribe(
         (isMember) => {
@@ -328,6 +334,7 @@ export class ProjectDetailsComponent {
       );
     }
   }
+
 
   isStatusDisabled(status: string): boolean {
     if (this.selectedTask) {

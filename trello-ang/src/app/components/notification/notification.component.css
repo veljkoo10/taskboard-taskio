@@ -4,27 +4,59 @@ body {
   align-items: center;
   height: 100vh;
   margin: 0;
-  background-color: #f8f9fa; /* Dodano za svetlu pozadinu */
+  background-color: #f8f9fa; /* Light background for a clean, modern look */
+}
+
+.table-container {
+  margin-top: 10%;
+  margin-left: 20%;
+  margin-right: 20%;
+  width: 60%; /* Container matches table width */
+  padding: 20px;
+  background-color: #ffffff; /* Ensure a distinct white background */
+}
+
+.unread-count {
+  text-align: left; /* Aligns the text to the left for a professional look */
+  font-size: 1.2rem; /* Slightly larger font for emphasis */
+  margin-bottom: 10px; /* Adds spacing between text and the table */
+  color: #343a40; /* Dark gray text for readability */
+}
+
+.table-wrapper {
+  display: block;
+  width: 100%;
+  max-height: 300px; /* Adjust as needed */
+  overflow-y: auto; /* Only scroll the table body */
 }
 
 .table {
-  margin-top: 10%;
-  margin-left:20%;
-  margin-right: 20%;
   border: 1px solid #dee2e6;
-  width: 60%; /* Postavlja širinu tabele na 60% ekrana */
-  padding: 20px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 100%; /* Fill container width */
+  border-collapse: collapse; /* Ensures clean borders */
 }
 
 .table th, .table td {
   padding: 10px;
-  text-align: center;
+  text-align: left; /* Align text to the left */
 }
 
 .table-dark {
-  background-color: #343a40;
-  color: white;
+  background-color: #343a40; /* Dark header */
+  color: white; /* Light text on dark background */
+}
+
+.scrollable-tbody {
+  overflow-y: auto;
+}
+
+.table th, .table td {
+  width: 33%; /* Adjust if needed */
+  table-layout: fixed;
+}
+
+.table td {
+  white-space: nowrap; /* Prevent text from wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add ellipsis if text overflows */
 }

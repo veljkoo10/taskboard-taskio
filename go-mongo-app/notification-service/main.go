@@ -15,42 +15,42 @@ import (
 )
 
 func main() {
-	// Port na kojem API treba da sluÅ¡a
 	port := os.Getenv("PORT")
 	if len(port) == 0 {
 		port = "8080"
 	}
 
-	// Inicijalizacija logera
 	logger := log.New(os.Stdout, "[notification-api] ", log.LstdFlags)
 	storeLogger := log.New(os.Stdout, "[notification-store] ", log.LstdFlags)
 
-	// Povezivanje sa Cassandra bazom
 	store, err := repoNotification.New(storeLogger)
 	if err != nil {
 		logger.Fatalf("Failed to initialize Cassandra connection: %v", err)
 	}
 	defer store.CloseSession()
 
-	cluster := gocql.NewCluster("cassandra") // or your cassandra host
+	cluster := gocql.NewCluster("cassandra")
 	cluster.Keyspace = "notifications"
 	cluster.Consistency = gocql.Quorum
 
 	session, err := cluster.CreateSession()
 	if err != nil {
-		log.Fatal("Error connecting to Cassandra:", err)
+		logger.Fatalf("Error connecting to Cassandra: %v", err)
 	}
 	defer session.Close()
 
-	err = session.Query("TRUNCATE notifications").Exec()
-	if err != nil {
-		log.Fatal("Error truncating notifications table:", err)
+	if err := repoNotification.EnsureKeyspaceAndTable(session, logger); err != nil {
+		logger.Fatalf("Error ensuring keyspace and table: %v", err)
+	}
+
+	if err := clearNotifications(session, logger); err != nil {
+		logger.Fatalf("Error clearing notifications: %v", err)
 	}
 
 	store.CreateTables()
 
-	// Kreiramo NotificationHandler sa logerom i repozitorijumom
 	notificationHandler := handlers.NewNotificationHandler(logger, store)
+
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -61,13 +61,17 @@ func main() {
 		logger.Println("NotificationListener invoked successfully")
 	}()
 
+	// Set up HTTP router
 	r := mux.NewRouter()
 	r.HandleFunc("/notifications/user/{id}", notificationHandler.GetNotificationsByUserID).Methods("GET", "OPTIONS")
 	r.HandleFunc("/notifications", notificationHandler.CreateNotification).Methods("POST")
 	r.HandleFunc("/notifications/all", notificationHandler.GetAllNotifications).Methods("GET")
+	r.HandleFunc("/notifications/{id}/mark-as-read", notificationHandler.MarkAsRead).Methods("PUT", "OPTIONS")
 
+	// Apply CORS middleware
 	r.Use(CORS)
 
+	// Start HTTP server
 	server := &http.Server{
 		Addr:         ":" + port,
 		Handler:      r,
@@ -83,6 +87,7 @@ func main() {
 		}
 	}()
 
+	// Graceful shutdown handling
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, os.Kill)
 
@@ -97,7 +102,6 @@ func main() {
 
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -107,4 +111,14 @@ func CORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func clearNotifications(session *gocql.Session, logger *log.Logger) error {
+	logger.Println("Clearing notifications table...")
+	err := session.Query("TRUNCATE notifications.notifications").Exec()
+	if err != nil {
+		return err
+	}
+	logger.Println("Notifications table cleared.")
+	return nil
 }

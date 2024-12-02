@@ -196,6 +196,7 @@ func (repo *NotificationRepo) UpdateStatus(createdAt time.Time, userID string, i
 	}
 	return nil
 }
+
 func (repo *NotificationRepo) GetAllNotifications() ([]models.Notification, error) {
 	var notifications []models.Notification
 
@@ -213,4 +214,84 @@ func (repo *NotificationRepo) GetAllNotifications() ([]models.Notification, erro
 	}
 
 	return notifications, nil
+}
+func (r *NotificationRepo) MarkAllAsRead(userID string) error {
+	var notificationIDs []struct {
+		ID        gocql.UUID `json:"id"`
+		CreatedAt time.Time  `json:"created_at"`
+	}
+
+	iter := r.session.Query("SELECT id, created_at FROM notifications WHERE user_id = ? AND status = ? ALLOW FILTERING", userID, "unread").Iter()
+	for {
+		var id gocql.UUID
+		var createdAt time.Time
+		if !iter.Scan(&id, &createdAt) {
+			break
+		}
+		notificationIDs = append(notificationIDs, struct {
+			ID        gocql.UUID `json:"id"`
+			CreatedAt time.Time  `json:"created_at"`
+		}{
+			ID:        id,
+			CreatedAt: createdAt,
+		})
+	}
+
+	if err := iter.Close(); err != nil {
+		return fmt.Errorf("failed to fetch unread notifications for user %s: %w", userID, err)
+	}
+
+	if len(notificationIDs) == 0 {
+		return nil // No unread notifications, nothing to update
+	}
+
+	// Update status for each notification
+	for _, notification := range notificationIDs {
+		err := r.session.Query("UPDATE notifications SET status = ? WHERE user_id = ? AND created_at = ? AND id = ?",
+			"read", userID, notification.CreatedAt, notification.ID).Exec()
+		if err != nil {
+			return fmt.Errorf("failed to update notification %s for user %s: %w", notification.ID, userID, err)
+		}
+	}
+
+	return nil
+}
+func EnsureKeyspaceAndTable(session *gocql.Session, logger *log.Logger) error {
+	var keyspaceCount int
+	err := session.Query("SELECT count(*) FROM system_schema.keyspaces WHERE keyspace_name = 'notifications'").Scan(&keyspaceCount)
+	if err != nil {
+		return err
+	}
+
+	if keyspaceCount == 0 {
+		logger.Println("Creating keyspace 'notifications'...")
+		createKeyspaceQuery := `CREATE KEYSPACE IF NOT EXISTS notifications 
+			WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}`
+		if err := session.Query(createKeyspaceQuery).Exec(); err != nil {
+			return err
+		}
+	}
+
+	var tableCount int
+	err = session.Query("SELECT count(*) FROM system_schema.tables WHERE keyspace_name = 'notifications' AND table_name = 'notifications'").Scan(&tableCount)
+	if err != nil {
+		return err
+	}
+
+	if tableCount == 0 {
+		logger.Println("Creating table 'notifications.notifications'...")
+		createTableQuery := `CREATE TABLE IF NOT EXISTS notifications.notifications (
+			user_id TEXT,
+			created_at TIMESTAMP,
+			id UUID,
+			message TEXT,
+			status TEXT,
+			PRIMARY KEY (user_id, created_at, id)
+		) WITH CLUSTERING ORDER BY (created_at DESC)`
+		if err := session.Query(createTableQuery).Exec(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

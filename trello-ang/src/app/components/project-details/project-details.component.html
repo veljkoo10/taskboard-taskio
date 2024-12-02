@@ -176,7 +176,7 @@
 
 
 <!-- Task Details Modal -->
-<div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
+  <div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
 
   <div id="taskModal" class="modal" *ngIf="isTaskDetailsVisible">
     <div class="modal-dialog">
@@ -189,8 +189,8 @@
           <h6>Task Name: {{ selectedTask?.name }}</h6>
           <h6>Description: {{ selectedTask?.description }}</h6>
 
-          <!-- Radio buttons for status -->
-          <div *ngIf="selectedTask" id="status-block">
+          <!-- Radio buttons for status, visible only if the user is not a manager -->
+          <div *ngIf="!isManager() && selectedTask" id="status-block">
             <label>Status:</label>
             <div class="radio-group">
               <label class="radio-label">
@@ -220,11 +220,12 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
-          <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage Member</button>
+          <button  (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage Member</button>
         </div>
       </div>
     </div>
   </div>
+
 
 <div class="modal-background" *ngIf="isAddTaskUserVisible" (click)="closeAddUserToTask()"></div>
 

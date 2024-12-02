@@ -18,8 +18,9 @@
     <!-- Right elements -->
     <div class="d-flex align-items-center position-relative">
       <!-- Profile icon -->
-      <a class="nav-link custom-link" (click)="toggleProfileMenu()">
+      <a class="nav-link custom-link position-relative" (click)="toggleProfileMenu()">
         <img [src]="profilePath" alt="Profile Icon" width="45" height="45" style="cursor: pointer;">
+        <span class="notification-dot" *ngIf="hasNotifications"></span>
       </a>
 
       <!-- Profile menu -->
@@ -27,15 +28,17 @@
         <a class="nav-link custom-link p-2" (click)="goToProfile()">
           Profile
         </a>
-        <a class="nav-link custom-link p-2" (click)="goToNotifications()">
+        <a class="nav-link custom-link p-2 position-relative" *ngIf="isMember()" (click)="goToNotifications()">
           Notification
+          <span class="notification-dot" *ngIf="hasNotifications"></span>
         </a>
         <a class="nav-link custom-link p-2" (click)="logout()">
           Logout
         </a>
-
       </div>
+
     </div>
+
   </div>
 </nav>
 <router-outlet></router-outlet>
