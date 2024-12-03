@@ -1,10 +1,14 @@
 package handlers
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 	"user-service/db"
 	"user-service/models"
@@ -312,6 +316,38 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(htmlForm))
 	}
 }
+
+func isBlacklisted(input string) (bool, error) {
+	// Proveri trenutni radni direktorijum
+	dir, err := os.Getwd()
+	if err != nil {
+		return false, fmt.Errorf("Greška prilikom dobijanja radnog direktorijuma: %v", err)
+	}
+	fmt.Println("Trenutni radni direktorijum:", dir)
+
+	file, err := os.Open("/root/service/blacklist.txt")
+	if err != nil {
+		return false, fmt.Errorf("Greška prilikom otvaranja fajla: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file) // Kreira scanner za čitanje fajla liniju po liniju
+	for scanner.Scan() {
+		// Uklanja whitespace sa linija za pouzdaniju provjeru
+		line := strings.TrimSpace(scanner.Text())
+		if line == input {
+			return true, nil // Nađen je unos u blacklisti
+		}
+	}
+
+	// Provjerava greške prilikom čitanja fajla
+	if err := scanner.Err(); err != nil {
+		return false, fmt.Errorf("Greška prilikom čitanja fajla: %v", err)
+	}
+
+	return false, nil // Nema poklapanja
+}
+
 func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 	// Parsiranje forme
 	r.ParseForm()
@@ -322,6 +358,93 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 	// Proveri da li su lozinke iste
 	if newPassword != confirmPassword {
 		http.Error(w, "Lozinke se ne podudaraju", http.StatusBadRequest)
+		return
+	}
+
+	isBlacklistedPassword, err := isBlacklisted(newPassword)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Greška prilikom provere lozinke: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if isBlacklistedPassword {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>Error</title>
+				<style>
+					body {
+						font-family: Arial, sans-serif;
+						background-color: #ffffff;
+						display: flex;
+						justify-content: center;
+						align-items: center;
+						height: 100vh;
+						margin: 0;
+					}
+					.modal {
+						display: block;
+						position: fixed;
+						z-index: 1;
+						padding-top: 100px;
+						left: 0;
+						top: 0;
+						width: 100%;
+						height: 100%;
+						background-color: rgba(0,0,0,0.5);
+					}
+					.modal-content {
+						margin: auto;
+						padding: 20px;
+						width: 80%;
+						max-width: 400px;
+						background-color: #f9f9f9;
+						border-radius: 8px;
+						text-align: center;
+						box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+					}
+					.error-title {
+						color: #d32f2f;
+						font-size: 24px;
+						margin-bottom: 20px;
+					}
+					.error-message {
+						color: #333;
+						font-size: 16px;
+						margin-bottom: 20px;
+					}
+					button {
+						background-color: #d32f2f;
+						color: white;
+						padding: 10px 20px;
+						border: none;
+						border-radius: 5px;
+						cursor: pointer;
+						font-size: 16px;
+					}
+					button:hover {
+						background-color: #b71c1c;
+					}
+				</style>
+			</head>
+			<body>
+				<div class="modal">
+					<div class="modal-content">
+						<h1 class="error-title">Error</h1>
+						<p class="error-message">Password is blacklisted. Please choose a different password.</p>
+						<button onclick="closeModal()">OK</button>
+					</div>
+				</div>
+				<script>
+					function closeModal() {
+						document.querySelector('.modal').style.display = 'none';
+					}
+				</script>
+			</body>
+			</html>
+		`))
 		return
 	}
 
@@ -343,7 +466,7 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// HTML odgovor za uspešan reset lozinke
+	// Uspešan odgovor
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`

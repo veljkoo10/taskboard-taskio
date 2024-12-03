@@ -89,7 +89,7 @@
 
             <!-- Dropdown for selecting dependencies -->
             <div class="form-group">
-              <label for="taskDependencies">Task dependencies:</label>
+              <label for="taskDependencies" class="dependencies-label">Task dependencies:</label>
               <select
                 id="taskDependencies"
                 class="form-control"
@@ -115,6 +115,7 @@
       </div>
     </div>
   </div>
+
 
 <div class="modal-background" *ngIf="isAddMemberFormVisible" (click)="cancelAddMember()"></div>
 
@@ -220,7 +221,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
-          <button  (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage Member</button>
+          <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage Member</button>
         </div>
       </div>
     </div>

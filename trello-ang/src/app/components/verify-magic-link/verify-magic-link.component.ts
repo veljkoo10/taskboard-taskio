@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { CommonModule } from '@angular/common'; // Dodaj CommonModule za korišćenje ngIf, ngFor, itd.
 import { NgModule } from '@angular/core';
+import * as CryptoJS from 'crypto-js';
 
 @Component({
   selector: 'app-verify-magic-link',
@@ -16,6 +17,8 @@ export class VerifyMagicLinkComponent implements OnInit {
   successMessage: string = '';
   email: string = '';
   message: string = '';
+
+  SECRET_KEY = 'my-secret-key-12345';
 
 
 
@@ -50,13 +53,17 @@ export class VerifyMagicLinkComponent implements OnInit {
         console.log('Dobijeni user_id:', response.user_id);
 
         if (response.user_id) {
-          localStorage.setItem('user_id', response.user_id.toString());
+          const encryptedUserId = CryptoJS.AES.encrypt(response.user_id, this.SECRET_KEY).toString();
+          localStorage.setItem('user_id', encryptedUserId);
         } else {
           console.error('User ID nije dostavljen od servera!');
         }
 
-        this.authService.saveToken(response.access_token);
-        localStorage.setItem('role', response.role);
+        const encryptedRole = CryptoJS.AES.encrypt(response.role, this.SECRET_KEY).toString();
+        //this.authService.saveToken(response.access_token);
+        localStorage.setItem('role', encryptedRole);
+        const encryptedToken = CryptoJS.AES.encrypt(response.access_token, this.SECRET_KEY).toString();
+        localStorage.setItem('access_token', encryptedToken);
 
         console.log('Proveravam localStorage:');
         console.log('access_token:', localStorage.getItem('access_token'));

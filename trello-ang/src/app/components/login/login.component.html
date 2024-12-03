@@ -35,9 +35,11 @@
                   class="form-control form-control-lg"
                   [(ngModel)]="password"
                   name="password"
+                  autocomplete="current-password"
                   required
                   (keydown.enter)="login()"
                 />
+
               </div>
 
               <!-- Centered reCAPTCHA -->
@@ -93,9 +95,11 @@
                   [(ngModel)]="magicLinkUsername"
                   name="magicLinkUsername"
                   placeholder="Enter your username"
+                  autocomplete="username"
                   required
                   (keydown.enter)="sendMagicLink()"
                 />
+
               </div>
 
               <!-- Submit button for Magic Link -->

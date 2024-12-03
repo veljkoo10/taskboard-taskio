@@ -92,9 +92,6 @@ export class ProjectDetailsComponent {
     if (this.project && this.project.id) {
       this.projectId = this.project.id;  // Postavi projectId
       console.log('Project ID set to:', this.projectId);
-      //this.loadTasksDepend();  // Pozovi funkciju nakon što je projectId postavljen
-    } else {
-      console.error('Project ID is missing!');
     }
 
 

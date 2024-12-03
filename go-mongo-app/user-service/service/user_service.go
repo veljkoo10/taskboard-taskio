@@ -1,10 +1,12 @@
 package service
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"html"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -17,6 +19,37 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func isBlacklisted(input string) (bool, error) {
+	// Proveri trenutni radni direktorijum
+	dir, err := os.Getwd()
+	if err != nil {
+		return false, fmt.Errorf("Greška prilikom dobijanja radnog direktorijuma: %v", err)
+	}
+	fmt.Println("Trenutni radni direktorijum:", dir)
+
+	file, err := os.Open("/root/service/blacklist.txt")
+	if err != nil {
+		return false, fmt.Errorf("Greška prilikom otvaranja fajla: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file) // Kreira scanner za čitanje fajla liniju po liniju
+	for scanner.Scan() {
+		// Uklanja whitespace sa linija za pouzdaniju provjeru
+		line := strings.TrimSpace(scanner.Text())
+		if line == input {
+			return true, nil // Nađen je unos u blacklisti
+		}
+	}
+
+	// Provjerava greške prilikom čitanja fajla
+	if err := scanner.Err(); err != nil {
+		return false, fmt.Errorf("Greška prilikom čitanja fajla: %v", err)
+	}
+
+	return false, nil // Nema poklapanja
+}
 
 // sanitizeInput uklanja potencijalno opasne HTML tagove
 func sanitizeInput(input string) string {
@@ -210,6 +243,16 @@ func UsernameExists(username string) (bool, error) {
 	return true, nil
 }
 func RegisterUser(user models.User) (string, error) {
+	// Provjera da li je lozinka na blacklisti
+	isBlacklistedPassword, err := isBlacklisted(user.Password)
+	if err != nil {
+		return "", fmt.Errorf("error checking password blacklist: %v", err)
+	}
+	if isBlacklistedPassword {
+		return "", errors.New("registration failed: password is blacklisted")
+	}
+
+	// Nastavak sa sanitizacijom i validacijom
 	user.Username = sanitizeInput(user.Username)
 	user.Email = sanitizeInput(user.Email)
 	user.Name = sanitizeInput(user.Name)
@@ -238,6 +281,7 @@ func RegisterUser(user models.User) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Hashiranje lozinke
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
@@ -245,11 +289,13 @@ func RegisterUser(user models.User) (string, error) {
 	user.Password = string(hashedPassword)
 	user.IsActive = false
 
+	// Unos korisnika u bazu
 	_, err = collection.InsertOne(ctx, user)
 	if err != nil {
 		return "", err
 	}
 
+	// Slanje emaila za potvrdu registracije
 	subject := "Thanks for registering"
 	body := "Your registration is successful! Click the following link to activate your account: http://localhost:8080/confirm?email=" + user.Email
 	err = notification.SendEmail(user.Email, subject, body, emailConfig)
@@ -388,6 +434,15 @@ func ChangePassword(userID, oldPassword, newPassword string) error {
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
 	if err != nil {
 		return errors.New("incorrect old password") // Stara lozinka nije tačna
+	}
+
+	// Provjera da li je lozinka na blacklisti
+	isBlacklistedPassword, err := isBlacklisted(newPassword)
+	if err != nil {
+		return fmt.Errorf("error checking password blacklist: %v", err)
+	}
+	if isBlacklistedPassword {
+		return errors.New("registration failed: password is blacklisted")
 	}
 
 	// Hashiraj novu lozinku

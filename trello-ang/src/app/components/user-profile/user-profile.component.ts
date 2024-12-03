@@ -112,16 +112,19 @@ export class UserProfileComponent implements OnInit {
 
 
   onSubmitChangePassword(): void {
+    // Provera da li su sva polja popunjena
     if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {
       this.errorMessage = 'All fields must be filled out.';
       return;
     }
-
+  
+    // Provera da li se nova lozinka i potvrda lozinke podudaraju
     if (this.newPassword !== this.confirmPassword) {
       this.errorMessage = 'New password and confirm password do not match.';
       return;
     }
-
+  
+    // Provera validnosti nove lozinke (ako imaš neku specifičnu validaciju)
     if (this.isPasswordValid(this.newPassword)) {
       const userId = this.user.id;
       const passwordData = {
@@ -129,23 +132,31 @@ export class UserProfileComponent implements OnInit {
         newPassword: this.newPassword,
         confirmPassword: this.confirmPassword,
       };
-
+  
+      // Poziv servisa za promenu lozinke
       this.userService.changePassword(userId, passwordData).subscribe({
         next: () => {
           this.successMessage = 'Password changed successfully!';
           this.errorMessage = '';
         },
-        error: () => {
-          this.errorMessage = 'Wrong old password.';
+        error: (error) => {
+          // Dinamičko preuzimanje i prikazivanje greške sa backend-a
+          if (error.error && typeof error.error === 'string') {
+            this.errorMessage = error.error; // Prikazuje stvarnu grešku koju vrati backend
+          } else {
+            this.errorMessage = 'An unexpected error occurred. Please try again.';
+          }
           this.successMessage = '';
         },
       });
     }
-
+  
+    // Ako postoji greška u validaciji lozinke
     if (this.passwordError) {
       this.errorMessage = this.passwordError;
     }
   }
+  
 
 
   deleteUserAccount(): void {
