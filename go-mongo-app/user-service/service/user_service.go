@@ -249,7 +249,7 @@ func RegisterUser(user models.User) (string, error) {
 		return "", fmt.Errorf("error checking password blacklist: %v", err)
 	}
 	if isBlacklistedPassword {
-		return "", errors.New("registration failed: password is blacklisted")
+		return "", errors.New("Password is used too often")
 	}
 
 	// Nastavak sa sanitizacijom i validacijom
@@ -442,7 +442,7 @@ func ChangePassword(userID, oldPassword, newPassword string) error {
 		return fmt.Errorf("error checking password blacklist: %v", err)
 	}
 	if isBlacklistedPassword {
-		return errors.New("registration failed: password is blacklisted")
+		return errors.New("Password is used too often")
 	}
 
 	// Hashiraj novu lozinku

@@ -33,34 +33,34 @@ export class LoginComponent {
 
   login() {
     const recaptchaResponse = (window as any).grecaptcha.getResponse();
-  
+
     // Provera CAPTCHA
     if (!recaptchaResponse) {
       this.loginError = 'Please solve the CAPTCHA.';
       return;
     }
-  
+
     // Provera username-a i password-a
     if (!this.username || !this.password) {
       this.loginError = 'Please enter both username and password.';
       return;
     }
-  
-    const userCredentials = { 
-      username: this.username, 
-      password: this.password, 
-      recaptchaResponse 
+
+    const userCredentials = {
+      username: this.username,
+      password: this.password,
+      recaptchaResponse
     };
-  
+
     this.authService.login(userCredentials).subscribe(
       (response) => {
         const { access_token, role, user_id } = response;
-  
+
         // Enkripcija podataka pre skladištenja
         const encryptedToken = CryptoJS.AES.encrypt(access_token, this.SECRET_KEY).toString();
         const encryptedRole = CryptoJS.AES.encrypt(role, this.SECRET_KEY).toString();
         const encryptedUserId = CryptoJS.AES.encrypt(user_id.toString(), this.SECRET_KEY).toString();
-  
+
         // Smeštanje enkriptovanih podataka u localStorage
         localStorage.setItem('access_token', encryptedToken);
         localStorage.setItem('role', encryptedRole);
@@ -132,9 +132,13 @@ export class LoginComponent {
           this.userService.requestPasswordReset(this.resetEmail).subscribe(
             () => {
               this.resetMessage = 'A password reset link has been sent to your email address.';
+              this.isSuccess = true;
+
             },
             (error) => {
               this.resetMessage = 'There was an error sending the password reset link. Try again.';
+              this.isSuccess = false;
+
             }
           );
         } else {

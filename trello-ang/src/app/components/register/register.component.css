@@ -23,16 +23,16 @@ a {
 }
 .modal {
   position: fixed;
-  top: 0;
+  top: 0; /* Pozadina ostaje preko celog ekrana */
   left: 0;
   z-index: 1050;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5); /* Pozadina preko celog ekrana */
   display: none;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* Sadržaj modala poravnat prema početku */
 }
 
 .modal.show {
@@ -41,8 +41,9 @@ a {
 
 .modal-dialog {
   max-width: 500px;
-  margin: auto;
+  margin-top: 50px; /* Pomera sadržaj modala niže */
 }
+
 .modal-success {
   color: green; /* Tamno zelena */
 }
@@ -50,3 +51,4 @@ a {
 .modal-error {
   color: red; /* Tamno crvena */
 }
+

@@ -153,9 +153,10 @@
                 required
               />
             </div>
-            <p *ngIf="resetMessage" [ngClass]="{ 'text-danger': !isSuccess, 'text-success': isSuccess }">
+            <p *ngIf="resetMessage" [ngClass]="{'text-success': isSuccess, 'text-danger': !isSuccess}">
               {{ resetMessage }}
             </p>
+
             <div class="btn-container">
               <button type="button" class="custom-btn" (click)="checkEmailAndResetPassword()">Send Reset Link</button>
             </div>

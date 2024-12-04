@@ -53,6 +53,11 @@ export class UserProfileComponent implements OnInit {
     this.accountDeleteMessage = 'Are you sure you want to delete your account?';
     this.deleteAccountModalVisible = true;
   }
+  resetPasswordFields(): void {
+    this.oldPassword = '';
+    this.newPassword = '';
+    this.confirmPassword = '';
+  }
 
   canDeleteAccount(): boolean {
     return this.accountDeleteMessage === 'Are you sure you want to delete your account?';
@@ -63,9 +68,13 @@ export class UserProfileComponent implements OnInit {
     this.accountDeleteMessage = 'Are you sure you want to delete your account?';
   }
 
-  closeModalAndRefresh(){
+  closeModalAndRefresh(): void {
+    this.resetPasswordFields();
+    this.successMessage = '';
+    this.errorMessage = '';
     window.location.reload();
   }
+
 
   getUserInfoFromToken(): any {
     const token = this.authService.getDecryptedData('access_token');
@@ -117,13 +126,13 @@ export class UserProfileComponent implements OnInit {
       this.errorMessage = 'All fields must be filled out.';
       return;
     }
-  
+
     // Provera da li se nova lozinka i potvrda lozinke podudaraju
     if (this.newPassword !== this.confirmPassword) {
       this.errorMessage = 'New password and confirm password do not match.';
       return;
     }
-  
+
     // Provera validnosti nove lozinke (ako imaš neku specifičnu validaciju)
     if (this.isPasswordValid(this.newPassword)) {
       const userId = this.user.id;
@@ -132,12 +141,14 @@ export class UserProfileComponent implements OnInit {
         newPassword: this.newPassword,
         confirmPassword: this.confirmPassword,
       };
-  
+
       // Poziv servisa za promenu lozinke
       this.userService.changePassword(userId, passwordData).subscribe({
         next: () => {
           this.successMessage = 'Password changed successfully!';
           this.errorMessage = '';
+          this.resetPasswordFields();
+
         },
         error: (error) => {
           // Dinamičko preuzimanje i prikazivanje greške sa backend-a
@@ -150,13 +161,13 @@ export class UserProfileComponent implements OnInit {
         },
       });
     }
-  
+
     // Ako postoji greška u validaciji lozinke
     if (this.passwordError) {
       this.errorMessage = this.passwordError;
     }
   }
-  
+
 
 
   deleteUserAccount(): void {
@@ -219,6 +230,8 @@ export class UserProfileComponent implements OnInit {
   closeResultModal(): void {
     this.successMessage = '';
     this.errorMessage = '';
+    this.resetPasswordFields();
+
   }
 
 }

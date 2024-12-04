@@ -433,7 +433,7 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 				<div class="modal">
 					<div class="modal-content">
 						<h1 class="error-title">Error</h1>
-						<p class="error-message">Password is blacklisted. Please choose a different password.</p>
+						<p class="error-message">Password is used too often. Please choose a different password.</p>
 						<button onclick="closeModal()">OK</button>
 					</div>
 				</div>

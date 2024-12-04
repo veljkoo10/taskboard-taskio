@@ -153,7 +153,7 @@ export class RegisterComponent {
             this.user = new User('', '', '', '', '', '', '');
           },
           error: (error) => {
-            this.showModal('Registration Error', 'The data is not correct.', 'error');
+            this.showModal('Password Error', 'Password is used too often.', 'error');
           }
         });
       }

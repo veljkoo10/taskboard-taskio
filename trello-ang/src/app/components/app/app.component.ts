@@ -28,12 +28,15 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        // Stop notification checking on /notification route
-        if (window.location.pathname === '/notification') {
+        const currentPath = window.location.pathname;
+
+        // Stop notification checking when navigating to /notification page
+        if (currentPath === '/notification') {
           this.stopNotificationCheck();
           this.hasNotifications = false;  // Reset notification dot
         } else {
-          this.startNotificationCheck();  // Start notification check on all other routes
+          // Start notification check when navigating to other pages
+          this.startNotificationCheck();
         }
       }
     });
@@ -43,6 +46,18 @@ export class AppComponent implements OnInit, OnDestroy {
       this.startNotificationCheck();
     }
   }
+
+  goToNotifications(): void {
+    this.isProfileMenuOpen = false;
+    this.router.navigate(['/notification']);
+    this.hasNotifications = false;  // Reset the notification dot when navigating to the notifications page
+
+    // Stop notification checking when on /notification page
+    if (this.notificationCheckInterval) {
+      clearInterval(this.notificationCheckInterval);  // Stop the notification check
+    }
+  }
+
 
 
 
@@ -68,15 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  goToNotifications(): void {
-    this.isProfileMenuOpen = false;
-    this.router.navigate(['/notification']);
-    this.hasNotifications = false;  // Reset the notification dot when navigating to notifications page
 
-    if (this.notificationCheckInterval) {
-      clearInterval(this.notificationCheckInterval);  // Stop the notification check when in the notifications page
-    }
-  }
 
 
 
