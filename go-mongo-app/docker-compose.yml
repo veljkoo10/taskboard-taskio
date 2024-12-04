@@ -58,9 +58,11 @@ services:
   nginx:
     image: nginx:latest
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx.conf:/etc/nginx/nginx.conf  # NGINX konfiguracija
+      - ./certs:/etc/nginx/certs            # Sertifikati se mapiraju u kontejner
     ports:
-      - "80:80"
+      - "443:443"                           # HTTPS port
+      - "80:80"                             # HTTP port (za redirekciju ili unutrašnji saobraćaj)
     depends_on:
       - user-service
       - project-service
@@ -68,7 +70,8 @@ services:
       - notification-service
     networks:
       - app-network
-
+    environment:
+      - NGINX_HOST=localhost               # Dodatno ako je potrebno za NGINX podešavanje
 
   notification-service:
     build: ./notification-service
@@ -99,9 +102,6 @@ services:
       - task-service
     networks:
       - app-network
-    
-
-
 
   cassandra:
     image: cassandra:4.0
@@ -124,6 +124,7 @@ services:
       - cass_store:/var/lib/cassandra
     networks:
       - app-network
+
   nats:
     image: 'nats:latest'
     expose:
@@ -142,4 +143,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-

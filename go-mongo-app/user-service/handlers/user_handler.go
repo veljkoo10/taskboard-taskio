@@ -297,7 +297,7 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 <body>
 	<div class="container">
 		<h1>Reset Your Password</h1>
-		<form method="POST" action="/verify-password">
+		<form method="POST" action="/taskio/verify-password">
 			<input type="hidden" name="email" value="` + requestBody.Email + `">
 			<label for="newPassword">New Password:</label>
 			<input type="password" id="newPassword" name="newPassword" required>

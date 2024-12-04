@@ -297,7 +297,7 @@ func RegisterUser(user models.User) (string, error) {
 
 	// Slanje emaila za potvrdu registracije
 	subject := "Thanks for registering"
-	body := "Your registration is successful! Click the following link to activate your account: http://localhost:8080/confirm?email=" + user.Email
+	body := "Your registration is successful! Click the following link to activate your account: https://localhost/taskio/confirm?email=" + user.Email
 	err = notification.SendEmail(user.Email, subject, body, emailConfig)
 	if err != nil {
 		return "Registration successful, but failed to send confirmation email", nil
@@ -396,7 +396,7 @@ func ResetPassword(email string) (string, error) {
 func SendPasswordResetEmail(email string) error {
 
 	subject := "Password reset"
-	body := "Click the following link to reset your password: http://localhost:8080/reset-password?email=" + email
+	body := "Click the following link to reset your password: https://localhost/taskio/reset-password?email=" + email
 	err := notification.SendEmail(email, subject, body, emailConfig)
 	return err
 }

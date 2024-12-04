@@ -12,8 +12,8 @@ import { lastValueFrom } from 'rxjs';
   providedIn: 'root'
 })
 export class ProjectService {
-  private baseUrl = 'http://localhost/taskio/projects';
-  private taskUrl = 'http://localhost:8082/tasks';
+  private baseUrl = 'https://localhost/taskio/projects';
+  private taskUrl = 'https://localhost/taskio/tasks';
   private projectCreated = new Subject<Project>();
   private newProject = {}
 

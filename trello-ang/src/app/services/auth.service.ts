@@ -7,7 +7,7 @@ import * as CryptoJS from 'crypto-js';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly baseUrl = 'http://localhost/taskio';
+  private readonly baseUrl = 'https://localhost/taskio';
   private readonly registerUrl = `${this.baseUrl}/register`;
   private readonly loginUrl = `${this.baseUrl}/login`;
   private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;

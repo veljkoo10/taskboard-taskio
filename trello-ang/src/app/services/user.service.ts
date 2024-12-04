@@ -6,7 +6,7 @@ import { catchError, Observable, throwError } from 'rxjs';
   providedIn: 'root'
 })
 export class UserService {
-  private readonly baseUrl = 'http://localhost/taskio';
+  private readonly baseUrl = 'https://localhost/taskio';
   private readonly checkEmailUrl = `${this.baseUrl}/check-email`;
   private readonly resetPasswordUrl = `${this.baseUrl}/reset-password`;
 

@@ -50,7 +50,7 @@ func main() {
 	router.HandleFunc("/tasks/{taskId}", tasksHandler.UpdateTaskHandler).Methods("PUT")
 	router.HandleFunc("/tasks/{taskId}/member-of/{userId}", handlers.CheckUserInTaskHandler).Methods("GET")
 	router.HandleFunc("/tasks/{task_id}/dependencies/{dependency_id}", handlers.AddDependencyHandler).Methods("PUT")
-	router.HandleFunc("/projects/{project_id}/tasks", handlers.GetTasksForProjectHandler).Methods("GET")
+	router.HandleFunc("/tasks/projects/{project_id}/tasks", handlers.GetTasksForProjectHandler).Methods("GET")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

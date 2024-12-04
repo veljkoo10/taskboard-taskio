@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class NotificationService {
 
-  private apiUrl = 'http://localhost/taskio/notifications';
+  private apiUrl = 'https://localhost/taskio/notifications';
 
   constructor(private http: HttpClient) { }
 

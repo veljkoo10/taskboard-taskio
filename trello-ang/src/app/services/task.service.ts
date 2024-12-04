@@ -10,8 +10,8 @@ import {Observable, Subject, throwError} from 'rxjs';
   providedIn: 'root'
 })
 export class TaskService {
-  private taskUrl = 'http://localhost:8082/tasks'; // Base URL for task endpoints
-  private taskUrl2 = 'http://localhost:8082'; // Base URL for task endpoints
+  private taskUrl = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
+  private taskUrl2 = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
 
   constructor(private http: HttpClient) {}
 
