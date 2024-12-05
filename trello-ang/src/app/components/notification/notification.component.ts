@@ -23,7 +23,6 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log("Loading notifications...");
     const encryptedUserId = localStorage.getItem('user_id');
     if (encryptedUserId) {
       try {
@@ -33,7 +32,6 @@ export class NotificationComponent implements OnInit, OnDestroy {
         console.error('Error decrypting user ID', error);
       }
     } else {
-      console.log('Error: User ID not found');
     }
   }
 
@@ -51,13 +49,11 @@ export class NotificationComponent implements OnInit, OnDestroy {
       (data) => {
         if (!data || data.length === 0) {
           this.notifications = [];
-          console.log('No notifications found.');
         } else {
           this.notifications = data.map((notification: Notification) => ({
             ...notification,
             created_at: new Date(notification.created_at)
           }));
-          console.log('Notifications loaded:', this.notifications);
         }
 
         // Emit unreadCount after notifications are loaded
@@ -79,7 +75,6 @@ export class NotificationComponent implements OnInit, OnDestroy {
       const userId = this.decryptUserId(encryptedUserId);
       this.notificationService.markNotificationAsRead(userId).subscribe(
         () => {
-          console.log(`All unread notifications for user ID ${userId} marked as read.`);
           this.notifications.forEach(notification => {
             if (notification.status === NotificationStatus.Unread) {
               notification.status = NotificationStatus.Read;

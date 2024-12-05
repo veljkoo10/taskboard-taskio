@@ -82,7 +82,6 @@ export class ProjectDetailsComponent {
   ngOnInit() {
     // Dobijanje korisničkih podataka iz tokena
     this.user = this.getUserInfoFromToken();
-    console.log('User Info:', this.user);
 
     // Učitavanje zadataka i aktivnih korisnika
     this.loadTasks();
@@ -91,13 +90,11 @@ export class ProjectDetailsComponent {
     // Provera da li projekt postoji i ima validan ID
     if (this.project && this.project.id) {
       this.projectId = this.project.id;  // Postavi projectId
-      console.log('Project ID set to:', this.projectId);
     }
 
 
     // Provera da li projekt ima title
     if (this.project && this.project.title) {
-      console.log('Project Title:', this.project.title);
       this.getProjectIDByTitle(this.project.title);
     } else {
       console.error('Project Title is missing!');
@@ -129,7 +126,6 @@ export class ProjectDetailsComponent {
         const projectId = response?.projectId;
 
         if (typeof projectId === 'string') {
-          console.log('Project ID:', projectId);
           if (this.project) {
             this.project.id = projectId;
             this.projectId = projectId;
@@ -154,6 +150,7 @@ export class ProjectDetailsComponent {
           this.loadActiveUsers();
         },
         (error) => {
+
           console.error('Error loading users for project:', error);
         }
       );
@@ -192,9 +189,7 @@ export class ProjectDetailsComponent {
           }
         });
 
-        console.log('Pending Tasks:', this.pendingTasks);
-        console.log('In Progress Tasks:', this.inProgressTasks);
-        console.log('Done Tasks:', this.doneTasks);
+
       });
     }
   }
@@ -258,7 +253,6 @@ export class ProjectDetailsComponent {
 
           this.projectService.addMemberToProject(project.id, userIds).subscribe(
             (response) => {
-              console.log('Users successfully added:', response);
               this.loadUsersForProject();
               this.loadActiveUsers();
               this.selectedUsers = [];
@@ -302,7 +296,6 @@ export class ProjectDetailsComponent {
             // Pozivanje servisa za ažuriranje statusa
             this.taskService.updateTaskStatus(taskId, status).subscribe(
               (response) => {
-                console.log('Task status updated successfully:', response);
                 this.loadTasks();
                 // Resetovanje poruke o zavisnostima
                 this.dependencyMessage = null;
@@ -351,17 +344,14 @@ export class ProjectDetailsComponent {
   selectedTaskUsers: any[] = []; // Stores selected users for the task
 
   showAddTaskUserModal(task: any) {
-    console.log('Opening Add Task User Modal:', task);
     this.selectedTask = task; // Ensure task is valid
     this.isAddTaskUserVisible = true; // Toggle visibility
     this.isTaskDetailsVisible = false;
     this.loadUsersForProject()
     //const C = A.filter(item => !B.i`ncludes(item));
-    console.log(this.selectedTask.users)
     this.taskAvUsers = this.projectUsers.filter(
       item => !this.selectedTask.users.includes(item.id)
     );
-    console.log(this.taskAvUsers)
   }
 
   closeAddTaskUserModal() {
@@ -395,7 +385,6 @@ export class ProjectDetailsComponent {
       if (!isAlreadyAssigned) {
         this.taskService.addUserToTask(taskId, userId).subscribe(
           response => {
-            console.log(`User ${userId} added to task ${taskId}:`, response);
 
             // Ažuriraj lokalni niz taskUsers
             const addedUser = this.taskAvUsers.find(user => user.id === userId);
@@ -479,7 +468,6 @@ export class ProjectDetailsComponent {
   showCreateTaskForm() {
     const projectId = this.project as any;
     this.loadTasksDepend();
-    console.log(projectId);
     this.isCreateTaskFormVisible = true;
     this.cdRef.detectChanges();
     document.querySelector('#mm')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
@@ -487,7 +475,6 @@ export class ProjectDetailsComponent {
 
   showAddMemberToProject() {
     const project = this.project as any;
-    console.log(project.id);
     this.isAddMemberFormVisible=true
     this.cdRef.detectChanges();
     document.querySelector('#addMemberModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
@@ -495,11 +482,9 @@ export class ProjectDetailsComponent {
   addMemberToProject(user: any) {
     const project = this.project as any;
     if (project && user) {
-      console.log(`Dodavanje korisnika ${user.name} u projekat ${project.name}`);
 
       this.projectService.addMemberToProject(project.id, user.id).subscribe(
         (response) => {
-          console.log('User added to project:', response);
           this.loadActiveUsers();
           this.isAddMemberFormVisible = false;
         },
@@ -537,7 +522,6 @@ export class ProjectDetailsComponent {
 
       this.projectService.createTask(this.projectId, newTask).subscribe(
         (response) => {
-          console.log('Task successfully created:', response);
 
           this.cancelCreateTask();
           this.taskFormError = '';
@@ -586,7 +570,6 @@ export class ProjectDetailsComponent {
       }
     );
 
-    console.log("Selected task:", task);
     this.selectedTask = task;
     this.isTaskDetailsVisible = true;
     this.selectedTask = { ...task };
@@ -614,7 +597,6 @@ export class ProjectDetailsComponent {
     if(this.selectedTask.status !== "done"){
     this.taskService.removeUserFromTask(this.selectedTask.id, userId).subscribe(
       (response) => {
-        console.log('User removed from task successfully:', response);
 
         // Ukloni korisnika iz lokalne liste korisnika na tasku
         const removedUser = this.taskUsers.find(user => user.id === userId);
@@ -670,11 +652,9 @@ export class ProjectDetailsComponent {
     }
 
     if(this.project.min_people <= this.projectUsers.length ){
-      console.log(this.projectUsers.length - 1)
 
       this.projectService.removeMemberToProject(this.project.id, [userId]).subscribe(
         (response) => {
-          console.log('User removed successfully:', response);
           // Uklanjanje korisnika iz lokalne liste korisnika na projektu
           this.projectUsers = this.projectUsers.filter(user => user.id !== userId);
 
@@ -691,7 +671,6 @@ export class ProjectDetailsComponent {
       );
     }
     else{
-      console.log(this.project.users.length )
       this.showDeletePeopleProjectModal();  // Show modal instead of alert
     }
   }
@@ -737,7 +716,6 @@ export class ProjectDetailsComponent {
     // Resetujemo postojeće zadatke pre nego što učitamo nove
     this.existingTasks = [];
 
-    console.log('Fetching tasks for project ID:', this.projectId);
 
     // Pozivamo servis za učitavanje ID-ova zadataka vezanih za trenutni projekat
     this.taskService.getTasksByProjectId(this.projectId).subscribe(
@@ -756,7 +734,6 @@ export class ProjectDetailsComponent {
                 id: task.id,
                 name: task.name,
               }));
-              console.log('Tasks loaded:', this.existingTasks);
               this.cdRef.detectChanges();
             },
             (error) => {
@@ -764,7 +741,6 @@ export class ProjectDetailsComponent {
             }
           );
         } else {
-          console.log('No tasks found for this project.');
         }
       },
       (error) => {

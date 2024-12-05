@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -20,6 +21,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type UserService struct {
+	user   *db.Mongo
+	logger *log.Logger
+}
+
+func NewUserService(user *db.Mongo, logger *log.Logger) *UserService {
+	return &UserService{user, logger}
+}
 func isBlacklisted(input string) (bool, error) {
 	// Proveri trenutni radni direktorijum
 	dir, err := os.Getwd()

@@ -228,7 +228,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
           this.projectService.createProject(managerId, projectPayload).subscribe(
             (response: Project) => {
-              console.log('Project created successfully:', response);
 
               this.projectService.notifyProjectCreated(response);
 

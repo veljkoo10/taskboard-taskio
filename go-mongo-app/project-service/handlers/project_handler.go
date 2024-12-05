@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang-jwt/jwt"
 	"github.com/nats-io/nats.go"
 	"log"
 	"net/http"
@@ -20,11 +22,19 @@ type ProjectHandler struct {
 	repo     *db.ProjectRepo
 	natsConn *nats.Conn
 }
+type KeyAccount struct{}
+
+type KeyRole struct{}
+
+const (
+	Manager = "Manager"
+	Member  = "Member"
+)
 
 func NewProjectsHandler(l *log.Logger, r *db.ProjectRepo, natsConn *nats.Conn) *ProjectHandler {
 	return &ProjectHandler{l, r, natsConn}
 }
-func GetUsersForProjectHandler(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) GetUsersForProjectHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
@@ -47,7 +57,7 @@ func GetUsersForProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetProjectIDByTitle(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) GetProjectIDByTitle(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		Title string `json:"title"`
 	}
@@ -72,7 +82,7 @@ func GetProjectIDByTitle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"projectId": projectID})
 }
 
-func GetProjectsByUserID(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) GetProjectsByUserID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["userId"]
 
@@ -85,7 +95,7 @@ func GetProjectsByUserID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(projects)
 }
-func GetProjects(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 	projects, err := service.GetAllProjects()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +106,7 @@ func GetProjects(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(projects)
 }
 
-func CreateProject(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -201,7 +211,7 @@ func Conn() (*nats.Conn, error) {
 	return conn, nil
 }
 
-func GetProjectByID(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) GetProjectByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
@@ -285,7 +295,7 @@ func (p *ProjectHandler) sendNotification(subject string, message interface{}) e
 	return nil
 }
 
-func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	managerID := vars["managerId"]
 
@@ -326,7 +336,7 @@ func HandleCheckProjectByTitle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func AddTaskToProjectHandler(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) AddTaskToProjectHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectID"]
 	taskID := vars["taskID"]
@@ -341,7 +351,7 @@ func AddTaskToProjectHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Task successfully added to project"))
 }
 
-func IsActiveProject(w http.ResponseWriter, r *http.Request) {
+func (h *ProjectHandler) IsActiveProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
@@ -355,4 +365,108 @@ func IsActiveProject(w http.ResponseWriter, r *http.Request) {
 	// Vrati rezultat u JSON formatu
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"result": status})
+}
+func (uh *ProjectHandler) MiddlewareExtractUserFromHeader(next func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, h *http.Request) {
+		// Retrieve the token from the Authorization header
+		authHeader := h.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(rw, "No Authorization header found", http.StatusUnauthorized)
+			uh.logger.Println("No Authorization header:", authHeader)
+			return
+		}
+
+		// Expect the format "Bearer <token>"
+		tokenString := ""
+		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+			tokenString = authHeader[7:]
+		} else {
+			http.Error(rw, "Invalid Authorization header format", http.StatusUnauthorized)
+			uh.logger.Println("Invalid Authorization header format:", authHeader)
+			return
+		}
+
+		// Extract userID and role from the token directly
+		userID, role, err := uh.extractUserAndRoleFromToken(tokenString)
+		if err != nil {
+			uh.logger.Println("Token extraction failed:", err)
+			http.Error(rw, `{"message": "Invalid token"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// Log the userID and role
+		uh.logger.Println("User ID is:", userID, "Role is:", role)
+
+		// Add userID and role to the request context
+		ctx := context.WithValue(h.Context(), KeyAccount{}, userID)
+		ctx = context.WithValue(ctx, KeyRole{}, role)
+
+		// Update the request with the new context
+		h = h.WithContext(ctx)
+
+		// Pass the request along the middleware chain
+		next(rw, h)
+	}
+}
+
+// Helper method to extract userID and role from JWT token
+func (uh *ProjectHandler) extractUserAndRoleFromToken(tokenString string) (userID string, role string, err error) {
+	// Parse the token
+	// Replace with your actual secret key
+	secretKey := []byte(os.Getenv("TOKEN_SECRET"))
+
+	// Parse and validate the token
+	parsedToken, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		// Validate the algorithm (ensure it's signed with HMAC)
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return secretKey, nil
+	})
+
+	if err != nil || !parsedToken.Valid {
+		return "", "", fmt.Errorf("invalid token: %v", err)
+	}
+
+	// Extract claims from the token
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", fmt.Errorf("invalid token claims")
+	}
+
+	// Extract userID and role from the claims
+	userID, ok = claims["id"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("userID not found in token")
+	}
+
+	role, ok = claims["role"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("role not found in token")
+	}
+
+	return userID, role, nil
+}
+
+func (uh *ProjectHandler) RoleRequired(next http.HandlerFunc, roles ...string) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) { // changed 'r' to 'req'
+		// Extract the role from the request context
+		role, ok := req.Context().Value(KeyRole{}).(string) // 'req' instead of 'r'
+		if !ok {
+			http.Error(rw, "Role not found in context", http.StatusForbidden)
+			return
+		}
+
+		// Check if the user's role is in the list of required roles
+		for _, r := range roles {
+			if role == r {
+				// If the role matches, pass the request to the next handler in the chain
+				next(rw, req) // 'req' instead of 'r'
+				return
+			}
+		}
+
+		// If the role doesn't match any of the required roles, return a forbidden error
+		http.Error(rw, "Forbidden", http.StatusForbidden)
+	}
 }

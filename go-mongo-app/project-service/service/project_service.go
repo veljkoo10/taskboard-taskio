@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"project-service/db"
 	"project-service/models"
@@ -18,6 +19,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type ProjectService struct {
+	user   *db.Mongo
+	logger *log.Logger
+}
+
+func NewProjectService(user *db.Mongo, logger *log.Logger) *ProjectService {
+	return &ProjectService{user, logger}
+}
 func GetUserDetails(userIDs []string) ([]models.User, error) {
 	var users []models.User
 

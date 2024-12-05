@@ -171,6 +171,22 @@ export class UserProfileComponent implements OnInit {
 
 
   deleteUserAccount(): void {
+    console.log(this.projects)
+    if(this.projects === null){
+      this.userService.deactivateUser(this.user.id).subscribe({
+        next: (response) => {
+          this.accountDeleteMessage = 'Your account has been deleted.';
+          this.authService.logout();
+          this.router.navigate(['/login']);
+        },
+        error: (error) => {
+          console.error('Error deleting user:', error);
+          this.accountDeleteMessage = 'There was an error deleting your account.';
+        }
+      });
+
+      this.closeDeleteAccountModal();
+    }
     const projectStatusChecks = this.projects.map(project => {
       if (project.id) {
         return this.projectService.isProjectActive(project.id);
@@ -178,6 +194,7 @@ export class UserProfileComponent implements OnInit {
         return of(false);
       }
     });
+
 
     forkJoin(projectStatusChecks).subscribe(
       (results) => {

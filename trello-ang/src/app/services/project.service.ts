@@ -19,8 +19,14 @@ export class ProjectService {
 
   constructor(private http: HttpClient) {}
   getUsersForProject(projectId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/${projectId}/users`);
+    return this.http.get<any[]>(`${this.baseUrl}/${projectId}/users`).pipe(
+      catchError((error) => {
+        console.error('Error fetching users for project:', error);
+        return throwError(() => error);
+      })
+    );
   }
+
   getProjectIDByTitle(title: string): Observable<string> {
     return this.http.post<string>(`${this.baseUrl}/title/id`, { title })
       .pipe(
@@ -96,15 +102,6 @@ export class ProjectService {
     this.projectCreated.next(project);
   }
 
-  getPeojectById(projectId: string): Observable<any[]> {
-    const url = `${this.baseUrl}/${projectId}`;
-    return this.http.get<any>(url).pipe(
-      catchError(error => {
-        console.error('Error fetching user profile:', error);
-        return throwError(error);
-      })
-    );
-  }
 
   isProjectActive(projectId: string): Observable<boolean> {
     const url = `${this.baseUrl}/isActive/${projectId}`;

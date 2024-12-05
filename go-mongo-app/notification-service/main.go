@@ -63,10 +63,10 @@ func main() {
 
 	// Set up HTTP router
 	r := mux.NewRouter()
-	r.HandleFunc("/notifications/user/{id}", notificationHandler.GetNotificationsByUserID).Methods("GET", "OPTIONS")
-	r.HandleFunc("/notifications", notificationHandler.CreateNotification).Methods("POST")
-	r.HandleFunc("/notifications/all", notificationHandler.GetAllNotifications).Methods("GET")
-	r.HandleFunc("/notifications/{id}/mark-as-read", notificationHandler.MarkAsRead).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/notifications/user/{id}", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.GetNotificationsByUserID, "Member", "Manager"))).Methods("GET", "OPTIONS")
+	r.HandleFunc("/notifications", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.CreateNotification, "Member"))).Methods("POST")
+	r.HandleFunc("/notifications/all", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.GetAllNotifications, "Member"))).Methods("GET")
+	r.HandleFunc("/notifications/{id}/mark-as-read", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.MarkAsRead, "Member"))).Methods("PUT", "OPTIONS")
 
 	// Apply CORS middleware
 	r.Use(CORS)

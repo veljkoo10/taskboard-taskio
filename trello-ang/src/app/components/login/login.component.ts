@@ -65,7 +65,6 @@ export class LoginComponent {
         localStorage.setItem('access_token', encryptedToken);
         localStorage.setItem('role', encryptedRole);
         localStorage.setItem('user_id', encryptedUserId);
-        console.log(this.authService.getDecryptedData('role'))
         this.router.navigate(['/dashboard']);
       },
       (error) => {
@@ -90,10 +89,8 @@ export class LoginComponent {
       next: (response) => {
         this.message = 'Magic link sent successfully to your email.';
         this.isSuccess = true; // Uspešna poruka
-        console.log('Magic link poslat:', response);
       },
       error: (error) => {
-        console.error('Greška prilikom slanja magic link-a:', error);
 
         if (error.status === 403) {
           this.message = 'Your account is not active. Contact support for more information.';
@@ -164,8 +161,7 @@ export class LoginComponent {
     this.isSuccess = false;
   }
   checkEmailAndUsernameAndSendMagicLink() {
-    console.log("Email koji je unet:", this.email);
-    console.log("Username koji je unet:", this.username);
+
 
     if (!this.email || !this.username) {
       this.resetMessageMagic = 'Email i Username moraju biti uneti.';
@@ -174,11 +170,9 @@ export class LoginComponent {
 
     this.userService.loginWithMagic(this.email, this.username).subscribe(
       (response) => {
-        console.log('Odgovor sa servera:', response);
         this.resetMessageMagic = response.message;
       },
       (error) => {
-        console.error('Greška pri slanju magic linka:', error);
         this.resetMessageMagic = 'Desila se greška pri slanju magic linka.';
       }
     );

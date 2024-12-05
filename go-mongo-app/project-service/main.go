@@ -42,17 +42,17 @@ func main() {
 	projectsHandler := handlers.NewProjectsHandler(logger, projectRepo, nc)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/projects/{projectId}/users", handlers.GetUsersForProjectHandler).Methods("GET")
-	router.HandleFunc("/projects/title/id", handlers.GetProjectIDByTitle).Methods("POST")
-	router.HandleFunc("/projects/user/{userId}", handlers.GetProjectsByUserID).Methods("GET")
-	router.HandleFunc("/projects", handlers.GetProjects).Methods("GET")
-	router.HandleFunc("/projects/create/{managerId}", handlers.CreateProject).Methods("POST")
-	router.HandleFunc("/projects/{projectId}", handlers.GetProjectByID).Methods("GET", "OPTIONS")
-	router.HandleFunc("/projects/{projectId}/add-users", projectsHandler.AddUsersToProject).Methods("PUT")
-	router.HandleFunc("/projects/{projectId}/remove-users", projectsHandler.RemoveUsersFromProject).Methods("PUT")
-	router.HandleFunc("/projects/title/{managerId}", handlers.HandleCheckProjectByTitle).Methods("POST")
-	router.HandleFunc("/projects/{projectID}/tasks/{taskID}", handlers.AddTaskToProjectHandler).Methods("PUT", "OPTIONS")
-	router.HandleFunc("/projects/isActive/{projectId}", handlers.IsActiveProject).Methods("GET")
+	router.HandleFunc("/projects/{projectId}/users", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.GetUsersForProjectHandler, "Manager", "Member"))).Methods("GET")
+	router.HandleFunc("/projects/title/id", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.GetProjectIDByTitle, "Manager", "Member"))).Methods("POST")
+	router.HandleFunc("/projects/user/{userId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.GetProjectsByUserID, "Manager", "Member"))).Methods("GET")
+	router.HandleFunc("/projects", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.GetProjects, "Manager"))).Methods("GET")
+	router.HandleFunc("/projects/create/{managerId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.CreateProject, "Manager"))).Methods("POST")
+	router.HandleFunc("/projects/{projectId}", projectsHandler.GetProjectByID).Methods("GET", "OPTIONS")
+	router.HandleFunc("/projects/{projectId}/add-users", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.AddUsersToProject, "Manager"))).Methods("PUT")
+	router.HandleFunc("/projects/{projectId}/remove-users", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.RemoveUsersFromProject, "Manager"))).Methods("PUT")
+	router.HandleFunc("/projects/title/{managerId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.HandleCheckProjectByTitle, "Manager"))).Methods("POST")
+	router.HandleFunc("/projects/{projectID}/tasks/{taskID}", projectsHandler.AddTaskToProjectHandler).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/projects/isActive/{projectId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.IsActiveProject, "Manager", "Member"))).Methods("GET")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

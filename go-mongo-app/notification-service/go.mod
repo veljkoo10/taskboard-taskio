@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/gocql/gocql v1.2.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/nats-io/nats.go v1.37.0
 )

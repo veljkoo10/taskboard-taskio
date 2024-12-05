@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 	"user-service/db"
@@ -22,7 +23,24 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func GetActiveUsers(w http.ResponseWriter, r *http.Request) {
+type KeyAccount struct{}
+
+type KeyRole struct{}
+type UserHandler struct {
+	logger  *log.Logger
+	service *service.UserService
+}
+
+func NewUserHandler(logger *log.Logger, service *service.UserService) *UserHandler {
+	return &UserHandler{logger, service}
+}
+
+const (
+	Manager = "Manager"
+	Member  = "Member"
+)
+
+func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 	activeUsers, err := service.GetActiveUsers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -32,7 +50,7 @@ func GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(activeUsers)
 }
-func CheckUserExists(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) CheckUserExists(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
@@ -51,7 +69,7 @@ func CheckUserExists(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
 }
 
-func GetUsers(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := service.GetUsers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,7 +80,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-func GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
@@ -103,7 +121,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
-func ConfirmUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) ConfirmUser(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 	if email == "" {
 		http.Error(w, "Missing email", http.StatusBadRequest)
@@ -169,7 +187,7 @@ func CheckEmail(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
 }
-func CheckUsername(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
 	if username == "" {
 		http.Error(w, "Missing username", http.StatusBadRequest)
@@ -185,7 +203,7 @@ func CheckUsername(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
 }
-func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		Email string `json:"email"`
 	}
@@ -317,7 +335,7 @@ func HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func isBlacklisted(input string) (bool, error) {
+func (h *UserHandler) isBlacklisted(input string) (bool, error) {
 	// Proveri trenutni radni direktorijum
 	dir, err := os.Getwd()
 	if err != nil {
@@ -348,110 +366,411 @@ func isBlacklisted(input string) (bool, error) {
 	return false, nil // Nema poklapanja
 }
 
-func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 	// Parsiranje forme
 	r.ParseForm()
 	email := r.FormValue("email")
 	newPassword := r.FormValue("newPassword")
 	confirmPassword := r.FormValue("confirmPassword")
+	r1 := true
+	r2 := true
+	r3 := true
+	r4 := true
 
-	// Proveri da li su lozinke iste
+	// Proverite da li lozinka sadrži barem jedno veliko slovo
+	matched, _ := regexp.MatchString("[A-Z]", newPassword)
+	if !matched {
+		r1 = false
+	}
+
+	// Proverite da li lozinka sadrži barem jedno malo slovo
+	matched, _ = regexp.MatchString("[a-z]", newPassword)
+	if !matched {
+		r2 = false
+	}
+
+	// Proverite da li lozinka sadrži barem jedan broj
+	matched, _ = regexp.MatchString("[0-9]", newPassword)
+	if !matched {
+		r3 = false
+	}
+
+	// Proverite da li lozinka sadrži barem jedan specijalni karakter
+	matched, _ = regexp.MatchString(`[!@#$%^&*(),.?":{}|<>]`, newPassword)
+	if !matched {
+		r4 = false
+	}
+	// Ako lozinke nisu iste
 	if newPassword != confirmPassword {
-		http.Error(w, "Lozinke se ne podudaraju", http.StatusBadRequest)
-		return
-	}
-
-	isBlacklistedPassword, err := isBlacklisted(newPassword)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Greška prilikom provere lozinke: %v", err), http.StatusInternalServerError)
-		return
-	}
-	if isBlacklistedPassword {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<title>Error</title>
-				<style>
-					body {
-						font-family: Arial, sans-serif;
-						background-color: #ffffff;
-						display: flex;
-						justify-content: center;
-						align-items: center;
-						height: 100vh;
-						margin: 0;
-					}
-					.modal {
-						display: block;
-						position: fixed;
-						z-index: 1;
-						padding-top: 100px;
-						left: 0;
-						top: 0;
-						width: 100%;
-						height: 100%;
-						background-color: rgba(0,0,0,0.5);
-					}
-					.modal-content {
-						margin: auto;
-						padding: 20px;
-						width: 80%;
-						max-width: 400px;
-						background-color: #f9f9f9;
-						border-radius: 8px;
-						text-align: center;
-						box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-					}
-					.error-title {
-						color: #d32f2f;
-						font-size: 24px;
-						margin-bottom: 20px;
-					}
-					.error-message {
-						color: #333;
-						font-size: 16px;
-						margin-bottom: 20px;
-					}
-					button {
-						background-color: #d32f2f;
-						color: white;
-						padding: 10px 20px;
-						border: none;
-						border-radius: 5px;
-						cursor: pointer;
-						font-size: 16px;
-					}
-					button:hover {
-						background-color: #b71c1c;
-					}
-				</style>
-			</head>
-			<body>
-				<div class="modal">
-					<div class="modal-content">
-						<h1 class="error-title">Error</h1>
-						<p class="error-message">Password is used too often. Please choose a different password.</p>
-						<button onclick="closeModal()">OK</button>
-					</div>
-				</div>
-				<script>
-					function closeModal() {
-						document.querySelector('.modal').style.display = 'none';
-					}
-				</script>
-			</body>
-			</html>
-		`))
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greška</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: rgba(0, 0, 0, 0.5);
+                    }
+                    .modal {
+                        display: block;
+                        position: relative;
+                        z-index: 1;
+                        width: 80%;
+                        max-width: 400px;
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        text-align: center;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    }
+                    .error-title {
+                        color: #d32f2f;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        color: #333;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    button:hover {
+                        background-color: #b71c1c;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h1 class="error-title">Greška</h1>
+                    <p class="error-message">Lozinke se ne podudaraju.</p>
+                    <button onclick="closeModal()">OK</button>
+                </div>
+                <script>
+                    function closeModal() {
+                        document.querySelector('.modal').style.display = 'none';
+                    }
+                </script>
+            </body>
+            </html>
+        `))
 		return
 	}
 
-	// Hash lozinke
+	// Proveri da li je lozinka na crnoj listi
+	isBlacklistedPassword, err := h.isBlacklisted(newPassword)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greška</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: rgba(0, 0, 0, 0.5);
+                    }
+                    .modal {
+                        display: block;
+                        position: relative;
+                        z-index: 1;
+                        width: 80%;
+                        max-width: 400px;
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        text-align: center;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    }
+                    .error-title {
+                        color: #d32f2f;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        color: #333;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    button:hover {
+                        background-color: #b71c1c;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h1 class="error-title">Greška</h1>
+                    <p class="error-message">Greška prilikom provere lozinke: ` + err.Error() + `</p>
+                    <button onclick="goBack()">OK</button>
+                </div>
+                <script>
+					function goBack() {
+                		window.history.back();  // Vraća korisnika na prethodnu stranicu
+            		}
+                </script>
+            </body>
+            </html>
+        `))
+		return
+	} else if isBlacklistedPassword {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greška</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: rgba(0, 0, 0, 0.5);
+                    }
+                    .modal {
+                        display: block;
+                        position: relative;
+                        z-index: 1;
+                        width: 80%;
+                        max-width: 400px;
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        text-align: center;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    }
+                    .error-title {
+                        color: #d32f2f;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        color: #333;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    button:hover {
+                        background-color: #b71c1c;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h1 class="error-title">Greška</h1>
+                    <p class="error-message">Lozinka je na crnoj listi. Molimo vas da izaberete drugu lozinku.</p>
+                    <button onclick="goBack()">OK</button>
+                </div>
+                <script>
+                    function closeModal() {
+                        document.querySelector('.modal').style.display = 'none';
+                    }
+
+					function goBack() {
+                		window.history.back();  // Vraća korisnika na prethodnu stranicu
+            		}
+                </script>
+            </body>
+            </html>
+        `))
+		return
+	} else if !r1 || !r2 || !r3 || !r4 {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greška</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: rgba(0, 0, 0, 0.5);
+                    }
+                    .modal {
+                        display: block;
+                        position: relative;
+                        z-index: 1;
+                        width: 80%;
+                        max-width: 400px;
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        text-align: center;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    }
+                    .error-title {
+                        color: #d32f2f;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        color: #333;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    button:hover {
+                        background-color: #b71c1c;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h1 class="error-title">Error</h1>
+                    <p class="error-message">Password must contain at least one uppercase letter, lowercase letter, number and character.</p>
+                    <button onclick="goBack()">OK</button>
+                </div>
+                <script>
+                    function closeModal() {
+                        document.querySelector('.modal').style.display = 'none';
+                    }
+
+					function goBack() {
+                		window.history.back();  // Vraća korisnika na prethodnu stranicu
+            		}
+                </script>
+            </body>
+            </html>
+        `))
+		return
+	}
+
+	// Hash lozinke i nastavi sa procedurom
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Greška prilikom heširanja lozinke", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greška</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: rgba(0, 0, 0, 0.5);
+                    }
+                    .modal {
+                        display: block;
+                        position: relative;
+                        z-index: 1;
+                        width: 80%;
+                        max-width: 400px;
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        text-align: center;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    }
+                    .error-title {
+                        color: #d32f2f;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        color: #333;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    button:hover {
+                        background-color: #b71c1c;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h1 class="error-title">Greška</h1>
+                    <p class="error-message">Greška prilikom heširanja lozinke: ` + err.Error() + `</p>
+                    <button onclick="goBack()">OK</button>
+                </div>
+                <script>
+                    function goBack() {
+                		window.history.back();  // Vraća korisnika na prethodnu stranicu
+            		}
+                </script>
+            </body>
+            </html>
+        `))
 		return
 	}
 
@@ -462,7 +781,78 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 
 	_, err = collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{"$set": bson.M{"password": string(hashedPassword)}})
 	if err != nil {
-		http.Error(w, "Greška prilikom ažuriranja lozinke", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Greška</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: rgba(0, 0, 0, 0.5);
+                    }
+                    .modal {
+                        display: block;
+                        position: relative;
+                        z-index: 1;
+                        width: 80%;
+                        max-width: 400px;
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        text-align: center;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    }
+                    .error-title {
+                        color: #d32f2f;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        color: #333;
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                    }
+                    button {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    button:hover {
+                        background-color: #b71c1c;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h1 class="error-title">Greška</h1>
+                    <p class="error-message">Greška prilikom ažuriranja lozinke: ` + err.Error() + `</p>
+                    <button onclick="goBack()">OK</button>
+                </div>
+                <script>
+                    function closeModal() {
+                        document.querySelector('.modal').style.display = 'none';
+                    }
+            		function goBack() {
+                		window.history.back();  // Vraća korisnika na prethodnu stranicu
+            		}
+                </script>
+            </body>
+            </html>
+        `))
 		return
 	}
 
@@ -470,61 +860,61 @@ func HandleVerifyPassword(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`
-		<!DOCTYPE html>
-		<html>
-		<head>
-			<title>Reset Password Success</title>
-			<style>
-				body {
-					font-family: Arial, sans-serif;
-					background-color: #ffffff;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-					height: 100vh;
-					margin: 0;
-				}
-				.container {
-					text-align: center;
-					width: 100%;
-					max-width: 400px;
-					padding: 20px;
-					background-color: #f9f9f9;
-					border: 1px solid #e0e0e0;
-					border-radius: 8px;
-					box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-				}
-				h1 {
-					color: #2e7d32;
-					font-size: 24px;
-					margin-bottom: 20px;
-				}
-				p {
-					color: #333;
-					font-size: 16px;
-					margin-bottom: 20px;
-				}
-				a {
-					color: #4caf50;
-					text-decoration: none;
-					font-weight: bold;
-				}
-				a:hover {
-					text-decoration: underline;
-				}
-			</style>
-		</head>
-		<body>
-			<div class="container">
-				<h1>Password Reset Successful</h1>
-				<p>Your password has been successfully reset. You can now <a href="http://localhost:4200/login">log in</a> with your new password.</p>
-			</div>
-		</body>
-		</html>
-	`))
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Password Reset Success</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #ffffff;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                }
+                .container {
+                    text-align: center;
+                    width: 100%;
+                    max-width: 400px;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+                h1 {
+                    color: #2e7d32;
+                    font-size: 24px;
+                    margin-bottom: 20px;
+                }
+                p {
+                    color: #333;
+                    font-size: 16px;
+                    margin-bottom: 20px;
+                }
+                a {
+                    color: #4caf50;
+                    text-decoration: none;
+                    font-weight: bold;
+                }
+                a:hover {
+                    text-decoration: underline;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Password Reset Successful</h1>
+                <p>Your password has been successfully reset. You can now <a href="http://localhost:4200/login">log in</a> with your new password.</p>
+            </div>
+        </body>
+        </html>
+    `))
 }
 
-func CheckUserActive(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) CheckUserActive(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 	if email == "" {
 		http.Error(w, "Missing email", http.StatusBadRequest)
@@ -541,7 +931,7 @@ func CheckUserActive(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"active": isActive})
 
 }
-func LoginUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -588,7 +978,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func ChangePassword(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
@@ -622,7 +1012,7 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Password changed successfully"})
 }
-func SendMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) SendMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
 	// Pokušaj da uzmeš email iz query parametra
 	email := r.URL.Query().Get("email")
 	username := r.URL.Query().Get("username")
@@ -692,7 +1082,7 @@ func SendMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func VerifyMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) VerifyMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
 	// Dohvati token iz URL-a
 	tokenString := r.URL.Query().Get("token")
 	if tokenString == "" {
@@ -730,7 +1120,7 @@ func VerifyMagicLinkHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 
 }
-func DeactivateUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
@@ -747,4 +1137,109 @@ func DeactivateUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "User deactivated successfully"})
+}
+
+func (uh *UserHandler) MiddlewareExtractUserFromHeader(next func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, h *http.Request) {
+		// Retrieve the token from the Authorization header
+		authHeader := h.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(rw, "No Authorization header found", http.StatusUnauthorized)
+			uh.logger.Println("No Authorization header:", authHeader)
+			return
+		}
+
+		// Expect the format "Bearer <token>"
+		tokenString := ""
+		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+			tokenString = authHeader[7:]
+		} else {
+			http.Error(rw, "Invalid Authorization header format", http.StatusUnauthorized)
+			uh.logger.Println("Invalid Authorization header format:", authHeader)
+			return
+		}
+
+		// Extract userID and role from the token directly
+		userID, role, err := uh.extractUserAndRoleFromToken(tokenString)
+		if err != nil {
+			uh.logger.Println("Token extraction failed:", err)
+			http.Error(rw, `{"message": "Invalid token"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// Log the userID and role
+		uh.logger.Println("User ID is:", userID, "Role is:", role)
+
+		// Add userID and role to the request context
+		ctx := context.WithValue(h.Context(), KeyAccount{}, userID)
+		ctx = context.WithValue(ctx, KeyRole{}, role)
+
+		// Update the request with the new context
+		h = h.WithContext(ctx)
+
+		// Pass the request along the middleware chain
+		next(rw, h)
+	}
+}
+
+// Helper method to extract userID and role from JWT token
+func (uh *UserHandler) extractUserAndRoleFromToken(tokenString string) (userID string, role string, err error) {
+	// Parse the token
+	// Replace with your actual secret key
+	secretKey := []byte(os.Getenv("TOKEN_SECRET"))
+
+	// Parse and validate the token
+	parsedToken, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		// Validate the algorithm (ensure it's signed with HMAC)
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return secretKey, nil
+	})
+
+	if err != nil || !parsedToken.Valid {
+		return "", "", fmt.Errorf("invalid token: %v", err)
+	}
+
+	// Extract claims from the token
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", fmt.Errorf("invalid token claims")
+	}
+
+	// Extract userID and role from the claims
+	userID, ok = claims["id"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("userID not found in token")
+	}
+
+	role, ok = claims["role"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("role not found in token")
+	}
+
+	return userID, role, nil
+}
+
+func (uh *UserHandler) RoleRequired(next http.HandlerFunc, roles ...string) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) { // changed 'r' to 'req'
+		// Extract the role from the request context
+		role, ok := req.Context().Value(KeyRole{}).(string) // 'req' instead of 'r'
+		if !ok {
+			http.Error(rw, "Role not found in context", http.StatusForbidden)
+			return
+		}
+
+		// Check if the user's role is in the list of required roles
+		for _, r := range roles {
+			if role == r {
+				// If the role matches, pass the request to the next handler in the chain
+				next(rw, req) // 'req' instead of 'r'
+				return
+			}
+		}
+
+		// If the role doesn't match any of the required roles, return a forbidden error
+		http.Error(rw, "Forbidden", http.StatusForbidden)
+	}
 }

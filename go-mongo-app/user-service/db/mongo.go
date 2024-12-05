@@ -4,10 +4,20 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
 	"os"
 )
 
 var Client *mongo.Client
+
+type Mongo struct {
+	cli    *mongo.Client
+	logger *log.Logger
+}
+
+func New(client *mongo.Client, logger *log.Logger) *Mongo {
+	return &Mongo{cli: client, logger: logger}
+}
 
 func ConnectToMongo() error {
 	mongoURI := os.Getenv("MONGO_URI")

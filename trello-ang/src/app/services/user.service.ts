@@ -82,6 +82,7 @@ export class UserService {
 
     return this.http.post<any>(`${this.baseUrl}/send-magic-link`, requestBody);
   }
+
   loginWithMagicLink(email: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/send-magic-link?email=${email}`, {});
   }
@@ -92,5 +93,5 @@ export class UserService {
     const url = `${this.baseUrl}/users/${userId}/deactivate`;
     return this.http.put<any>(url, null);
   }
-  
+
 }

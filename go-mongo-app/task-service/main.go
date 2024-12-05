@@ -41,16 +41,16 @@ func main() {
 	tasksHandler := handlers.NewTasksHandler(logger, taskRepo, nc)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/tasks", handlers.GetTasks).Methods("GET")
-	router.HandleFunc("/tasks/{taskId}", handlers.GetTaskByID).Methods("GET", "OPTIONS")
-	router.HandleFunc("/tasks/create/{project_id}", handlers.CreateTaskHandler).Methods("POST")
-	router.HandleFunc("/tasks/{taskId}/users/{userId}", tasksHandler.AddUserToTaskHandler).Methods("PUT")
-	router.HandleFunc("/tasks/{taskId}/users/{userId}", tasksHandler.RemoveUserFromTaskHandler).Methods("DELETE")
-	router.HandleFunc("/tasks/{taskID}/users", handlers.GetUsersForTaskHandler).Methods("GET")
-	router.HandleFunc("/tasks/{taskId}", tasksHandler.UpdateTaskHandler).Methods("PUT")
-	router.HandleFunc("/tasks/{taskId}/member-of/{userId}", handlers.CheckUserInTaskHandler).Methods("GET")
-	router.HandleFunc("/tasks/{task_id}/dependencies/{dependency_id}", handlers.AddDependencyHandler).Methods("PUT")
-	router.HandleFunc("/tasks/projects/{project_id}/tasks", handlers.GetTasksForProjectHandler).Methods("GET")
+	router.HandleFunc("/tasks", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTasks, "Manager", "Member"))).Methods("GET")
+	router.HandleFunc("/tasks/{taskId}", tasksHandler.GetTaskByID).Methods("GET", "OPTIONS")
+	router.HandleFunc("/tasks/create/{project_id}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.CreateTaskHandler, "Manager"))).Methods("POST")
+	router.HandleFunc("/tasks/{taskId}/users/{userId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.AddUserToTaskHandler, "Manager"))).Methods("PUT")
+	router.HandleFunc("/tasks/{taskId}/users/{userId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.RemoveUserFromTaskHandler, "Manager"))).Methods("DELETE")
+	router.HandleFunc("/tasks/{taskID}/users", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetUsersForTaskHandler, "Manager", "Member"))).Methods("GET")
+	router.HandleFunc("/tasks/{taskId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.UpdateTaskHandler, "Member"))).Methods("PUT")
+	router.HandleFunc("/tasks/{taskId}/member-of/{userId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.CheckUserInTaskHandler, "Manager", "Member"))).Methods("GET")
+	router.HandleFunc("/tasks/{task_id}/dependencies/{dependency_id}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.AddDependencyHandler, "Manager"))).Methods("PUT")
+	router.HandleFunc("/tasks/projects/{project_id}/tasks", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTasksForProjectHandler, "Manager"))).Methods("GET")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
