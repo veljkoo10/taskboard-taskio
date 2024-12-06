@@ -56,13 +56,12 @@ services:
       - app-network
 
   nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./certs:/etc/nginx/certs
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
     ports:
-      - "${NGINX_PORT_HTTPS:-443}:443"
-      - "${NGINX_PORT_HTTP:-80}:80"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     depends_on:
       - user-service
       - project-service
@@ -71,7 +70,20 @@ services:
     networks:
       - app-network
     environment:
-      - NGINX_HOST=${NGINX_HOST:-localhost}
+      - NGINX_HTTP_PORT=${NGINX_HTTP_PORT:-80}
+      - NGINX_HTTPS_PORT=${NGINX_HTTPS_PORT:-443}
+      - NGINX_SERVER_NAME=${NGINX_SERVER_NAME:-localhost}
+      - SSL_CERTIFICATE_PATH=${SSL_CERTIFICATE_PATH:-/etc/nginx/certs/server.crt}
+      - SSL_CERTIFICATE_KEY_PATH=${SSL_CERTIFICATE_KEY_PATH:-/etc/nginx/certs/server.key}
+      - USER_SERVICE_HOST=${USER_SERVICE_HOST:-user-service}
+      - USER_SERVICE_PORT=${USER_SERVICE_PORT:-8080}
+      - PROJECT_SERVICE_HOST=${PROJECT_SERVICE_HOST:-project-service}
+      - PROJECT_SERVICE_PORT=${PROJECT_SERVICE_PORT:-8081}
+      - TASK_SERVICE_HOST=${TASK_SERVICE_HOST:-task-service}
+      - TASK_SERVICE_PORT=${TASK_SERVICE_PORT:-8082}
+      - NOTIFICATION_SERVICE_HOST=${NOTIFICATION_SERVICE_HOST:-notification-service}
+      - NOTIFICATION_SERVICE_PORT=${NOTIFICATION_SERVICE_PORT:-8083}
+
 
   notification-service:
     build: ./notification-service
