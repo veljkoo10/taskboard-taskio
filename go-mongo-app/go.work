@@ -6,4 +6,5 @@ use (
 	.
 	task-service
 	notification-service
+	workflow-service
 )

@@ -54,14 +54,25 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
         }
 
-       location /taskio/notification {
-                   rewrite ^/taskio(/.*)$ $1 break;
-                   proxy_pass http://notification-service:8080;
-                   proxy_set_header Host $host;
-                   proxy_set_header X-Real-IP $remote_addr;
-                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                   proxy_set_header X-Forwarded-Proto $scheme;
-               }
+        # Prosleđivanje zahteva ka notification-service
+        location /taskio/notification {
+            rewrite ^/taskio(/.*)$ $1 break;
+            proxy_pass http://notification-service:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Prosleđivanje zahteva ka workflow-service (novi servis)
+        location /taskio/workflow {
+            rewrite ^/taskio/workflow(/.*)$ $1 break;
+            proxy_pass http://workflow-service:8084/workflow$1;  # Podesi port na 8084, ili odgovarajući port tvog workflow servisa
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
 
         # Opciona konfiguracija za statičke fajlove
         location /static/ {

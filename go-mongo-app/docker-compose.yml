@@ -48,6 +48,29 @@ services:
     volumes:
       - task-mongo_store:/data/db
 
+  workflow-service:
+    build: ./workflow-service  # Dodavanje workflow service
+    ports:
+      - "${WORKFLOW_SERVICE_PORT:-8084}:8080"  # Možeš prilagoditi port po želji
+    depends_on:
+      - neo4j
+    environment:
+      - NEO4J_URI=${NEO4J_URI:-neo4j://neo4j:7687}
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}  # Ne zaboravi da dodaš u .env
+    networks:
+      - app-network
+
+  neo4j:
+    image: neo4j:latest
+    ports:
+      - "7687:7687"
+      - "7474:7474"  # Web interfejs
+    environment:
+      - NEO4J_AUTH=neo4j/password  # Ne zaboravi da prilagodiš lozinku
+    networks:
+      - app-network
+
   mongo:
     image: mongo:latest
     ports:
@@ -67,6 +90,7 @@ services:
       - project-service
       - task-service
       - notification-service
+      - workflow-service  # Dodato workflow-service u zavisnosti
     networks:
       - app-network
     environment:
@@ -83,7 +107,8 @@ services:
       - TASK_SERVICE_PORT=${TASK_SERVICE_PORT:-8082}
       - NOTIFICATION_SERVICE_HOST=${NOTIFICATION_SERVICE_HOST:-notification-service}
       - NOTIFICATION_SERVICE_PORT=${NOTIFICATION_SERVICE_PORT:-8083}
-
+      - WORKFLOW_SERVICE_HOST=${WORKFLOW_SERVICE_HOST:-workflow-service}  # Dodato workflow-service u Nginx konfiguraciju
+      - WORKFLOW_SERVICE_PORT=${WORKFLOW_SERVICE_PORT:-8084}
 
   notification-service:
     build: ./notification-service
