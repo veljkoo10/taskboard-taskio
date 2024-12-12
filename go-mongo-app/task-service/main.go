@@ -51,7 +51,7 @@ func main() {
 	router.HandleFunc("/tasks/{taskId}/member-of/{userId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.CheckUserInTaskHandler, "Manager", "Member"))).Methods("GET")
 	router.HandleFunc("/tasks/{task_id}/dependencies/{dependency_id}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.AddDependencyHandler, "Manager"))).Methods("PUT")
 	router.HandleFunc("/tasks/projects/{project_id}/tasks", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTasksForProjectHandler, "Manager"))).Methods("GET")
-
+	router.HandleFunc("/tasks/{task_id}/dependenciesWork", tasksHandler.GetDependenciesForTaskHandler).Methods("GET", "OPTIONS")
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},

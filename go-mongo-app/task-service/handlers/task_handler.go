@@ -522,3 +522,62 @@ func (uh *TasksHandler) RoleRequired(next http.HandlerFunc, roles ...string) htt
 		http.Error(rw, "Forbidden", http.StatusForbidden)
 	}
 }
+func (uh *TasksHandler) GetDependenciesForTaskHandler(w http.ResponseWriter, r *http.Request) {
+	// Izvlačenje `task_id` iz URL parametra
+	taskID := mux.Vars(r)["task_id"]
+
+	if taskID == "" {
+		http.Error(w, "Missing task_id", http.StatusBadRequest)
+		return
+	}
+
+	// Poziv funkcije za dobavljanje zavisnosti iz workflow-service
+	dependencies, err := service.GetDependenciesFromWorkflowService(taskID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching dependencies: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Slanje zavisnosti kao odgovor
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(dependencies)
+}
+func (uh *TasksHandler) UpdateTaskStatusHandler(w http.ResponseWriter, r *http.Request) {
+	// Parsiranje parametara iz URL-a
+	vars := mux.Vars(r)
+	taskID := vars["taskID"]
+
+	// Parsiranje statusa iz zahteva
+	var payload struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validacija unosa
+	if payload.Status == "" {
+		http.Error(w, "Status is required", http.StatusBadRequest)
+		return
+	}
+
+	// Ažuriranje statusa zadatka
+	updatedTask, err := service.UpdateTaskStatus(taskID, payload.Status)
+	if err != nil {
+		if strings.Contains(err.Error(), "dependency task") {
+			http.Error(w, err.Error(), http.StatusConflict) // Konflikt zbog zavisnosti
+		} else if strings.Contains(err.Error(), "task not found") {
+			http.Error(w, err.Error(), http.StatusNotFound) // Zadatak nije pronađen
+		} else {
+			http.Error(w, "Internal server error", http.StatusInternalServerError) // Ostale greške
+		}
+		return
+	}
+
+	// Slanje odgovora sa ažuriranim zadatkom
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(updatedTask)
+}

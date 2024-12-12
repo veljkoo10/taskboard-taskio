@@ -98,7 +98,6 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
-
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -111,32 +110,39 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Poziv na RegisterUser iz servisa koji vrši registraciju korisnika
 	message, err := service.RegisterUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Uspešna registracija
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
+
 func (h *UserHandler) ConfirmUser(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
-	if email == "" {
-		http.Error(w, "Missing email", http.StatusBadRequest)
+	token := r.URL.Query().Get("token") // Dodavanje parametra tokena
+	if email == "" || token == "" {
+		http.Error(w, "Missing email or token", http.StatusBadRequest)
 		return
 	}
 
-	err := service.ConfirmUser(email)
+	// Poziv na ConfirmUser iz servisa koji proverava token i aktivira korisnika
+	err := service.ConfirmUser(email, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Uspešna potvrda
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/html")
 
+	// HTML odgovor korisniku
 	htmlResponse := `
         <!DOCTYPE html>
         <html lang="en">
@@ -171,6 +177,7 @@ func (h *UserHandler) ConfirmUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(htmlResponse))
 }
+
 func CheckEmail(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 	if email == "" {
@@ -206,6 +213,7 @@ func (h *UserHandler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		Email string `json:"email"`
+		Token string `json:"token"`
 	}
 
 	// Decode the request body for JSON requests
@@ -217,6 +225,8 @@ func (h *UserHandler) HandleResetPassword(w http.ResponseWriter, r *http.Request
 	} else {
 		// For web requests, get email from URL
 		requestBody.Email = r.URL.Query().Get("email")
+		requestBody.Token = r.URL.Query().Get("token") // Token za resetovanje lozinke
+		log.Println("Token iz URL-a:", requestBody.Token)
 	}
 
 	if requestBody.Email == "" {
@@ -225,7 +235,7 @@ func (h *UserHandler) HandleResetPassword(w http.ResponseWriter, r *http.Request
 	}
 
 	// Call your service to send a reset email link
-	response, err := service.ResetPassword(requestBody.Email)
+	response, err := service.ResetPassword(requestBody.Email, r.Method)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -317,6 +327,7 @@ func (h *UserHandler) HandleResetPassword(w http.ResponseWriter, r *http.Request
 		<h1>Reset Your Password</h1>
 		<form method="POST" action="/taskio/verify-password">
 			<input type="hidden" name="email" value="` + requestBody.Email + `">
+				<input type="hidden" name="token" value="` + requestBody.Token + `">
 			<label for="newPassword">New Password:</label>
 			<input type="password" id="newPassword" name="newPassword" required>
 			<label for="confirmPassword">Confirm Password:</label>
@@ -372,6 +383,8 @@ func (h *UserHandler) HandleVerifyPassword(w http.ResponseWriter, r *http.Reques
 	email := r.FormValue("email")
 	newPassword := r.FormValue("newPassword")
 	confirmPassword := r.FormValue("confirmPassword")
+	token := r.FormValue("token")
+	log.Println("Token iz URL-a:", token)
 	r1 := true
 	r2 := true
 	r3 := true
@@ -698,6 +711,44 @@ func (h *UserHandler) HandleVerifyPassword(w http.ResponseWriter, r *http.Reques
         `))
 		return
 	}
+	collection := db.Client.Database("testdb").Collection("password_resets")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var resetData struct {
+		Email     string    `bson:"email"`
+		Token     string    `bson:"token"`
+		ExpiresAt time.Time `bson:"expiresAt"`
+	}
+
+	// Potrudi se da je token koji šalješ u zahtevu tačan
+	err = collection.FindOne(ctx, bson.M{"email": email, "token": token}).Decode(&resetData)
+	if err != nil {
+		log.Println("Neuspešan upit prema bazi:", err)
+		log.Println(email, token)
+		http.Error(w, "Neispravan token", http.StatusBadRequest)
+		return
+	}
+
+	// Loguj vrednosti tokena i vremena isteka
+	log.Println("Token sačuvan u bazi:", resetData.Token)
+	log.Println("ExpiresAt sačuvan u bazi:", resetData.ExpiresAt)
+	log.Println("Trenutno vreme:", time.Now().UTC())
+
+	// Proveri da li je token istekao
+	if time.Now().UTC().After(resetData.ExpiresAt) {
+		log.Println("Token je istekao za korisnika:", email)
+		http.Error(w, "Token je istekao", http.StatusBadRequest)
+
+		// Obriši token iz baze, jer je istekao
+		_, err := collection.DeleteOne(ctx, bson.M{"email": email, "token": token})
+		if err != nil {
+			log.Println("Greška pri brisanju istekao token:", err)
+			http.Error(w, "Greška prilikom brisanja istekao token", http.StatusInternalServerError)
+			return
+		}
+		return
+	}
 
 	// Hash lozinke i nastavi sa procedurom
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -775,8 +826,8 @@ func (h *UserHandler) HandleVerifyPassword(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Ažuriraj lozinku u bazi
-	collection := db.Client.Database("testdb").Collection("users")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	collection = db.Client.Database("testdb").Collection("users")
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	_, err = collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{"$set": bson.M{"password": string(hashedPassword)}})

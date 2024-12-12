@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"math/rand"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -252,7 +254,7 @@ func UsernameExists(username string) (bool, error) {
 	return true, nil
 }
 func RegisterUser(user models.User) (string, error) {
-	// Provjera da li je lozinka na blacklisti
+	// Provera da li je lozinka na blacklisti
 	isBlacklistedPassword, err := isBlacklisted(user.Password)
 	if err != nil {
 		return "", fmt.Errorf("error checking password blacklist: %v", err)
@@ -261,7 +263,7 @@ func RegisterUser(user models.User) (string, error) {
 		return "", errors.New("Password is used too often")
 	}
 
-	// Nastavak sa sanitizacijom i validacijom
+	// Sanitizacija korisničkih podataka
 	user.Username = sanitizeInput(user.Username)
 	user.Email = sanitizeInput(user.Email)
 	user.Name = sanitizeInput(user.Name)
@@ -304,9 +306,28 @@ func RegisterUser(user models.User) (string, error) {
 		return "", err
 	}
 
-	// Slanje emaila za potvrdu registracije
+	// Generisanje tokena za potvrdu naloga
+	token := generateToken()
+
+	// Postavljanje vremena isteka tokena (3 minuta od trenutnog vremena)
+	expiresAt := time.Now().UTC().Add(3 * time.Minute)
+
+	// Čuvanje tokena u kolekciji za potvrdu
+	resetCollection := db.Client.Database("testdb").Collection("confirmations")
+	resetData := bson.M{
+		"email":     user.Email,
+		"token":     token,
+		"expiresAt": expiresAt,
+	}
+
+	_, err = resetCollection.InsertOne(ctx, resetData)
+	if err != nil {
+		return "", fmt.Errorf("failed to store confirmation token: %v", err)
+	}
+
+	// Slanje emaila sa linkom za potvrdu
 	subject := "Thanks for registering"
-	body := "Your registration is successful! Click the following link to activate your account: https://localhost/taskio/confirm?email=" + user.Email
+	body := fmt.Sprintf("Your registration is successful! Click the following link to activate your account: https://localhost/taskio/confirm?email=%s&token=%s", user.Email, token)
 	err = notification.SendEmail(user.Email, subject, body, emailConfig)
 	if err != nil {
 		return "Registration successful, but failed to send confirmation email", nil
@@ -348,22 +369,49 @@ func FindUserByEmail(email string) (models.User, error) {
 	}
 	return user, nil
 }
-func ConfirmUser(email string) error {
-	collection := db.Client.Database("testdb").Collection("users")
-
-	filter := bson.M{"email": email}
-	update := bson.M{"$set": bson.M{"isActive": true}}
-
+func ConfirmUser(email, token string) error {
+	// Pronalaženje potvrde u bazi
+	resetCollection := db.Client.Database("testdb").Collection("confirmations")
+	filter := bson.M{"email": email, "token": token}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	result, err := collection.UpdateOne(ctx, filter, update)
+	var resetData bson.M
+	err := resetCollection.FindOne(ctx, filter).Decode(&resetData)
+	if err != nil {
+		return errors.New("invalid or expired confirmation link")
+	}
+
+	// Provera da li je token istekao
+	expiresAtRaw, ok := resetData["expiresAt"]
+	if !ok {
+		return errors.New("expiresAt field not found in confirmation record")
+	}
+
+	expiresAt, ok := expiresAtRaw.(primitive.DateTime)
+	if !ok {
+		return errors.New("expiresAt field is not a valid date")
+	}
+
+	// Provera da li je token istekao u odnosu na trenutno vreme
+	if time.Now().UTC().After(expiresAt.Time()) {
+		return errors.New("confirmation link has expired")
+	}
+
+	// Ažuriranje korisnika kao potvrđenog
+	collection := db.Client.Database("testdb").Collection("users")
+	update := bson.M{"$set": bson.M{"isActive": true}}
+	updateFilter := bson.M{"email": email}
+
+	_, err = collection.UpdateOne(ctx, updateFilter, update)
 	if err != nil {
 		return err
 	}
 
-	if result.MatchedCount == 0 {
-		return errors.New("user not found")
+	// Brisanje tokena iz kolekcije nakon potvrde
+	_, err = resetCollection.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -380,35 +428,93 @@ func IsUserActive(email string) (bool, error) {
 	}
 	return user.IsActive, nil
 }
-func ResetPassword(email string) (string, error) {
-	collection := db.Client.Database("testdb").Collection("users")
+func ResetPassword(email string, method string) (string, error) {
+	// Kolekcija korisnika (users)
+	usersCollection := db.Client.Database("testdb").Collection("users")
+
 	var user models.User
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	// Tražimo korisnika na osnovu email-a u kolekciji "users"
+	err := usersCollection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		return "", fmt.Errorf("The user with this email does not exist")
 	}
 
+	// Ako korisnik nije aktivan, ne dozvoljavamo resetovanje lozinke
 	if !user.IsActive {
 		return "", fmt.Errorf("The user is not active, you cannot reset the password")
 	}
 
-	err = SendPasswordResetEmail(user.Email)
-	if err != nil {
-		return "", err
+	// Proveriti da li već postoji važeći token za korisnika
+	resetCollection := db.Client.Database("testdb").Collection("password_resets")
+	var existingResetData bson.M
+	err = resetCollection.FindOne(ctx, bson.M{"email": email}).Decode(&existingResetData)
+
+	// Ako postoji aktivan token koji nije istekao, ne šaljemo novi
+	if err == nil {
+		expiresAt, ok := existingResetData["expiresAt"].(time.Time)
+		if ok && expiresAt.After(time.Now().UTC()) {
+			log.Println("Token already exists and is valid. Not sending email again.")
+			return "", fmt.Errorf("A password reset token has already been sent. Please check your email.")
+		} else if err != nil {
+			// Ako je token istekao, obrišite ga pre slanja novog
+			_, err = resetCollection.DeleteOne(ctx, bson.M{"email": email})
+			if err != nil {
+				return "", fmt.Errorf("Failed to delete expired reset token: %v", err)
+			}
+		}
 	}
 
+	if method == http.MethodPost {
+		token := generateToken() // Generiši token za resetovanje lozinke
+		expiresAt := time.Now().UTC().Add(3 * time.Minute)
+
+		resetData := bson.M{
+			"email":     email,
+			"token":     token,
+			"expiresAt": expiresAt,
+		}
+
+		// Čuvanje tokena u kolekciji "password_resets"
+		_, err = resetCollection.InsertOne(ctx, resetData)
+		if err != nil {
+			return "", fmt.Errorf("Failed to store password reset token")
+		}
+
+		err = SendPasswordResetEmail(email, token)
+		if err != nil {
+			return "", fmt.Errorf("Error sending password reset email: %v", err)
+		}
+	}
 	return "The password reset email has been successfully sent. Check your email.", nil
 }
-func SendPasswordResetEmail(email string) error {
 
+// Funkcija za generisanje nasumičnog tokena (ovo možeš prilagoditi prema potrebama)
+func generateToken() string {
+	b := make([]byte, 16) // 16 bajtova za duži i sigurniji token
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatal(err) // Upravljanje greškom
+	}
+	return fmt.Sprintf("%x", b) // Vraća token kao heksadecimalni string
+}
+
+func SendPasswordResetEmail(email string, token string) error {
 	subject := "Password reset"
-	body := "Click the following link to reset your password: https://localhost/taskio/reset-password?email=" + email
+	body := "Click the following link to reset your password: http://localhost/taskio/reset-password?email=" + email + "&token=" + token
+
+	// Logovanje pre slanja emaila
+	log.Println("Sending password reset email to:", email)
+
 	err := notification.SendEmail(email, subject, body, emailConfig)
+	if err != nil {
+		log.Println("Error sending email:", err)
+	}
 	return err
 }
+
 func LoginUser(user models.User) (models.User, error) {
 	collection := db.Client.Database("testdb").Collection("users")
 

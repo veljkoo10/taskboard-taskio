@@ -1,12 +1,13 @@
 <div class="project-details-container" *ngIf="project">
   <div class="project-header">
     <div class="action-buttons">
-      <button *ngIf="isManager()"  class="btn btn-primary"(click)="showAddMemberToProject()">User management</button>
-      <button *ngIf="isManager()"    class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
+      <button *ngIf="isManager()" class="btn btn-primary" (click)="showAddMemberToProject()">User management</button>
+      <button *ngIf="isManager()" class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
 
     </div>
 
-    <h2 class="project-title highlight">Project Name: <span class="project-name">{{ project.title | titlecase }}</span></h2>
+    <h2 class="project-title highlight">Project Name: <span class="project-name">{{ project.title | titlecase }}</span>
+    </h2>
   </div>
 
   <!-- Task status section -->
@@ -48,7 +49,7 @@
 
 
   <!-- Modal Background -->
-    <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
+  <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
 
   <!-- Modal -->
   <div id="mm" class="modal" *ngIf="isCreateTaskFormVisible">
@@ -63,45 +64,16 @@
           <form #taskForm="ngForm">
             <div class="form-group">
               <label for="taskName">Task name:</label>
-              <input
-                type="text"
-                id="taskName"
-                class="form-control"
-                name="name"
-                placeholder="Enter name"
-                [(ngModel)]="taskName"
-                required
-              />
+              <input type="text" id="taskName" class="form-control" name="name" placeholder="Enter name"
+                [(ngModel)]="taskName" required />
             </div>
 
             <div class="form-group">
               <label for="taskDescription">Task description:</label>
-              <textarea
-                id="taskDescription"
-                class="form-control"
-                name="description"
-                rows="4"
-                placeholder="Enter description"
-                [(ngModel)]="taskDescription"
-                required
-              ></textarea>
+              <textarea id="taskDescription" class="form-control" name="description" rows="4"
+                placeholder="Enter description" [(ngModel)]="taskDescription" required></textarea>
             </div>
 
-            <!-- Dropdown for selecting dependencies -->
-            <div class="form-group">
-              <label for="taskDependencies" class="dependencies-label">Task dependencies:</label>
-              <select
-                id="taskDependencies"
-                class="form-control"
-                multiple
-                [(ngModel)]="selectedDependencies"
-                name="dependencies"
-              >
-                <option *ngFor="let task of existingTasks" [value]="task.id">
-                  {{ task.name }}
-                </option>
-              </select>
-            </div>
           </form>
           <div class="error-message" *ngIf="taskFormError">
             {{ taskFormError }}
@@ -117,221 +89,263 @@
   </div>
 
 
-<div class="modal-background" *ngIf="isAddMemberFormVisible" (click)="cancelAddMember()"></div>
+  <div class="modal-background" *ngIf="isAddMemberFormVisible" (click)="cancelAddMember()"></div>
 
-<!-- Modal za dodavanje korisnika -->
-<div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible" >
+  <!-- Modal za dodavanje korisnika -->
+  <div id="addMemberModal" class="modal" *ngIf="isAddMemberFormVisible">
 
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">
-          Manager:
-
-          <span *ngFor="let user of projectManagers; let isLast = last" class="manager-name">
-            {{ user.username | titlecase }}<span *ngIf="!isLast">, </span>
-
-          </span>
-
-        </h3>
-        <button type="button" class="btn-close" aria-label="Close" (click)="closeAddMember()">&#10005;</button>
-      </div>
-      <div class="modal-body">
-        <!-- Lista korisnika koji mogu biti dodati na projekat -->
-        <h4>Select a user to add to the project:</h4>
-        <div class="available-spots">
-          <p>Available Spots: {{ getAvailableSpots() }}</p>
-        </div>
-
-        <ul class="user-list">
-          <li *ngFor="let user of users" class="user-item">
-            <label>
-              <!-- Use the 'checked' binding and 'isSelected()' method to determine the checkbox state -->
-              <input type="checkbox" [checked]="isSelected(user)" (change)="toggleSelection(user)" />
-              {{ user.username | titlecase }}
-            </label>
-          </li>
-        </ul>
-
-
-
-        <!-- Prikaz korisnika koji su već na projektu -->
-        <h4>Users in the project:</h4>
-        <ul class="user-list">
-          <li *ngFor="let user of projectUsers"  class="user-item">
-            {{ user.username | titlecase }}
-            <button class="btn btn-danger btn-sm float-end" (click)="removeUserFromProject(user.id)">Remove user</button>
-          </li>
-
-        </ul>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="cancelAddMember()">Cancel</button>
-        <button type="button" class="btn btn-success" (click)="addSelectedUsersToProject()">Add Selected Users</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-
-
-<!-- Task Details Modal -->
-  <div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
-
-  <div id="taskModal" class="modal" *ngIf="isTaskDetailsVisible">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h4 class="modal-title">Task Details</h4>
-          <button type="button" class="btn-close" (click)="closeTaskDetails()">&#10005;</button>
+          <h3 class="modal-title">
+            Manager:
+
+            <span *ngFor="let user of projectManagers; let isLast = last" class="manager-name">
+              {{ user.username | titlecase }}<span *ngIf="!isLast">, </span>
+
+            </span>
+
+          </h3>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeAddMember()">&#10005;</button>
         </div>
         <div class="modal-body">
-          <h6>Task Name: {{ selectedTask?.name }}</h6>
-          <h6>Description: {{ selectedTask?.description }}</h6>
-
-          <!-- Radio buttons for status, visible only if the user is not a manager -->
-          <div *ngIf="!isManager() && selectedTask" id="status-block">
-            <label>Status:</label>
-            <div class="radio-group">
-              <label class="radio-label">
-                <input type="radio" id="pending" name="status" value="pending"
-                       [(ngModel)]="selectedTask.status"
-                       (change)="updateTaskStatus('pending')" [disabled]="isStatusDisabled('pending')" />
-                Pending
-              </label>
-              <label class="radio-label">
-                <input type="radio" id="wip" name="status" value="work in progress"
-                       [(ngModel)]="selectedTask.status"
-                       (change)="updateTaskStatus('work in progress')" [disabled]="isStatusDisabled('work in progress')" />
-                Work in Progress
-              </label>
-              <label class="radio-label">
-                <input type="radio" id="done" name="status" value="done"
-                       [(ngModel)]="selectedTask.status"
-                       (change)="updateTaskStatus('done')" [disabled]="isStatusDisabled('done')" />
-                Done
-              </label>
-            </div>
-            <!-- Display dependency messages -->
-            <div *ngIf="dependencyMessage" class="dependency-message">
-              <span>{{ dependencyMessage }}</span>
-            </div>
+          <!-- Lista korisnika koji mogu biti dodati na projekat -->
+          <h4>Select a user to add to the project:</h4>
+          <div class="available-spots">
+            <p>Available Spots: {{ getAvailableSpots() }}</p>
           </div>
+
+          <ul class="user-list">
+            <li *ngFor="let user of users" class="user-item">
+              <label>
+                <!-- Use the 'checked' binding and 'isSelected()' method to determine the checkbox state -->
+                <input type="checkbox" [checked]="isSelected(user)" (change)="toggleSelection(user)" />
+                {{ user.username | titlecase }}
+              </label>
+            </li>
+          </ul>
+
+
+
+          <!-- Prikaz korisnika koji su već na projektu -->
+          <h4>Users in the project:</h4>
+          <ul class="user-list">
+            <li *ngFor="let user of projectUsers" class="user-item">
+              {{ user.username | titlecase }}
+              <button class="btn btn-danger btn-sm float-end" (click)="removeUserFromProject(user.id)">Remove
+                user</button>
+            </li>
+
+          </ul>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
-          <button  *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage Member</button>
+          <button type="button" class="btn btn-secondary" (click)="cancelAddMember()">Cancel</button>
+          <button type="button" class="btn btn-success" (click)="addSelectedUsersToProject()">Add Selected
+            Users</button>
         </div>
       </div>
     </div>
   </div>
 
 
-<div class="modal-background" *ngIf="isAddTaskUserVisible" (click)="closeAddUserToTask()"></div>
 
-<!-- Add Users to Task Modal -->
-<div id="addTaskUserModal" class="modal" *ngIf="isAddTaskUserVisible">
+
+  <!-- Task Details Modal -->
+<div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
+
+<div id="taskModal" class="modal" *ngIf="isTaskDetailsVisible">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Add Users to Task</h5>
-        <button type="button" class="btn-close" aria-label="Close" (click)="closeAddUserToTask()">&#10005;</button>
+        <h4 class="modal-title">Task Details</h4>
+        <button type="button" class="btn-close" (click)="closeTaskDetails()">&#10005;</button>
       </div>
-
       <div class="modal-body">
-        <div *ngIf="message" class="alert" [ngClass]="{ 'alert-danger': !isSuccessMessage }">
-          {{ message }}
-        </div>
-        <!-- Lista korisnika dostupnih za dodavanje na task -->
-        <h4>Select a user to add to the task:</h4>
-        <ul class="user-list">
-          <li *ngFor="let user of taskAvUsers" class="user-item">
-            <label>
-              <input type="checkbox" (change)="toggleTaskUserSelection(user)" />
-              {{ user.username | titlecase }}
-            </label>
-          </li>
-        </ul>
+        <h6>Task Name: {{ selectedTask?.name }}</h6>
+        <h6>Description: {{ selectedTask?.description }}</h6>
 
-        <!-- Prikaz korisnika koji su već dodani na task -->
-        <h4>Users in the task:</h4>
-        <ul class="user-list">
-          <li *ngFor="let user of taskUsers" class="user-item">
-            {{ user.username | titlecase }}
-            <button class="btn btn-danger btn-sm" (click)="removeUserFromTask(user.id)">Remove user</button>
-          </li>
-        </ul>
+        <!-- Status Promena za Clanove -->
+        <div *ngIf="!isManager() && selectedTask" id="status-block">
+          <label>Status:</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status"
+                (change)="updateTaskStatus('pending')" [disabled]="isStatusDisabled('pending')" />
+              Pending
+            </label>
+            <label class="radio-label">
+              <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status"
+                (change)="updateTaskStatus('work in progress')" [disabled]="isStatusDisabled('work in progress')" />
+              Work in Progress
+            </label>
+            <label class="radio-label">
+              <input type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status"
+                (change)="updateTaskStatus('done')" [disabled]="isStatusDisabled('done')" />
+              Done
+            </label>
+          </div>
+          <div *ngIf="dependencyMessage" class="dependency-message">
+            <span>{{ dependencyMessage }}</span>
+          </div>
+        </div>
       </div>
+
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeAddTaskUserModal()">Cancel</button>
-        <button type="button" class="btn btn-success" (click)="addSelectedUsersToTask()">Add Users</button>
+        <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
+        <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage
+          Members</button>
+          <button *ngIf="isManager()" class="btn btn-warning" (click)="showAddDependencyModal()">
+            Add Dependency
+          </button>          
       </div>
     </div>
   </div>
 </div>
 
 
-<div class="all-tasks-done-modal" (click)="closeTasksDoneModal()"  >
-  <div class="modal-content">
-    <h2>Can't add people to project</h2>
-    <p>You cannot add users to the project because the project is inactive .</p>
-    <button (click)="closeTasksDoneModal()">OK</button>
+  <div class="modal-background" *ngIf="isAddTaskUserVisible" (click)="closeAddUserToTask()"></div>
+
+  <!-- Add Users to Task Modal -->
+  <div id="addTaskUserModal" class="modal" *ngIf="isAddTaskUserVisible">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Users to Task</h5>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeAddUserToTask()">&#10005;</button>
+        </div>
+
+        <div class="modal-body">
+          <div *ngIf="message" class="alert" [ngClass]="{ 'alert-danger': !isSuccessMessage }">
+            {{ message }}
+          </div>
+          <!-- Lista korisnika dostupnih za dodavanje na task -->
+          <h4>Select a user to add to the task:</h4>
+          <ul class="user-list">
+            <li *ngFor="let user of taskAvUsers" class="user-item">
+              <label>
+                <input type="checkbox" (change)="toggleTaskUserSelection(user)" />
+                {{ user.username | titlecase }}
+              </label>
+            </li>
+          </ul>
+
+          <!-- Prikaz korisnika koji su već dodani na task -->
+          <h4>Users in the task:</h4>
+          <ul class="user-list">
+            <li *ngFor="let user of taskUsers" class="user-item">
+              {{ user.username | titlecase }}
+              <button class="btn btn-danger btn-sm" (click)="removeUserFromTask(user.id)">Remove user</button>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeAddTaskUserModal()">Cancel</button>
+          <button type="button" class="btn btn-success" (click)="addSelectedUsersToTask()">Add Users</button>
+        </div>
+      </div>
+    </div>
   </div>
+
+
+  <div class="all-tasks-done-modal" (click)="closeTasksDoneModal()">
+    <div class="modal-content">
+      <h2>Can't add people to project</h2>
+      <p>You cannot add users to the project because the project is inactive .</p>
+      <button (click)="closeTasksDoneModal()">OK</button>
+    </div>
+  </div>
+
+  <div id="addMemberToProject" class="custom-modal no-users-selected-modal-project">
+    <div class="modal-content">
+      <h2>No Users Selected</h2>
+      <p>Please select at least one user to add to the project.</p>
+      <button (click)="closeNoUsersProjectSelectedModal()">OK</button>
+    </div>
+  </div>
+  <!-- Delete People Project Modal -->
+  <div class="delete-people-project-modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Cannot Remove Members</h2>
+      <p *ngIf="project">Can't remove more people. Minimum number of people in project is: {{ project.min_people ?
+        project.min_people -1 : 0 }}</p>
+      <button (click)="closeDeletePeopleProjectModal()">Close</button>
+    </div>
+  </div>
+
+
+  <div id="AddMaxPeopleProject" class="max-people-error-modal" (click)="closeMaxPeople()">
+    <div class="modal-content">
+      <h2>You need selected less people</h2>
+      <p>Can't add these people to project, no available slots.</p>
+      <button (click)="closeMaxPeople()">OK</button>
+    </div>
+  </div>
+
+  <div id="missingProjectIdModal" class="exist-task-name" style="display: none;">
+    <div class="modal-content">
+      <h2>Warning</h2>
+      <p>Project ID is missing. Could not create task .</p>
+      <button (click)="closeMissingProjectIdModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="add-user-error-modal" (click)="closeAddUserErrorModal()">
+    <div class="modal-content">
+      <p>Error adding user to the task. Please try again later.</p>
+      <button (click)="closeAddUserErrorModal()">OK</button>
+    </div>
+  </div>
+
+  <div class="no-users-selected-modal" (click)="closeNoUsersSelectedModal()">
+    <div class="modal-content">
+      <p>No users selected. Please select at least one user to add to the task.</p>
+      <button (click)="closeNoUsersSelectedModal()">OK</button>
+    </div>
+  </div>
+
+  <div class="user-already-added-modal" (click)="closeUserAlreadyAddedModal()">
+    <div class="modal-content">
+      <p>User is already added to this task.</p>
+      <button (click)="closeUserAlreadyAddedModal()">OK</button>
+    </div>
+  </div>
+
 </div>
 
-<div id="addMemberToProject" class="custom-modal no-users-selected-modal-project" >
-  <div class="modal-content">
-    <h2>No Users Selected</h2>
-    <p>Please select at least one user to add to the project.</p>
-    <button (click)="closeNoUsersProjectSelectedModal()">OK</button>
-  </div>
-</div>
-<!-- Delete People Project Modal -->
-<div class="delete-people-project-modal" style="display: none;">
-  <div class="modal-content">
-    <h2>Cannot Remove Members</h2>
-    <p *ngIf="project">Can't remove more people. Minimum number of people in project is: {{ project.min_people ? project.min_people -1 : 0 }}</p>
-    <button (click)="closeDeletePeopleProjectModal()">Close</button>
-  </div>
-</div>
+<!-- Modal za dodavanje zavisnosti -->
+<div class="modal-background-container" *ngIf="isAddDependencyModalVisible" (click)="closeAddDependencyModal()"></div>
 
+<div id="addDependencyModal" class="modal-container" *ngIf="isAddDependencyModalVisible">
+  <div class="modal-dialog-container">
+    <div class="modal-content-container">
+      <div class="modal-header-container">
+        <button _ngcontent-ng-c3023526105=""(click)="closeAddDependencyModal()" type="button" class="btn-close">✕</button>
+        <h5 class="modal-title-container">Add Task Dependencies</h5>
 
-<div id="AddMaxPeopleProject" class="max-people-error-modal" (click)="closeMaxPeople()">
-  <div class="modal-content">
-    <h2>You need selected less people</h2>
-    <p>Can't add these people to project, no available slots.</p>
-    <button (click)="closeMaxPeople()">OK</button>
+      </div>
+
+      <div class="modal-body-container">
+        <div class="form-group-container">
+          <label class="dependency-label-container">Select Tasks:</label>
+          <ul class="dependency-task-list-container">
+            <li *ngFor="let task of existingTasks; trackBy: trackByTaskId" class="dependency-task-item-container">
+              <label class="custom-checkbox-container">
+                <input type="checkbox" [value]="task" (change)="toggleTaskDependency(task)" />
+                <span class="checkbox-label-container">{{ task.name | titlecase }}</span>
+              </label>
+            </li>
+            
+          </ul>
+        </div>
+        <div class="error-message-container" *ngIf="dependencyFormError">
+          {{ dependencyFormError }}
+        </div>
+      </div>
+
+      <div class="modal-footer-container">
+        <button type="button" class="btn btn-secondary" (click)="closeAddDependencyModal()">Cancel</button>
+        <button style="margin-left: 10px;" type="button" class="btn btn-success" (click)="confirmDependencies()">Add Dependency</button>
+      </div>
+    </div>
   </div>
-</div>
-
-<div id="missingProjectIdModal" class="exist-task-name" style="display: none;">
-  <div class="modal-content">
-    <h2>Warning</h2>
-    <p>Project ID is missing. Could not create task .</p>
-    <button (click)="closeMissingProjectIdModal()">Close</button>
-  </div>
-</div>
-
-<div class="add-user-error-modal" (click)="closeAddUserErrorModal()">
-  <div class="modal-content">
-    <p>Error adding user to the task. Please try again later.</p>
-    <button (click)="closeAddUserErrorModal()">OK</button>
-  </div>
-</div>
-
-<div class="no-users-selected-modal" (click)="closeNoUsersSelectedModal()">
-  <div class="modal-content">
-    <p>No users selected. Please select at least one user to add to the task.</p>
-    <button (click)="closeNoUsersSelectedModal()">OK</button>
-  </div>
-</div>
-
-<div class="user-already-added-modal" (click)="closeUserAlreadyAddedModal()">
-  <div class="modal-content">
-    <p>User is already added to this task.</p>
-    <button (click)="closeUserAlreadyAddedModal()">OK</button>
-  </div>
-</div>
-
 </div>

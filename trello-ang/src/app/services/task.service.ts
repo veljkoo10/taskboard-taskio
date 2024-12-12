@@ -12,6 +12,7 @@ import {Observable, Subject, throwError} from 'rxjs';
 export class TaskService {
   private taskUrl = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
   private taskUrl2 = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
+  private workflow = 'https://localhost/taskio/workflow'
 
   constructor(private http: HttpClient) {}
 
@@ -97,5 +98,23 @@ export class TaskService {
       })
     );
   }
+
+  // Create a workflow by assigning dependencies to a task
+createWorkflow(taskId: string, dependencyTasks: string[]): Observable<any> {
+  const url = `${this.workflow}/createWorkflow`;
+
+  const payload = {
+    task_id: taskId,
+    dependency_task: dependencyTasks
+  };
+
+  return this.http.post<any>(url, payload).pipe(
+    catchError((error) => {
+      console.error('Error creating workflow:', error);
+      throw error;
+    })
+  );
+}
+
 
 }

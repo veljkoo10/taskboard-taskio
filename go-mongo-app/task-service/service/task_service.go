@@ -38,26 +38,21 @@ func EscapeHTML(input string) string {
 
 // UpdateTaskStatus ažurira status zadatka u bazi podataka
 func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
-	// Validacija taskID-a
+	// Validacija i konverzija taskID-a u ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
-		return nil, errors.New("invalid task ID format")
+		return nil, fmt.Errorf("invalid task ID format: %w", err)
 	}
 
-	// Sanitizacija statusa da bi se sprečili XSS napadi
-	status = SanitizeInput(status) // pozivanje funkcije za sanitizaciju unosa
-
-	// Validacija da status bude jedan od dozvoljenih
-	allowedStatuses := []string{"pending", "work in progress", "done"}
-	isValidStatus := false
-	for _, s := range allowedStatuses {
-		if status == s {
-			isValidStatus = true
-			break
-		}
+	// Validacija statusa
+	status = SanitizeInput(status)
+	allowedStatuses := map[string]bool{
+		"pending":          true,
+		"work in progress": true,
+		"done":             true,
 	}
 
-	if !isValidStatus {
+	if !allowedStatuses[status] {
 		return nil, errors.New("invalid status value")
 	}
 
@@ -65,26 +60,70 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 	collection := db.Client.Database("testdb").Collection("tasks")
 	var task models.Task
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
-	if err == mongo.ErrNoDocuments {
-		return nil, errors.New("task not found")
-	} else if err != nil {
-		return nil, err
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("task not found")
+		}
+		return nil, fmt.Errorf("error finding task: %w", err)
 	}
 
-	// Ažuriranje statusa zadatka
-	_, err = collection.UpdateOne(
+	// Provera zavisnosti
+	dependencies, err := GetDependenciesFromWorkflowService(taskID)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching dependencies: %w", err)
+	}
+
+	// Provera statusa zavisnih zadataka
+	for _, dependencyTaskID := range dependencies.DependencyTasks {
+		depTaskObjectID, err := primitive.ObjectIDFromHex(dependencyTaskID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dependency task ID: %s", dependencyTaskID)
+		}
+
+		var dependentTask models.Task
+		err = collection.FindOne(context.TODO(), bson.M{"_id": depTaskObjectID}).Decode(&dependentTask)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, fmt.Errorf("dependency task not found: %s", dependencyTaskID)
+			}
+			return nil, fmt.Errorf("error fetching dependency task: %w", err)
+		}
+
+		// Ako je neki zavisni zadatak "pending", ne možeš promeniti status
+		if dependentTask.Status == "pending" {
+			return nil, fmt.Errorf("cannot change status: dependency task %s is pending", dependentTask.ID.Hex())
+		}
+
+		// Ako je neki zavisni zadatak u "work in progress", možeš preći samo u "work in progress"
+		if dependentTask.Status == "work in progress" {
+			if status != "work in progress" {
+				return nil, fmt.Errorf("cannot change status: dependency task %s is in progress", dependentTask.ID.Hex())
+			}
+		}
+
+		// Ako su svi zavisni zadaci u "done", možeš preći u "done"
+		if status == "done" && dependentTask.Status != "done" {
+			return nil, fmt.Errorf("cannot change status to 'done': dependency task %s is not done", dependentTask.ID.Hex())
+		}
+	}
+
+	// Ažuriranje statusa zadatka u bazi
+	updateResult, err := collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
 		bson.M{"$set": bson.M{"status": status}},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error updating task status: %w", err)
+	}
+	if updateResult.MatchedCount == 0 {
+		return nil, errors.New("task not found during update")
 	}
 
-	// Povratak ažuriranog zadatka iz baze
+	// Ponovno čitanje ažuriranog zadatka
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching updated task: %w", err)
 	}
 
 	return &task, nil
@@ -679,4 +718,32 @@ func GetTaskIDsForProject(projectID string) ([]string, error) {
 	}
 
 	return project.Tasks, nil
+}
+func GetDependenciesFromWorkflowService(taskID string) (*models.Workflow, error) {
+	url := fmt.Sprintf("http://workflow-service:8084/workflow/%s/dependencies", taskID)
+
+	fmt.Println(url)
+	var workflow models.Workflow
+
+	for i := 0; i < 3; i++ { // Pokušaj 3 puta
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("error making request to workflow-service: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("no dependencies found for task_id %s (status 404)", taskID)
+		} else if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("error fetching dependencies: received status %v", resp.StatusCode)
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&workflow); err != nil {
+			return nil, fmt.Errorf("error decoding response: %v", err)
+		}
+
+		return &workflow, nil // Ako je uspešno, odmah vrati rezultat
+	}
+
+	return nil, fmt.Errorf("failed to fetch dependencies after 3 attempts")
 }

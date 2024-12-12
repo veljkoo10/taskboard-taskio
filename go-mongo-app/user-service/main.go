@@ -22,6 +22,8 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.DisconnectMongo()
+	db.CreateTTLIndex()
+	db.CreateTTLIndex2()
 
 	bootstrap.ClearUsers()
 	bootstrap.InsertInitialUsers()

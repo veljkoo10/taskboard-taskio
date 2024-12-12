@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/gorilla/mux"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/cors"
@@ -37,11 +38,17 @@ func main() {
 
 	workflowHandler := handler.NewWorkflowHandler(repo)
 
+	log.Println("Clearing database...")
+	if err := repo.ClearDatabase(context.Background()); err != nil {
+		log.Fatalf("Error clearing database: %v", err)
+	}
 	r := mux.NewRouter()
 
-	r.HandleFunc("/workflow/createWorkflow", workflowHandler.CreateTask).Methods("POST")
+	r.HandleFunc("/workflow/createWorkflow", workflowHandler.CreateWorkflow).Methods("POST")
 	r.HandleFunc("/workflow/getWorkflows", workflowHandler.GetWorkflowHandler).Methods("GET")
-	
+	r.HandleFunc("/workflow/getTaskById/{id}", workflowHandler.GetTaskByIDHandler).Methods("GET")
+	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.CheckDependencyHandler).Methods("GET")
+	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.GetTaskDependenciesHandler).Methods("GET")
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"}, // Frontend Angular
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
@@ -60,6 +67,8 @@ func main() {
 
 	// Pokretanje servera
 	log.Println("Workflow service running on port 8084")
+	log.Printf("Workflow service running on port: %s", os.Getenv("WORKFLOW_SERVICE_PORT"))
+
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Error starting workflow service: %v", err)
 	}

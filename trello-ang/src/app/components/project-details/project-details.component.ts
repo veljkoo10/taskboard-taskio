@@ -35,11 +35,14 @@ export class ProjectDetailsComponent {
   message: string | null = null;
   isSuccessMessage: boolean = true;
   taskAvUsers: any[] = []
-  selectedDependencies: string[] = [];
+  selectedDependencies: any[] = [];
   existingTasks: any[] = [];
   dependencyMessage: string | null = null;
   originalStatus: string | null = null;
   taskDependencies: any[]=[];
+  isAddDependencyModalVisible: boolean = false;
+  selectedDependency: any;
+  dependencyFormError: string = '';
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
@@ -59,6 +62,7 @@ export class ProjectDetailsComponent {
       this.resetCreateTaskForm();
       this.loadTasks();
       this.loadUsersForProject();
+      this.loadExistingTasks();
     }
   }
 
@@ -68,6 +72,90 @@ export class ProjectDetailsComponent {
     }
     return this.project.max_people - this.projectUsers.length-1;
   }
+
+
+  showAddDependencyModal(): void {
+    // Učitaj taskove i ažuriraj existingTasks
+    this.loadTasks();
+    this.loadExistingTasks();
+  
+    // Proveri da li su taskovi ažurirani
+    console.log('Updated Existing Tasks:', this.existingTasks);
+  
+    // Postavi modal kao vidljiv
+    this.isAddDependencyModalVisible = true;
+  
+    // Osveži prikaz ako je potrebno
+    this.cdRef.detectChanges();
+  }
+
+  loadExistingTasks(){
+    this.existingTasks = [...this.existingTasks.filter(task => task.id !== this.selectedTask.id)];
+    this.cdRef.detectChanges();
+  }
+  
+  trackByTaskId(index: number, task: any): string {
+    return task.id; // Assumes each task has a unique id
+  }
+  
+
+
+// Zatvaranje modala
+closeAddDependencyModal(): void {
+  this.isAddDependencyModalVisible = false;
+  this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
+  this.dependencyFormError = '';
+}
+
+// Upravljanje selektovanim zavisnostima
+toggleTaskDependency(task: any): void {
+  const index = this.selectedDependencies.findIndex(t => t === task.id); // Tražimo ID taska u listi
+  if (index === -1) {
+    this.selectedDependencies.push(task.id); // Dodajemo ID zavisnosti
+  } else {
+    this.selectedDependencies.splice(index, 1); // Uklanjamo ID ako je već selektovan
+  }
+}
+
+// Potvrda i dodavanje zavisnosti
+confirmDependencies(): void {
+  if (this.selectedDependencies.length === 0) {
+    this.dependencyFormError = 'Please select at least one task.';
+    return;
+  }
+
+  this.createWorkflow();
+  this.closeAddDependencyModal();
+}
+
+addDependency(): void {
+  if (!this.selectedDependency) {
+    this.dependencyFormError = 'Please select a task.';
+    return;
+  }
+
+  this.selectedDependencies.push(this.selectedDependency.id);
+  this.closeAddDependencyModal();
+}
+
+// Funkcija koja poziva createWorkflow iz TaskService
+createWorkflow(): void {
+  if (!this.selectedTask.id || this.selectedDependencies.length === 0) {
+    console.error('Invalid data for creating workflow');
+    return;
+  }
+
+  console.log(this.selectedDependencies)
+  // Pozivanje funkcije createWorkflow sa trenutnim taskId i zavisnostima
+  this.taskService.createWorkflow(this.selectedTask.id, this.selectedDependencies).subscribe(
+    (response) => {
+      console.log('Workflow created successfully:', response);
+    },
+    (error) => {
+      console.error('Error creating workflow:', error);
+    }
+  );
+}
 
   resetAddMemberForm() {
     this.isAddMemberFormVisible = false;
@@ -165,34 +253,41 @@ export class ProjectDetailsComponent {
     if (this.project) {
       const projectIdStr = String(this.project.id);
       this.taskService.getTasks().subscribe(tasks => {
-
         this.pendingTasks = [];
         this.inProgressTasks = [];
         this.doneTasks = [];
-
+        this.existingTasks = [];  // Resetovanje pre novog učitavanja
+  
         tasks.forEach(task => {
-
           if (String(task.project_id) === projectIdStr) {
             switch (task.status.toLowerCase()) {
               case 'pending':
                 this.pendingTasks.push(task);
+                this.existingTasks.push(task);
                 break;
               case 'work in progress':
                 this.inProgressTasks.push(task);
+                this.existingTasks.push(task);
                 break;
               case 'done':
                 this.doneTasks.push(task);
+                this.existingTasks.push(task);
                 break;
               default:
                 console.warn(`Unrecognized task status: ${task.status}`);
             }
           }
         });
-
-
+  
+        // Poziv za detekciju promena u slučaju da postoji problem sa UI
+        this.cdRef.detectChanges();
+  
+      }, (error) => {
+        console.error('Error loading tasks:', error);
       });
     }
   }
+  
 
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
@@ -467,7 +562,6 @@ export class ProjectDetailsComponent {
 
   showCreateTaskForm() {
     const projectId = this.project as any;
-    this.loadTasksDepend();
     this.isCreateTaskFormVisible = true;
     this.cdRef.detectChanges();
     document.querySelector('#mm')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
@@ -706,47 +800,6 @@ export class ProjectDetailsComponent {
 
   showMaxPeople(){
     document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
-  }
-  loadTasksDepend() {
-    if (!this.projectId) {
-      console.error('Project ID is missing!');
-      return;
-    }
-
-    // Resetujemo postojeće zadatke pre nego što učitamo nove
-    this.existingTasks = [];
-
-
-    // Pozivamo servis za učitavanje ID-ova zadataka vezanih za trenutni projekat
-    this.taskService.getTasksByProjectId(this.projectId).subscribe(
-      (taskIds) => {
-        if (taskIds && taskIds.length > 0) {
-          // Pozivamo servis za detalje zadatka prema ID-ovima
-          const taskDetailsRequests = taskIds.map((taskId) =>
-            this.taskService.getTaskById(taskId)
-          );
-
-          // Paralelno izvršavamo sve API pozive za detalje zadataka
-          forkJoin(taskDetailsRequests).subscribe(
-            (taskDetails) => {
-              // Mapiranje i filtriranje samo onih zadataka koji pripadaju trenutnom projektu
-              this.existingTasks = taskDetails.map((task) => ({
-                id: task.id,
-                name: task.name,
-              }));
-              this.cdRef.detectChanges();
-            },
-            (error) => {
-              console.error('Error fetching task details:', error);
-            }
-          );
-        } else {
-        }
-      },
-      (error) => {
-        console.error('Error loading task IDs:', error);
-      }
-    );
   }
 
 
