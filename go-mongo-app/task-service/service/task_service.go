@@ -6,17 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/colinmarc/hdfs"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"task-service/db"
 	"task-service/models"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // isValidUserID proverava da li korisnički ID sadrži samo dozvoljene karaktere
@@ -367,6 +370,7 @@ func CreateTask(projectID, name, description string, dependsOn []string) (*model
 		Users:       []string{}, // Prazna lista korisnika
 		Project_ID:  projectObjectID.Hex(),
 		DependsOn:   dependsOnObjectIDs,
+		FilePaths:   []string{},
 	}
 
 	// Ubacivanje novog zadatka u bazu podataka
@@ -746,4 +750,118 @@ func GetDependenciesFromWorkflowService(taskID string) (*models.Workflow, error)
 	}
 
 	return nil, fmt.Errorf("failed to fetch dependencies after 3 attempts")
+}
+
+func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string) error {
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
+
+	// Proveriti da li direktorijum postoji, ako ne, kreirati ga
+	_, err = client.Stat(hdfsDirPath)
+	if err != nil && os.IsNotExist(err) {
+		err := client.MkdirAll(hdfsDirPath, os.ModePerm) // Kreira direktorijum ako ne postoji
+		if err != nil {
+			return fmt.Errorf("failed to create directory on HDFS: %v", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("failed to check if directory exists: %v", err)
+	}
+
+	// Kreirati direktorijum putem MkdirAll za celu putanju
+	err = client.MkdirAll(hdfsDirPath, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to create directories on HDFS: %v", err)
+	}
+
+	// Formiranje pune putanje za fajl (direktorijum + ime fajla)
+	hdfsFilePath := path.Join(hdfsDirPath, fileName)
+
+	// Proveriti da li fajl već postoji
+	_, err = client.Stat(hdfsFilePath)
+	if err == nil {
+		// Ako fajl postoji, obriši ga pre nego što ga ponovo postaviš
+		err = client.Remove(hdfsFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to remove existing file on HDFS: %v", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to check if file exists: %v", err)
+	}
+
+	// Otvoriti lokalni fajl koji treba da bude uploadovan
+	localFile, err := os.Open(localFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open local file: %v", err)
+	}
+	defer localFile.Close()
+
+	// Kreirati fajl u HDFS-u
+	hdfsFile, err := client.Create(hdfsFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create file on HDFS: %v", err)
+	}
+	defer hdfsFile.Close()
+
+	// Kopirati sadržaj sa lokalnog fajla na HDFS
+	_, err = io.Copy(hdfsFile, localFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy data to HDFS: %v", err)
+	}
+
+	return nil
+}
+
+func ReadFileFromHDFS(hdfsPath string) ([]byte, error) {
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
+
+	// Otvoriti fajl sa HDFS-a
+	hdfsFile, err := client.Open(hdfsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file on HDFS: %v", err)
+	}
+	defer hdfsFile.Close()
+
+	// Čitanje sadržaja fajla u memoriju
+	fileContent, err := ioutil.ReadAll(hdfsFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file from HDFS: %v", err)
+	}
+
+	return fileContent, nil
+}
+func ReadFilesFromHDFSDirectory(dirPath string) ([]string, error) {
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
+
+	// Učitaj listu fajlova iz direktorijuma
+	files, err := client.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %v", err)
+	}
+
+	var fileNames []string
+	for _, file := range files {
+		fileNames = append(fileNames, file.Name())
+	}
+
+	return fileNames, nil
 }

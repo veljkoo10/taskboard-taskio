@@ -13,6 +13,7 @@ export class TaskService {
   private taskUrl = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
   private taskUrl2 = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
   private workflow = 'https://localhost/taskio/workflow'
+  private taskUrl3 = 'http://localhost:8082/tasks';
 
   constructor(private http: HttpClient) {}
 
@@ -98,7 +99,15 @@ export class TaskService {
       })
     );
   }
-
+  uploadFile(formData: FormData): Observable<any> {
+    
+    return this.http.post(`${this.taskUrl}/upload`, formData);
+  }
+  downloadFile(taskId: string, fileNamee: string): Observable<Blob> {
+    const fileName = encodeURIComponent(fileNamee); // Enkodiranje imena fajla
+    const url = `${this.taskUrl3}/${taskId}/download/${fileName}`;  // Prilagodi URL
+    return this.http.get(url, { responseType: 'blob' });
+  }
   // Create a workflow by assigning dependencies to a task
 createWorkflow(taskId: string, dependencyTasks: string[]): Observable<any> {
   const url = `${this.workflow}/createWorkflow`;
@@ -115,6 +124,10 @@ createWorkflow(taskId: string, dependencyTasks: string[]): Observable<any> {
     })
   );
 }
-
+getTaskFiles(taskId: string): Observable<{ fileName: string, content: string }[]> {
+  return this.http.get<{ fileName: string, content: string }[]>(`${this.taskUrl}/files/${taskId}`);
+}
 
 }
+
+

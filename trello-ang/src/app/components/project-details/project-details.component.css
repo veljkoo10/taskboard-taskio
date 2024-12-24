@@ -990,3 +990,45 @@ body {
 .btn-secondary-container:hover {
   background-color: #aaa;
 }
+/* Stil za ulazni fajl input */
+#fileInput {
+  margin: 10px 0;
+}
+
+/* Dugme za upload fajla */
+
+/* Naslov za listu fajlova */
+h4 {
+  font-size: 20px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+/* Lista fajlova */
+.file-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.file-list li {
+  margin: 5px 0;
+}
+
+/* Stil za linkove fajlova */
+.file-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 16px;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+/* Poruka za praznu listu fajlova */
+p {
+  font-size: 16px;
+  color: #888;
+  margin-top: 10px;
+}

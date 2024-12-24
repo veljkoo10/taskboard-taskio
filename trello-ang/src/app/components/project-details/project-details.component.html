@@ -183,6 +183,7 @@
                 (change)="updateTaskStatus('done')" [disabled]="isStatusDisabled('done')" />
               Done
             </label>
+              
           </div>
           <div *ngIf="dependencyMessage" class="dependency-message">
             <span>{{ dependencyMessage }}</span>
@@ -197,9 +198,28 @@
           <button *ngIf="isManager()" class="btn btn-warning" (click)="showAddDependencyModal()">
             Add Dependency
           </button>          
+          <!-- Input za fajl -->
+          <input *ngIf="isManager()" type="file" (change)="onFileSelected($event)" id="fileInput"  />
+          <button *ngIf="isManager()" (click)="uploadFile()" class="btn btn-primary">Upload Fajl</button>
+          
+          
+    
+        </div>
+        <div>
+          <div>
+            <h4>Task Files</h4>
+            <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
+              <li *ngFor="let file of taskFiles">
+                <!-- Klik na link poziva funkciju downloadFile -->
+                <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
+                  {{file}}
+                </a>
+              </li>
+            </ul>
+            <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
+          </div>
+          
       </div>
-    </div>
-  </div>
 </div>
 
 

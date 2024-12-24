@@ -6,9 +6,15 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"github.com/nats-io/nats.go"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"task-service/db"
 	"task-service/service"
@@ -580,4 +586,199 @@ func (uh *TasksHandler) UpdateTaskStatusHandler(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(updatedTask)
+}
+func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	// Proveri HTTP metodu (POST)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parsiraj form-data (više fajlova + taskID)
+	err := r.ParseMultipartForm(10 << 20) // Max veličina fajla 10MB
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to parse form: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Dobavi taskID iz forme
+	taskID := r.FormValue("taskID")
+	if taskID == "" {
+		http.Error(w, "Task ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Dobavi sve fajlove iz forme
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		http.Error(w, "No files uploaded", http.StatusBadRequest)
+		return
+	}
+
+	// Definiši HDFS direktorijum
+	hdfsDirPath := fmt.Sprintf("/user/hdfs/tasks/%s", taskID)
+
+	// Lista putanja fajlova
+	var filePaths []string
+
+	// Obradi sve fajlove
+	for _, fileHeader := range files {
+		// Otvori fajl
+		file, err := fileHeader.Open()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to open file: %v", err), http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		// Preuzmi sadržaj fajla u privremeni lokalni fajl
+		localFilePath := "/tmp/" + fileHeader.Filename
+		fileBytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to read file: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		err = ioutil.WriteFile(localFilePath, fileBytes, 0644)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to save file locally: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Upload fajla na HDFS
+		err = service.UploadFileToHDFS(localFilePath, hdfsDirPath, fileHeader.Filename)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to upload file to HDFS: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Dodaj putanju fajla u listu
+		hdfsFilePath := path.Join(hdfsDirPath, fileHeader.Filename)
+		filePaths = append(filePaths, hdfsFilePath)
+	}
+
+	// Ažuriraj MongoDB task sa listom fajlova
+	objectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid task ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.Client.Database("testdb").Collection("tasks") // Prilagodi ime baze i kolekcije
+	_, err = collection.UpdateOne(
+		r.Context(),
+		bson.M{"_id": objectID},
+		bson.M{"$push": bson.M{"filePaths": bson.M{"$each": filePaths}}}, // Dodaj sve nove fajlove u niz
+	)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to update task in MongoDB: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Uspešan odgovor
+	w.Header().Set("Content-Type", "application/json") // Postavi Content-Type na application/json
+	response := map[string]string{
+		"message": "Files uploaded and task updated successfully",
+	}
+	json.NewEncoder(w).Encode(response)
+}
+func (uh *TasksHandler) DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	vars := mux.Vars(r)
+	taskID := vars["taskID"]
+	fileName := vars["fileName"]
+
+	if fileName == "" {
+		http.Error(w, "File name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Dekodiraj ime fajla
+	decodedFileName, err := url.QueryUnescape(fileName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to decode file name: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	fmt.Printf("TaskID: %s, Original FileName: %s, Decoded FileName: %s\n", taskID, fileName, decodedFileName)
+
+	// Proveri validnost taskID-a
+	objectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid task ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Dohvati task iz baze
+	collection := db.Client.Database("testdb").Collection("tasks")
+	var task struct {
+		FilePaths []string `bson:"filePaths"`
+	}
+	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&task)
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	// Nađi fajl
+	var filePath string
+	for _, path := range task.FilePaths {
+		if filepath.Base(path) == decodedFileName {
+			filePath = path
+			break
+		}
+	}
+	if filePath == "" {
+		http.Error(w, fmt.Sprintf("File %s not found for task", decodedFileName), http.StatusNotFound)
+		return
+	}
+
+	// Čitaj sadržaj fajla sa HDFS-a
+	fileContent, err := service.ReadFileFromHDFS(filePath)
+	if err != nil {
+		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		return
+	}
+
+	// Postavi Content-Type i header
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(filePath)))
+
+	_, err = w.Write(fileContent)
+	if err != nil {
+		http.Error(w, "Failed to send file", http.StatusInternalServerError)
+	}
+}
+
+func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Request) {
+	// Čitanje taskID iz URL-a
+	vars := mux.Vars(r)
+	taskID, ok := vars["taskID"]
+	if !ok || taskID == "" {
+		http.Error(w, "Task ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Putanja direktorijuma na HDFS-u za dati task
+	dirPath := fmt.Sprintf("/user/hdfs/tasks/%s", taskID)
+
+	// Pozivanje funkcije za učitavanje fajlova iz HDFS direktorijuma
+	files, err := service.ReadFilesFromHDFSDirectory(dirPath)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to read files from HDFS: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Postavljanje zaglavlja odgovora na JSON
+	w.Header().Set("Content-Type", "application/json")
+
+	// Slanje liste fajlova kao JSON u odgovoru
+	if err := json.NewEncoder(w).Encode(files); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode files list: %v", err), http.StatusInternalServerError)
+		return
+	}
 }

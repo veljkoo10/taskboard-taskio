@@ -52,9 +52,13 @@ func main() {
 	router.HandleFunc("/tasks/{task_id}/dependencies/{dependency_id}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.AddDependencyHandler, "Manager"))).Methods("PUT")
 	router.HandleFunc("/tasks/projects/{project_id}/tasks", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTasksForProjectHandler, "Manager"))).Methods("GET")
 	router.HandleFunc("/tasks/{task_id}/dependenciesWork", tasksHandler.GetDependenciesForTaskHandler).Methods("GET", "OPTIONS")
+	router.HandleFunc("/tasks/upload", tasksHandler.UploadFileHandler).Methods("POST")
+	router.HandleFunc("/tasks/{taskID}/download/{fileName:.+}", tasksHandler.DownloadFileHandler).Methods("GET")
+	router.HandleFunc("/tasks/files/{taskID}", tasksHandler.GetTaskFilesHandler).Methods("GET", "OPTIONS")
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})

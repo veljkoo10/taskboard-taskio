@@ -12,4 +12,5 @@ type Task struct {
 	Users       []string             `bson:"users" json:"users"`
 	Project_ID  string               `json:"project_id" bson:"project_id"`
 	DependsOn   []primitive.ObjectID `json:"DependsOn"   bson:"dependsOn"`
+	FilePaths   []string             `bson:"filePaths" json:"filePaths"`
 }

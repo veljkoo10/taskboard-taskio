@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   user-service:
@@ -44,32 +44,103 @@ services:
       - NATS_URL=${NATS_URL:-nats://nats:4222}
       - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/testdb}
       - ENABLE_BOOTSTRAP=${ENABLE_BOOTSTRAP:-true}
+      - HDFS_URI=namenode:8020
     networks:
       - app-network
     volumes:
       - task-mongo_store:/data/db
 
   workflow-service:
-    build: ./workflow-service  # Dodavanje workflow service
+    build: ./workflow-service
     ports:
-      - "${WORKFLOW_SERVICE_PORT:-8084}:8080"  # Možeš prilagoditi port po želji
+      - "${WORKFLOW_SERVICE_PORT:-8084}:8080"
     depends_on:
       - neo4j
-
     environment:
       - NEO4J_URI=${NEO4J_URI:-neo4j://neo4j:7687}
       - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}  # Ne zaboravi da dodaš u .env
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
     networks:
       - app-network
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    hostname: namenode
+    ports:
+      - "8020:8020"
+
+    environment:
+      - CLUSTER_NAME=test
+
+
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+
+
+    networks:
+      - app-network
+    env_file:
+      - ./.env
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+
+    container_name: datanode1
+    hostname: datanode1
+    depends_on:
+      - namenode
+    environment:
+      SERVICE_PRECONDITION: "namenode:8020"
+    volumes:
+      - hadoop_datanode1:/hadoop/dfs/data
+    networks:
+      - app-network
+    env_file:
+      - ./.env
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    hostname: datanode2
+    depends_on:
+      - namenode
+    environment:
+      SERVICE_PRECONDITION: "namenode:8020"
+    volumes:
+      - hadoop_datanode2:/hadoop/dfs/data
+
+
+    networks:
+      - app-network
+    env_file:
+      - ./.env
+  datanode3:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode3
+    hostname: datanode3
+    depends_on:
+      - namenode
+    environment:
+      SERVICE_PRECONDITION: "namenode:8020"
+
+
+    volumes:
+      - hadoop_datanode3:/hadoop/dfs/data
+
+
+    networks:
+      - app-network
+    env_file:
+      - ./.env
 
   neo4j:
     image: neo4j:latest
     ports:
       - "7687:7687"
-      - "7474:7474"  # Web interfejs
+      - "7474:7474"
     environment:
-      - NEO4J_AUTH=neo4j/password  # Ne zaboravi da prilagodiš lozinku
+      - NEO4J_AUTH=neo4j/password
     networks:
       - app-network
 
@@ -92,7 +163,7 @@ services:
       - project-service
       - task-service
       - notification-service
-      - workflow-service  # Dodato workflow-service u zavisnosti
+      - workflow-service
     networks:
       - app-network
     environment:
@@ -109,7 +180,7 @@ services:
       - TASK_SERVICE_PORT=${TASK_SERVICE_PORT:-8082}
       - NOTIFICATION_SERVICE_HOST=${NOTIFICATION_SERVICE_HOST:-notification-service}
       - NOTIFICATION_SERVICE_PORT=${NOTIFICATION_SERVICE_PORT:-8083}
-      - WORKFLOW_SERVICE_HOST=${WORKFLOW_SERVICE_HOST:-workflow-service}  # Dodato workflow-service u Nginx konfiguraciju
+      - WORKFLOW_SERVICE_HOST=${WORKFLOW_SERVICE_HOST:-workflow-service}
       - WORKFLOW_SERVICE_PORT=${WORKFLOW_SERVICE_PORT:-8084}
 
   notification-service:
@@ -130,6 +201,31 @@ services:
       - app-network
     volumes:
       - cass_store:/var/lib/cassandra/data
+  server:
+    build:
+      context: ./Hdfs
+      dockerfile: Dockerfile
+    container_name: "hdfs-server"
+    hostname: "hdfs-server"
+    ports:
+      - "8086:8080" # Mapiranje porta 8080 u kontejneru na port 8086 na lokalnoj mašini
+    environment:
+
+      - HDFS_URI=namenode:8020 # URI za HDFS konekciju prema Namenode
+    volumes:
+      - ./files:/usr/bin/files # Mount lokalnog direktorijuma za datoteke u kontejner
+    depends_on:
+      namenode:
+        condition: service_healthy
+      datanode1:
+        condition: service_healthy
+
+    env_file:
+      - ./.env
+    networks:
+      - app-network
+
+
 
   cassandra:
     image: cassandra:4.0
@@ -167,6 +263,10 @@ volumes:
   project-mongo_store:
   user-mongo_store:
   cass_store:
+  hadoop_namenode:
+  hadoop_datanode1:
+  hadoop_datanode2:
+  hadoop_datanode3:
 
 networks:
   app-network:

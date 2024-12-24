@@ -14,6 +14,7 @@ import {forkJoin} from "rxjs";
 })
 export class ProjectDetailsComponent {
   @Input() project: Project | null = null;
+  
   taskName: string = '';
   taskDescription: string = '';
   isCreateTaskFormVisible: boolean = false;
@@ -40,6 +41,7 @@ export class ProjectDetailsComponent {
   dependencyMessage: string | null = null;
   originalStatus: string | null = null;
   taskDependencies: any[]=[];
+  taskFiles: any[] = [];  
   isAddDependencyModalVisible: boolean = false;
   selectedDependency: any;
   dependencyFormError: string = '';
@@ -63,6 +65,7 @@ export class ProjectDetailsComponent {
       this.loadTasks();
       this.loadUsersForProject();
       this.loadExistingTasks();
+      
     }
   }
 
@@ -97,6 +100,7 @@ export class ProjectDetailsComponent {
   trackByTaskId(index: number, task: any): string {
     return task.id; // Assumes each task has a unique id
   }
+ 
   
 
 
@@ -680,8 +684,88 @@ createWorkflow(): void {
         console.error('Error loading users for task:', error);
       }
     );
+    this.loadTaskFiles(task.id);
+    
+  }
+  loadTaskFiles(taskId: string): void {
+  this.taskFiles = []; 
+  this.cdRef.detectChanges();
+  this.taskService.getTaskFiles(taskId).subscribe(
+    (files) => {
+      console.log('Files loaded for task:', files);  // Proverite da li fajlovi stižu
+      if (files && Array.isArray(files)) {
+        this.taskFiles = files;  // Direktno dodelite niz fajlova
+      } else {
+        console.error('Invalid file data format');
+      }
+    },
+    (error) => {
+      console.error('Error loading task files:', error);
+    }
+  );
+}
+
+downloadTaskFile(taskId: string, fileNamee: string): void {
+  this.taskService.downloadFile(taskId, fileNamee).subscribe(
+    (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileNamee; // Postavlja ime fajla
+      a.click();
+      window.URL.revokeObjectURL(url); // Oslobađa memoriju nakon preuzimanja
+    },
+    (error) => {
+      console.error('Error downloading file:', error);
+    }
+  );
+}
+
+  selectedFile: File | null = null; 
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+    }
   }
 
+
+  uploadFile(): void {
+    if (!this.selectedFile) {
+      console.error('No file selected!');
+      return;
+    }
+  
+    if (!this.selectedTask?.id) {
+      console.error('Task ID is missing.');
+      return;
+    }
+  
+    const formData = new FormData();
+    formData.append('taskID', this.selectedTask.id);
+    formData.append('file', this.selectedFile);
+  
+    this.taskService.uploadFile(formData).subscribe(
+      (response) => {
+        console.log('Fajl je uspešno upload-ovan!', response);
+        this.message = 'Fajl je uspešno upload-ovan!';
+        this.isSuccessMessage = true;
+        this.cdRef.detectChanges();
+        this.loadTaskFiles(this.selectedTask.id);
+        // Osvežavanje stranice
+       
+        this.isTaskDetailsVisible = false;
+        this.isTaskDetailsVisible = true;
+      },
+      (error) => {
+        console.error('Greška prilikom upload-a fajla:', error);
+        this.message = 'Greška prilikom upload-a fajla.';
+        this.isSuccessMessage = false;
+        
+      }
+    );
+  }
+ 
   removeUserFromTask(userId: string): void {
     if (!this.selectedTask?.id) {
       console.error('Task ID is missing.');
@@ -806,3 +890,4 @@ createWorkflow(): void {
 }
 
 
+  
