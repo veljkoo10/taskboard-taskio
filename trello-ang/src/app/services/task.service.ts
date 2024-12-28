@@ -127,7 +127,9 @@ createWorkflow(taskId: string, dependencyTasks: string[]): Observable<any> {
 getTaskFiles(taskId: string): Observable<{ fileName: string, content: string }[]> {
   return this.http.get<{ fileName: string, content: string }[]>(`${this.taskUrl}/files/${taskId}`);
 }
-
+getAllWorkflows() {
+  return this.http.get<any[]>(`${this.workflow}/getWorkflows`);
+}
 }
 
 

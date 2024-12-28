@@ -1032,3 +1032,21 @@ p {
   color: #888;
   margin-top: 10px;
 }
+.workflow-container {
+  width: 100%; /* Ovde možete podesiti veću širinu ako je potrebno */
+  overflow-x: auto; /* Omogućava horizontalno skrolovanje */
+  margin: 0 auto; /* Centrira kontejner horizontalno */
+}
+
+#workflowGraph {
+  width: 120%; /* Širina grafikona može biti veća od 100% da bi se omogućilo proširenje u desnu stranu */
+  min-width: 1000px; /* Minimalna širina grafikona */
+  height: 600px;
+  flex-grow: 1;
+}
+
+@media (max-width: 1200px) {
+  .workflow-container {
+    overflow-y: auto;
+  }
+}
