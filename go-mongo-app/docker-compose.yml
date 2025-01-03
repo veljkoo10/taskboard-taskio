@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   user-service:
@@ -53,15 +53,32 @@ services:
   workflow-service:
     build: ./workflow-service
     ports:
-      - "${WORKFLOW_SERVICE_PORT:-8084}:8080"
+      - "${WORKFLOW_SERVICE_PORT:-8087}:8080"
     depends_on:
-      - neo4j
+      neo4j:
+        condition: service_healthy
     environment:
       - NEO4J_URI=${NEO4J_URI:-neo4j://neo4j:7687}
       - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
     networks:
       - app-network
+
+
+  event:
+    build: ./workflow-service
+    ports:
+      - "${EVENT_SERVICE_PORT:-8084}:8080"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      - NEO4J_URI=${NEO4J_URI:-neo4j://neo4j:7687}
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+    networks:
+      - app-network
+
 
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
@@ -115,6 +132,7 @@ services:
       - app-network
     env_file:
       - ./.env
+
   datanode3:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode3
@@ -123,16 +141,54 @@ services:
       - namenode
     environment:
       SERVICE_PRECONDITION: "namenode:8020"
-
-
     volumes:
       - hadoop_datanode3:/hadoop/dfs/data
-
 
     networks:
       - app-network
     env_file:
       - ./.env
+
+  event_sourcing:
+    hostname: "event_sourcing"
+    build: ./event_sourcing
+    container_name: ${EVENT_SERVICE_HOST}
+    restart: always
+    ports:
+      - "${EVENT_SOURCING_PORT:-8085}:8080"
+    env_file:
+      - ./.env
+    depends_on:
+      - eventstore-db
+    environment:
+      - EVENTSTORE_ADDRESS=eventstore-db:2113
+    volumes:
+      - ${SSL_CERTIFICATE_PATH:-/etc/nginx/certs/server.crt}:/etc/nginx/certs/server.crt
+      - ${SSL_CERTIFICATE_KEY_PATH:-/etc/nginx/certs/server.key}:/etc/nginx/certs/server.key
+    networks:
+      - app-network
+
+  eventstore-db:
+    image: eventstore/eventstore:21.10.8-buster-slim
+    container_name: esdb
+    hostname: esdb
+    restart: always
+    ports:
+      - 2113:2113
+      - 1113:1113
+    environment:
+      EVENTSTORE_CLUSTER_SIZE: 1
+      EVENTSTORE_RUN_PROJECTIONS: All
+      EVENTSTORE_EXT_TCP_PORT: 1113
+      EVENTSTORE_HTTP_PORT: 2113
+      EVENTSTORE_START_STANDARD_PROJECTIONS: true
+      EVENTSTORE_INSECURE: "true"
+      EVENTSTORE_ENABLE_EXTERNAL_TCP: true
+      EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true
+    volumes:
+      - eventstore_data:/var/lib/eventstore
+    networks:
+      - app-network
 
   neo4j:
     image: neo4j:latest
@@ -143,6 +199,12 @@ services:
       - NEO4J_AUTH=neo4j/password
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-a", "bolt://localhost:7687", "-u", "neo4j", "-p", "password", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
   mongo:
     image: mongo:latest
@@ -210,7 +272,6 @@ services:
     ports:
       - "8086:8080" # Mapiranje porta 8080 u kontejneru na port 8086 na lokalnoj mašini
     environment:
-
       - HDFS_URI=namenode:8020 # URI za HDFS konekciju prema Namenode
     volumes:
       - ./files:/usr/bin/files # Mount lokalnog direktorijuma za datoteke u kontejner
@@ -267,6 +328,7 @@ volumes:
   hadoop_datanode1:
   hadoop_datanode2:
   hadoop_datanode3:
+  eventstore_data:
 
 networks:
   app-network:

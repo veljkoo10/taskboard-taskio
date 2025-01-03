@@ -8,4 +8,5 @@ use (
 	notification-service
 	workflow-service
 	Hdfs
+	event_sourcing
 )

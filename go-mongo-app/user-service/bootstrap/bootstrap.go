@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"os"
 	"user-service/db"
 	"user-service/models"
@@ -27,7 +28,44 @@ func InsertInitialUsers() {
 		return // Skip if users already exist
 	}
 
+	// Dodaj unapred definisane korisnike
 	var users []interface{}
+
+	// Dodavanje korisnika "aca"
+	hashedPasswordAca, err := bcrypt.GenerateFromPassword([]byte("Aca2024!"), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Println("Error hashing password for aca:", err)
+		return
+	}
+	acaUser := models.User{
+		Username: "aca",
+		Password: string(hashedPasswordAca),
+		Role:     "Manager",
+		Name:     "Aca",
+		Surname:  "Admin",
+		Email:    "aca@example.com",
+		IsActive: true,
+	}
+	users = append(users, acaUser)
+
+	// Dodavanje korisnika "ana"
+	hashedPasswordAna, err := bcrypt.GenerateFromPassword([]byte("Ana2024!"), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Println("Error hashing password for ana:", err)
+		return
+	}
+	anaUser := models.User{
+		Username: "ana",
+		Password: string(hashedPasswordAna),
+		Role:     "Member",
+		Name:     "Ana",
+		Surname:  "User",
+		Email:    "ana@example.com",
+		IsActive: true,
+	}
+	users = append(users, anaUser)
+
+	// Dodavanje drugih korisnika kao što je u originalu
 	for i := 1; i <= 10; i++ {
 		user := models.User{
 			Username: fmt.Sprintf("user%d", i),
@@ -45,7 +83,7 @@ func InsertInitialUsers() {
 	if err != nil {
 		fmt.Println("Error inserting initial users:", err)
 	} else {
-		fmt.Println("Inserted initial users")
+		fmt.Println("Inserted initial users including 'aca' and 'ana'")
 	}
 }
 

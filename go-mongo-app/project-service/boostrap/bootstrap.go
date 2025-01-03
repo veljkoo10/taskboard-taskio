@@ -3,14 +3,10 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"go.mongodb.org/mongo-driver/bson"
 	"os"
 	"project-service/db"
 	"project-service/models"
-	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func InsertInitialProjects() {
@@ -19,7 +15,6 @@ func InsertInitialProjects() {
 	}
 
 	collection := db.Client.Database("testdb").Collection("projects")
-	userCollection := db.Client.Database("testdb").Collection("users")
 
 	ClearProjects()
 
@@ -33,45 +28,14 @@ func InsertInitialProjects() {
 		return // If projects already exist, don't insert again
 	}
 
-	var users []bson.M
-	cursor, err := userCollection.Find(context.TODO(), bson.D{})
-	if err != nil {
-		fmt.Println("Error fetching users:", err)
-		return
-	}
-	if err = cursor.All(context.TODO(), &users); err != nil {
-		fmt.Println("Error decoding user IDs:", err)
-		return
-	}
-
-	var userIDs []string
-	for _, user := range users {
-		if id, ok := user["_id"].(primitive.ObjectID); ok {
-			userIDs = append(userIDs, id.Hex())
-		}
-	}
-
-	// Don't display message, just exit if not enough users
-	if len(userIDs) < 2 {
-		return // Exit if not enough users
-	}
-
-	rand.Seed(time.Now().UnixNano())
-
 	var projects []interface{}
 	for i := 1; i <= 10; i++ {
-		numUsers := rand.Intn(4) + 2 // Minimum 2, max 5
-		projectUsers := make([]string, numUsers)
-		for j := 0; j < numUsers; j++ {
-			projectUsers[j] = userIDs[rand.Intn(len(userIDs))]
-		}
-
 		project := models.Project{
 			Title:       fmt.Sprintf("Project %d", i),
 			Description: fmt.Sprintf("Description for project %d", i),
 			MinPeople:   2,
 			MaxPeople:   10,
-			Users:       projectUsers,
+			Users:       []string{},
 			Tasks:       []string{},
 		}
 		projects = append(projects, project)
@@ -81,7 +45,7 @@ func InsertInitialProjects() {
 	if err != nil {
 		fmt.Println("Error inserting initial projects:", err)
 	} else {
-		fmt.Println("Inserted initial projects with users")
+		fmt.Println("Inserted initial projects without users")
 	}
 }
 
