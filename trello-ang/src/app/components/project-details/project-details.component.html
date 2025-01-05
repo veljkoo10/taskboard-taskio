@@ -3,7 +3,7 @@
     <div class="action-buttons">
       <button *ngIf="isManager()" class="btn btn-primary" (click)="showAddMemberToProject()">User management</button>
       <button *ngIf="isManager()" class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
-     
+
 
     </div>
 
@@ -47,14 +47,14 @@
       </ul>
     </div>
   </div>
- 
+
     <div class="workflow-container">
       <div id="workflowGraph" style="width: 100%; height: 600px;"></div>
     </div>
 
     <!-- Modal Background -->
 
- 
+
   <!-- Modal Background -->
   <div class="modal-background" *ngIf="isCreateTaskFormVisible" (click)="cancelCreateTask()"></div>
 
@@ -63,7 +63,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Create New Task</h5>
+          <h4 class="modal-title">Create New Task</h4>
           <button type="button" class="btn-close" aria-label="Close" (click)="closeCreateTask()">&#10005;</button>
         </div>
 
@@ -164,7 +164,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h4 class="modal-title">Task Details</h4>
+        <h3 class="modal-title">Task Details</h3>
         <button type="button" class="btn-close" (click)="closeTaskDetails()">&#10005;</button>
       </div>
       <div class="modal-body">
@@ -190,7 +190,7 @@
                 (change)="updateTaskStatus('done')" [disabled]="isStatusDisabled('done')" />
               Done
             </label>
-              
+
           </div>
           <div *ngIf="dependencyMessage" class="dependency-message">
             <span>{{ dependencyMessage }}</span>
@@ -198,21 +198,8 @@
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
-        <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage
-          Members</button>
-          <button *ngIf="isManager()" class="btn btn-warning" (click)="showAddDependencyModal()">
-            Add Dependency
-          </button>          
-          <!-- Input za fajl -->
-          <input *ngIf="isManager()" type="file" (change)="onFileSelected($event)" id="fileInput"  />
-          <button *ngIf="isManager()" (click)="uploadFile()" class="btn btn-primary">Upload Fajl</button>
-          
-          
-    
-        </div>
-        <div>
+
+        <div class="task-files">
           <div>
             <h4>Task Files</h4>
             <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
@@ -224,9 +211,21 @@
               </li>
             </ul>
             <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
+            <input *ngIf="isManager()" type="file" (change)="onFileSelected($event)" id="fileInput"  />
+            <button *ngIf="isManager()" (click)="uploadFile()" class="btn btn-upload-file">Upload File</button>
           </div>
-          
+
       </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
+        <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage
+          Members</button>
+        <button *ngIf="isManager()"  class="btn btn-add-dependency" (click)="showAddDependencyModal()">
+          Add Dependency
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 
@@ -340,41 +339,41 @@
 </div>
 
 <!-- Modal za dodavanje zavisnosti -->
-<div class="modal-background-container" *ngIf="isAddDependencyModalVisible" (click)="closeAddDependencyModal()"></div>
+<div class="modal-background-container" *ngIf="isAddDependencyModalVisible" (click)="closeAddDependecyModalAll()"></div>
 
-<div id="addDependencyModal" class="modal-container" *ngIf="isAddDependencyModalVisible">
-  <div class="modal-dialog-container">
-    <div class="modal-content-container">
-      <div class="modal-header-container">
-        <button _ngcontent-ng-c3023526105=""(click)="closeAddDependencyModal()" type="button" class="btn-close">✕</button>
-        <h5 class="modal-title-container">Add Task Dependencies</h5>
+<div id="addDependencyModal" class="custom-modal" *ngIf="isAddDependencyModalVisible">
+  <div class="custom-modal-dialog">
+    <div class="custom-modal-content">
+      <div class="custom-modal-header">
+        <button (click)="closeAddDependencyModal()" type="button" class="btn-close">✕</button>
+        <h2 class="modal-title-container">Add Task Dependencies</h2>
 
       </div>
 
-      <div class="modal-body-container">
-        <div class="form-group-container">
-          <label class="dependency-label-container">Select Tasks:</label>
-          <ul class="dependency-task-list-container">
-            <li *ngFor="let task of existingTasks; trackBy: trackByTaskId" class="dependency-task-item-container">
-              <label class="custom-checkbox-container">
+      <div class="custom-modal-body">
+        <div class="custom-form-group">
+          <label class="custom-dependency-label">Select Tasks:</label>
+          <ul class="custom-dependency-task-list">
+            <li *ngFor="let task of existingTasks; trackBy: trackByTaskId" class="custom-dependency-task-item">
+              <label class="custom-checkbox">
                 <input type="checkbox" [value]="task" (change)="toggleTaskDependency(task)" />
-                <span class="checkbox-label-container">{{ task.name | titlecase }}</span>
+                <span class="custom-checkbox-label">{{ task.name | titlecase }}</span>
               </label>
             </li>
-            
           </ul>
         </div>
-        <div class="error-message-container" *ngIf="dependencyFormError">
+        <div class="custom-error-message" *ngIf="dependencyFormError">
           {{ dependencyFormError }}
         </div>
       </div>
 
-      <div class="modal-footer-container">
+      <div class="custom-modal-footer">
         <button type="button" class="btn btn-secondary" (click)="closeAddDependencyModal()">Cancel</button>
-        <button style="margin-left: 10px;" type="button" class="btn btn-success" (click)="confirmDependencies()">Add Dependency</button>
+        <button style="margin-left: 10px;" type="button" class="btn btn-add-dependency" (click)="confirmDependencies()">Add Dependency</button>
       </div>
     </div>
   </div>
-
 </div>
+
+
 

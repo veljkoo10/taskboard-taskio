@@ -16,7 +16,7 @@ import * as d3 from 'd3';
 })
 export class ProjectDetailsComponent {
   @Input() project: Project | null = null;
-  
+
   taskName: string = '';
   taskDescription: string = '';
   isCreateTaskFormVisible: boolean = false;
@@ -43,7 +43,7 @@ export class ProjectDetailsComponent {
   dependencyMessage: string | null = null;
   originalStatus: string | null = null;
   taskDependencies: any[]=[];
-  taskFiles: any[] = [];  
+  taskFiles: any[] = [];
   isAddDependencyModalVisible: boolean = false;
   selectedDependency: any;
   workflows: any[] = [];
@@ -70,12 +70,12 @@ export class ProjectDetailsComponent {
       this.loadTasks();
       this.loadUsersForProject();
       this.loadExistingTasks();
-      this.loadFlwos()
+      this.loadFlows()
       this.renderGraph();
       console.log(this.project)
       console.log(this.workflows)
-      
-      
+
+
     }
   }
 
@@ -89,42 +89,49 @@ export class ProjectDetailsComponent {
 
   showAddDependencyModal(): void {
     // Učitaj taskove i ažuriraj existingTasks
-    this.loadTasks();
     this.loadExistingTasks();
-  
+
     // Proveri da li su taskovi ažurirani
     console.log('Updated Existing Tasks:', this.existingTasks);
-  
+
     // Postavi modal kao vidljiv
     this.isAddDependencyModalVisible = true;
-  
+    this.isTaskDetailsVisible=false
     // Osveži prikaz ako je potrebno
     this.cdRef.detectChanges();
   }
 
   loadExistingTasks() {
-  
     if (!this.selectedTask || !this.selectedTask.id) {
       return;
     }
-  
-    this.existingTasks = [
-      ...this.existingTasks.filter(task => task && task.id && task.id !== this.selectedTask.id)
-    ];
-      this.cdRef.detectChanges();
+
+    // Ispisujemo ID selektovanog taska u konzoli
+    console.log('Selected Task ID:', this.selectedTask.id);
+
+    // Filtriramo sve zadatke tako da ne uključimo onaj koji je selektovan
+    this.existingTasks = this.existingTasks.filter(task => task.id !== this.selectedTask.id);
+    // Detekcija promene (ako je potrebno)
+    this.cdRef.detectChanges();
   }
-  
-  
+
+
+
   trackByTaskId(index: number, task: any): string {
     return task.id; // Assumes each task has a unique id
   }
- 
-  
 
+
+closeAddDependecyModalAll():void{
+  this.isAddDependencyModalVisible = false;
+  this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
+  this.dependencyFormError = '';
+}
 
 // Zatvaranje modala
 closeAddDependencyModal(): void {
   this.isAddDependencyModalVisible = false;
+  this.isTaskDetailsVisible=true;
   this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
   this.dependencyFormError = '';
 }
@@ -150,7 +157,8 @@ confirmDependencies(): void {
   this.closeAddDependencyModal();
   this.cdRef.detectChanges();
   this.renderGraph();
-  
+
+
 }
 
 addDependency(): void {
@@ -175,9 +183,11 @@ createWorkflow(): void {
   // Pozivanje funkcije createWorkflow sa trenutnim taskId i zavisnostima
   this.taskService.createWorkflow(this.selectedTask.id, this.selectedDependencies).subscribe(
     (response) => {
-      console.log('Workflow created successfully:', response);
-      // Pozivanje renderGraph nakon što se kreira workflow
-    
+      console.log('Workflow created successfully: uspesno', response);
+
+
+      this.loadFlows();
+      this.renderGraph();
     },
     (error) => {
       console.error('Error creating workflow:', error);
@@ -216,37 +226,30 @@ createWorkflow(): void {
       console.error('Project Title is missing!');
     }
 
-    this.loadFlwos();
+    this.loadFlows();
     this.renderGraph()
   }
 
-  loadFlwos(){
+  loadFlows(){
     this.taskService.getAllWorkflows().subscribe((data) => {
       this.workflows = data;
-  
+
       if (!this.workflows || this.workflows.length === 0) {
-        console.error('No workflows found!');
+        console.log('No workflows found!');
         return;
       }
-      
+
       console.log(this.workflows)
       console.log(this.existingTasks)
       for (let i = 0; i < this.workflows.length; i++) {
         const taskExists = this.existingTasks.some(task => task.id === this.workflows[i].task_id);
-    
-        if (taskExists) {
-            console.log("Našao: ", this.workflows[i]);
-        } else {
-            console.log("Nije našao: ", this.workflows[i]);
-            this.workflows.splice(i, 1); // Ukloni workflow koji nije pronađen
-        }
     }
 
     this.renderGraph();
-    
+
     });
   }
-  
+
 
   getUserInfoFromToken(): any {
     const token = this.authService.getDecryptedData('access_token');
@@ -310,13 +313,13 @@ createWorkflow(): void {
   }
   loadTasks() {
     if (this.project) {
-      const projectIdStr = String(this.project.id);
+        const projectIdStr = String(this.project.id);
       this.taskService.getTasks().subscribe(tasks => {
         this.pendingTasks = [];
         this.inProgressTasks = [];
         this.doneTasks = [];
         this.existingTasks = [];  // Resetovanje pre novog učitavanja
-  
+
         tasks.forEach(task => {
           if (String(task.project_id) === projectIdStr) {
             switch (task.status.toLowerCase()) {
@@ -337,16 +340,16 @@ createWorkflow(): void {
             }
           }
         });
-  
+
         // Poziv za detekciju promena u slučaju da postoji problem sa UI
         this.cdRef.detectChanges();
-  
+
       }, (error) => {
         console.error('Error loading tasks:', error);
       });
     }
   }
-  
+
 
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
@@ -740,10 +743,10 @@ createWorkflow(): void {
       }
     );
     this.loadTaskFiles(task.id);
-    
+
   }
   loadTaskFiles(taskId: string): void {
-  this.taskFiles = []; 
+  this.taskFiles = [];
   this.cdRef.detectChanges();
   this.taskService.getTaskFiles(taskId).subscribe(
     (files) => {
@@ -776,7 +779,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
   );
 }
 
-  selectedFile: File | null = null; 
+  selectedFile: File | null = null;
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
@@ -790,16 +793,16 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       console.error('No file selected!');
       return;
     }
-  
+
     if (!this.selectedTask?.id) {
       console.error('Task ID is missing.');
       return;
     }
-  
+
     const formData = new FormData();
     formData.append('taskID', this.selectedTask.id);
     formData.append('file', this.selectedFile);
-  
+
     this.taskService.uploadFile(formData).subscribe(
       (response) => {
         console.log('Fajl je uspešno upload-ovan!', response);
@@ -808,7 +811,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
         this.cdRef.detectChanges();
         this.loadTaskFiles(this.selectedTask.id);
         // Osvežavanje stranice
-       
+
         this.isTaskDetailsVisible = false;
         this.isTaskDetailsVisible = true;
       },
@@ -816,11 +819,11 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
         console.error('Greška prilikom upload-a fajla:', error);
         this.message = 'Greška prilikom upload-a fajla.';
         this.isSuccessMessage = false;
-        
+
       }
     );
   }
- 
+
   removeUserFromTask(userId: string): void {
     if (!this.selectedTask?.id) {
       console.error('Task ID is missing.');
@@ -945,25 +948,24 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       .select(this.el.nativeElement)
       .select('#workflowGraph')
       .select('svg');
-  
+
     if (svg.node()) {
       svg.remove(); // Brišemo postojeći SVG graf
     }
-  
-    // Kreiramo novi SVG element
+
+    // Kreiramo novi SVG element sa 100% dimenzijama
     const newSvg = d3
       .select(this.el.nativeElement)
       .select('#workflowGraph')
       .append('svg')
-      .attr('width', 800)
-      .attr('height', 600);
-  
+      .attr('width', '100%') // Postavljanje širine na 100%
+      .attr('height', '100%'); // Postavljanje visine na 100%
+
     // Proveravamo da li su podaci za workflow ažurirani pre nego što kreiramo graf
     if (!this.workflows || this.workflows.length === 0) {
-      console.log("Podaci nisu učitani ili su prazni!");
       return;
     }
-  
+
     // Kreiramo sve čvorove (nodes)
     const nodes = Array.from(
       new Set(
@@ -977,7 +979,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       x: Math.random() * 800,
       y: Math.random() * 600,
     }));
-  
+
     // Kreiramo sve veze (links)
     const links = this.workflows.flatMap((workflow) =>
       workflow.dependency_task.map((dep: string) => ({
@@ -985,7 +987,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
         target: dep,
       }))
     );
-  
+
     // Kreiramo markere za strelice
     newSvg
       .append('defs')
@@ -1000,7 +1002,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       .append('path')
       .attr('d', 'M0,-5L10,0L0,5')
       .attr('fill', '#007bff');
-  
+
     // Kreiramo simulaciju
     const simulation = d3
       .forceSimulation(nodes)
@@ -1008,7 +1010,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       .force('charge', d3.forceManyBody().strength(-100))
       .force('center', d3.forceCenter(400, 300))
       .force('collide', d3.forceCollide().radius(20));
-  
+
     // Kreiramo linije (links) sa strelicama
     const link = newSvg
       .append('g')
@@ -1019,7 +1021,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       .attr('stroke', '#ccc')
       .attr('stroke-width', 2)
       .attr('marker-end', 'url(#arrowhead)');
-  
+
     // Kreiramo čvorove (nodes)
     const node = newSvg
       .append('g')
@@ -1043,7 +1045,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
             if (!event.active) simulation.alphaTarget(0);
           })
       );
-  
+
     // Dodavanje tekstova sa asinhronim dohvatom imena
     const text = newSvg
       .append('g')
@@ -1054,21 +1056,26 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       .attr('font-size', 12)
       .attr('dx', 15)
       .attr('dy', 5)
-      .text((d: any) => d.id); // Privremeno postavi ID
-  
+      .text((d: any) => formatName(d.id)); // Koristimo funkciju za formatiranje naziva
+
+    // Funkcija za formatiranje naziva (prvo slovo veliko)
+    function formatName(name: string): string {
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
     // Ažuriranje imena taskova
-    nodes.forEach(async (node) => {
+    for (const node1 of nodes) {
       try {
-        const task = await this.taskService.getTaskById(node.id).toPromise();
-        const taskName = task?.name || `Task ${node.id}`;
+        const task = await this.taskService.getTaskById(node1.id).toPromise();
+        const taskName = task?.name || `Task ${node1.id}`;
         text
-          .filter((t: any) => t.id === node.id)
-          .text(taskName);
+          .filter((t: any) => t.id === node1.id)
+          .text(formatName(taskName)); // Formatiramo naziv pre postavljanja
       } catch (error) {
-        console.error(`Greška prilikom dohvatanja imena za ID ${node.id}`, error);
+        console.error(`Greška prilikom dohvatanja imena za ID ${node1.id}`, error);
       }
-    });
-  
+    }
+
     // Ažuriranje pozicija tokom simulacije
     simulation.on('tick', () => {
       link
@@ -1076,14 +1083,12 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
         .attr('y1', (d: any) => d.source.y)
         .attr('x2', (d: any) => d.target.x)
         .attr('y2', (d: any) => d.target.y);
-  
+
       node.attr('cx', (d: any) => d.x).attr('cy', (d: any) => d.y);
-  
+
       text.attr('x', (d: any) => d.x).attr('y', (d: any) => d.y);
     });
-  
-    // Pokrećemo detekciju promena u Angular-u
-   
+
   }
+
 }
-  

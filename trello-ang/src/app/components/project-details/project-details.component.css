@@ -321,6 +321,15 @@ body {
 .btn-danger:hover {
   background-color: #c82333;
 }
+.task-files {
+  border-top: 1px solid #dee2e6; /* Samo gornja ivica */
+  border-radius: 8px 8px 0 0;   /* Zaokruživanje samo na gornjim uglovima */
+  padding: 20px 20px 0;         /* Gornji: 20px, horizontalni: 20px, donji: 0 */
+  margin: 0 0 20px;             /* Gornji: 0, horizontalni: 0, donji: 20px */
+  font-weight: bold;
+  color: black;
+}
+
 
 .modal {
   position: fixed;
@@ -419,6 +428,7 @@ body {
   display: flex;
   justify-content: space-between; /* Raspoređuje naslov i dugme na krajeve */
   align-items: center; /* Vertikalno centriranje */
+  margin-top: 10px;
 }
 
 .modal-header .btn-close {
@@ -530,9 +540,12 @@ body {
   margin-bottom: 15px;
   color: #2a8a68;
 }
+.modal-body h6 {
+  font-size: 1.2rem;
+}
 .modal-body label {
   font-weight: bold;
-  font-size: 1.2rem; /* Optionally increase font size */
+  font-size: 1.4rem; /* Optionally increase font size */
   color: #333;
 }
 
@@ -890,7 +903,6 @@ body {
   padding: 20px;
   border-radius: 10px;
   z-index: 1000;
-  position: relative; /* Ensures the button can be positioned inside this container */
 }
 
 /* Header */
@@ -902,7 +914,7 @@ body {
 
 /* Title */
 .modal-title-container {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   color: #2e7d32; /* Dark green */
   width: 90%; /* Adjust title width */
@@ -912,11 +924,10 @@ body {
 /* Close Button */
 .btn-close {
   position: absolute;
-  top: 10px;
+  top: 3px;
   right: 10px;
   background: transparent;
   border: none;
-  font-size: 24px;
   color: #2e7d32; /* Dark green color for close button */
   cursor: pointer;
   padding: 0;
@@ -998,11 +1009,7 @@ body {
 /* Dugme za upload fajla */
 
 /* Naslov za listu fajlova */
-h4 {
-  font-size: 20px;
-  color: #333;
-  margin-bottom: 10px;
-}
+
 
 /* Lista fajlova */
 .file-list {
@@ -1050,3 +1057,142 @@ p {
     overflow-y: auto;
   }
 }
+/* Stil za novo dugme Add Dependency */
+.btn-add-dependency {
+  background-color: #28a745; /* Zeleni background */
+  border-color: #28a745; /* Zeleni border */
+  color: white; /* Bela boja teksta */
+}
+
+/* Stil pri hover efektu */
+.btn-add-dependency:hover {
+  background-color: #218838; /* Tamnija zelena prilikom hover-a */
+  border-color: #1e7e34; /* Tamniji border pri hover-u */
+}
+/* Stil za novo dugme Upload File */
+.btn-upload-file {
+  background-color: #007bff; /* Plavi background */
+  border-color: #007bff; /* Plavi border */
+  color: white; /* Bela boja teksta */
+}
+
+/* Stil pri hover efektu */
+.btn-upload-file:hover {
+  background-color: #0056b3; /* Tamnija plava prilikom hover-a */
+  border-color: #004085; /* Tamniji border pri hover-u */
+}
+/* CSS */
+.custom-modal {
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 20%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1050;
+  font-size: 1.2rem;
+}
+
+.custom-modal-dialog {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 500px;
+  margin: auto;
+}
+
+.custom-modal-content {
+  padding: 20px;
+}
+
+.custom-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+  position: relative;
+}
+
+.custom-btn-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.custom-modal-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.custom-modal-body {
+  margin-top: 15px;
+}
+
+.custom-form-group {
+  margin-bottom: 20px;
+}
+
+.custom-dependency-label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.custom-dependency-task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.custom-dependency-task-item {
+  margin-bottom: 10px;
+}
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.custom-checkbox-label {
+  margin-left: 8px;
+}
+
+.custom-error-message {
+  color: #d9534f;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.custom-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+  margin-top: 15px;
+}
+
+.custom-btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.custom-btn-success {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+

@@ -70,7 +70,7 @@ http {
         # Prosleđivanje zahteva ka workflow-service (novi servis)
         location /taskio/workflow {
             rewrite ^/taskio/workflow(/.*)$ $1 break;
-            proxy_pass http://workflow-service:8087/workflow$1;  # Podesi port na 8084, ili odgovarajući port tvog workflow servisa
+            proxy_pass http://workflow-service:8080/workflow$1;  # Podesi port na 8084, ili odgovarajući port tvog workflow servisa
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
