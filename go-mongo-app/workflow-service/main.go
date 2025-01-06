@@ -45,11 +45,12 @@ func main() {
 	r := mux.NewRouter()
 
 	// Dodavanje ruta
-	r.HandleFunc("/workflow/createWorkflow", workflowHandler.CreateWorkflow).Methods(http.MethodPost, http.MethodOptions)
-	r.HandleFunc("/workflow/getWorkflows", workflowHandler.GetWorkflowHandler).Methods(http.MethodGet, http.MethodOptions)
-	r.HandleFunc("/workflow/getTaskById/{id}", workflowHandler.GetTaskByIDHandler).Methods(http.MethodGet, http.MethodOptions)
-	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.CheckDependencyHandler).Methods(http.MethodGet, http.MethodOptions)
-	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.GetTaskDependenciesHandler).Methods(http.MethodGet, http.MethodOptions)
+	r.HandleFunc("/workflow/createWorkflow", workflowHandler.CreateWorkflow).Methods("POST")
+	r.HandleFunc("/workflow/getWorkflows", workflowHandler.GetWorkflowHandler).Methods("GET")
+	r.HandleFunc("/workflow/getTaskById/{id}", workflowHandler.GetTaskByIDHandler).Methods("GET")
+	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.CheckDependencyHandler).Methods("GET")
+	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.GetTaskDependenciesHandler).Methods("GET")
+	r.HandleFunc("/workflow/project/{project_id}", workflowHandler.GetFlowByProjectIDHandler).Methods("GET")
 
 	// Konfiguracija CORS-a
 	c := cors.New(cors.Options{

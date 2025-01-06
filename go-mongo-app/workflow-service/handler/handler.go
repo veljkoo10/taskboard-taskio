@@ -22,6 +22,7 @@ func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request)
 	var workflowRequest struct {
 		TaskID         string   `json:"task_id"`
 		DependencyTask []string `json:"dependency_task"`
+		ProjectID      string   `json:"project_id"`
 	}
 
 	// Dekodiraj telo zahteva u strukturu
@@ -30,9 +31,13 @@ func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Provera da li je task_id prazan
+	// Provera da li su task_id i project_id prazni
 	if workflowRequest.TaskID == "" {
 		http.Error(w, "task_id cannot be empty", http.StatusBadRequest)
+		return
+	}
+	if workflowRequest.ProjectID == "" {
+		http.Error(w, "project_id cannot be empty", http.StatusBadRequest)
 		return
 	}
 
@@ -54,7 +59,8 @@ func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request)
 	workflow := models.Workflow{
 		TaskID:         workflowRequest.TaskID,
 		DependencyTask: workflowRequest.DependencyTask,
-		IsActive:       true, // Aktivni workflow
+		ProjectID:      workflowRequest.ProjectID, // Postavljamo ProjectID
+		IsActive:       true,                      // Aktivni workflow
 	}
 
 	// Pozivamo metodu koja zapravo kreira workflow u bazi
@@ -68,8 +74,9 @@ func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated) // HTTP status za kreirani resurs
 	response := map[string]string{
-		"message": "Workflow dependency successfully created",
-		"task_id": workflow.TaskID,
+		"message":    "Workflow dependency successfully created",
+		"task_id":    workflow.TaskID,
+		"project_id": workflow.ProjectID,
 	}
 
 	// JSON odgovor koji potvrđuje uspešno kreiranje
@@ -153,4 +160,24 @@ func (h *WorkflowHandler) GetTaskDependenciesHandler(w http.ResponseWriter, r *h
 		"task_id":          taskID,
 		"dependency_tasks": dependencies,
 	})
+}
+func (h *WorkflowHandler) GetFlowByProjectIDHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	projectID, ok := vars["project_id"]
+	if !ok {
+		http.Error(w, "project_id is required", http.StatusBadRequest)
+		return
+	}
+
+	flows, err := h.repo.GetAllWorkflowsByProjectID(r.Context(), projectID)
+	if err != nil {
+		http.Error(w, "Error fetching workflows: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(flows); err != nil {
+		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

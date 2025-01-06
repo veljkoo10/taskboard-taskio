@@ -70,10 +70,9 @@ export class ProjectDetailsComponent {
       this.loadTasks();
       this.loadUsersForProject();
       this.loadExistingTasks();
-      this.loadFlows()
+      this.loadFlows();
       this.renderGraph();
-      console.log(this.project)
-      console.log(this.workflows)
+
 
 
     }
@@ -173,27 +172,26 @@ addDependency(): void {
 }
 
 // Funkcija koja poziva createWorkflow iz TaskService
-createWorkflow(): void {
-  if (!this.selectedTask.id || this.selectedDependencies.length === 0) {
-    console.error('Invalid data for creating workflow');
-    return;
+  createWorkflow(): void {
+    if (!this.selectedTask.id || this.selectedDependencies.length === 0 || !this.projectId) {
+      console.error('Invalid data for creating workflow');
+      return;
+    }
+
+    console.log(this.selectedDependencies);
+    // Pozivanje funkcije createWorkflow sa trenutnim taskId, zavisnostima i projectId
+    this.taskService.createWorkflow(this.selectedTask.id, this.selectedDependencies, this.projectId).subscribe(
+      (response) => {
+        console.log('Workflow created successfully: uspesno', response);
+        this.loadFlows();
+        this.renderGraph();
+      },
+      (error) => {
+        console.error('Error creating workflow:', error);
+      }
+    );
   }
 
-  console.log(this.selectedDependencies);
-  // Pozivanje funkcije createWorkflow sa trenutnim taskId i zavisnostima
-  this.taskService.createWorkflow(this.selectedTask.id, this.selectedDependencies).subscribe(
-    (response) => {
-      console.log('Workflow created successfully: uspesno', response);
-
-
-      this.loadFlows();
-      this.renderGraph();
-    },
-    (error) => {
-      console.error('Error creating workflow:', error);
-    }
-  );
-}
 
   resetAddMemberForm() {
     this.isAddMemberFormVisible = false;
@@ -212,7 +210,7 @@ createWorkflow(): void {
     // Učitavanje zadataka i aktivnih korisnika
     this.loadTasks();
     this.loadActiveUsers();
-
+    this.loadFlows();
     // Provera da li projekt postoji i ima validan ID
     if (this.project && this.project.id) {
       this.projectId = this.project.id;  // Postavi projectId
@@ -226,29 +224,43 @@ createWorkflow(): void {
       console.error('Project Title is missing!');
     }
 
-    this.loadFlows();
+
     this.renderGraph()
   }
 
-  loadFlows(){
-    this.taskService.getAllWorkflows().subscribe((data) => {
-      this.workflows = data;
+  loadFlows() {
+    // Proveri da li postoji objekat project i uzmi njegov ID
+    if (this.project) {
+      const projectIdStr = String(this.project.id);
+      console.log('KUPUUSSSSSSS:', projectIdStr);
 
-      if (!this.workflows || this.workflows.length === 0) {
-        console.log('No workflows found!');
-        return;
-      }
+      // Pozivanje servisa sa projectIdStr
+      this.taskService.getWorkflowByProjectId(projectIdStr).subscribe((data) => {
+        this.workflows = data;
+        this.renderGraph();
 
-      console.log(this.workflows)
-      console.log(this.existingTasks)
-      for (let i = 0; i < this.workflows.length; i++) {
-        const taskExists = this.existingTasks.some(task => task.id === this.workflows[i].task_id);
+        if (!this.workflows || this.workflows.length === 0) {
+          console.log('No workflows found!');
+          return;
+        }
+
+        console.log('Loaded workflows:', this.workflows);
+        console.log('Existing tasks:', this.existingTasks);
+
+        for (let i = 0; i < this.workflows.length; i++) {
+          const workflow = this.workflows[i];
+
+          // Ispis ID-ja taska iz workflow-a
+          console.log(`Workflow task_id: ${workflow.task_id}`);
+        }
+
+      }, (error) => {
+        console.error('Error loading workflows:', error);
+      });
     }
-
-    this.renderGraph();
-
-    });
   }
+
+
 
 
   getUserInfoFromToken(): any {
@@ -314,6 +326,7 @@ createWorkflow(): void {
   loadTasks() {
     if (this.project) {
         const projectIdStr = String(this.project.id);
+        console.log("PROJEEEEEEEEEEEEEKAT",projectIdStr)
       this.taskService.getTasks().subscribe(tasks => {
         this.pendingTasks = [];
         this.inProgressTasks = [];

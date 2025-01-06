@@ -100,7 +100,7 @@ export class TaskService {
     );
   }
   uploadFile(formData: FormData): Observable<any> {
-    
+
     return this.http.post(`${this.taskUrl}/upload`, formData);
   }
   downloadFile(taskId: string, fileNamee: string): Observable<Blob> {
@@ -109,27 +109,40 @@ export class TaskService {
     return this.http.get(url, { responseType: 'blob' });
   }
   // Create a workflow by assigning dependencies to a task
-createWorkflow(taskId: string, dependencyTasks: string[]): Observable<any> {
-  const url = `${this.workflow}/createWorkflow`;
+  createWorkflow(taskId: string, dependencyTasks: string[], projectId: string): Observable<any> {
+    const url = `${this.workflow}/createWorkflow`;
 
-  const payload = {
-    task_id: taskId,
-    dependency_task: dependencyTasks
-  };
+    const payload = {
+      task_id: taskId,
+      dependency_task: dependencyTasks,
+      project_id: projectId
+    };
 
-  return this.http.post<any>(url, payload).pipe(
-    catchError((error) => {
-      console.error('Error creating workflow:', error);
-      throw error;
-    })
-  );
-}
-getTaskFiles(taskId: string): Observable<{ fileName: string, content: string }[]> {
-  return this.http.get<{ fileName: string, content: string }[]>(`${this.taskUrl}/files/${taskId}`);
-}
-getAllWorkflows() {
-  return this.http.get<any[]>(`${this.workflow}/getWorkflows`);
-}
+    return this.http.post<any>(url, payload).pipe(
+      catchError((error) => {
+        console.error('Error creating workflow:', error);
+        throw error;
+      })
+    );
+  }
+
+  getTaskFiles(taskId: string): Observable<{ fileName: string, content: string }[]> {
+    return this.http.get<{ fileName: string, content: string }[]>(`${this.taskUrl}/files/${taskId}`);
+  }
+  getAllWorkflows() {
+    return this.http.get<any[]>(`${this.workflow}/getWorkflows`);
+  }
+
+  getWorkflowByProjectId(projectId: string): Observable<any[]> {
+      const url = `${this.workflow}/project/${projectId}`;
+      return this.http.get<any[]>(url).pipe(
+        catchError((error) => {
+          console.error(`Error fetching workflows for project ID ${projectId}:`, error);
+          return throwError(error);
+        }));
+  }
+
+
 }
 
 

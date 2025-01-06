@@ -782,3 +782,29 @@ func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 }
+func CheckTaskExistsHandler(w http.ResponseWriter, r *http.Request) {
+	// Parsiranje `task_id` iz URL-a
+	vars := mux.Vars(r)
+	taskID, ok := vars["task_id"]
+	if !ok {
+		http.Error(w, "Task ID is required in URL", http.StatusBadRequest)
+		return
+	}
+
+	// Pozivanje servisne funkcije za proveru postojanja zadatka
+	exists, err := service.TaskExists(taskID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Vraćanje rezultata u JSON formatu
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"task_id": taskID,
+		"exists":  exists,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}

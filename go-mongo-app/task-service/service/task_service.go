@@ -865,3 +865,31 @@ func ReadFilesFromHDFSDirectory(dirPath string) ([]string, error) {
 
 	return fileNames, nil
 }
+func TaskExists(taskID string) (bool, error) {
+	// Validacija i sanitizacija ulaza
+	taskID = SanitizeInput(taskID)
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return false, errors.New("invalid task ID format")
+	}
+
+	// Povezivanje sa MongoDB kolekcijom
+	collection := db.Client.Database("testdb").Collection("tasks")
+
+	// Provera da li zadatak postoji
+	var existingTask models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&existingTask)
+
+	// Ako je greška `mongo.ErrNoDocuments`, zadatak ne postoji
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+
+	// Ako postoji druga greška, prijavi je
+	if err != nil {
+		return false, fmt.Errorf("error checking task existence: %v", err)
+	}
+
+	// Ako nema greške, zadatak postoji
+	return true, nil
+}

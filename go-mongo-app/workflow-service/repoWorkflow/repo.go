@@ -24,21 +24,21 @@ func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models
 	session := r.driver.NewSession(neo4j.SessionConfig{})
 	defer session.Close()
 
-	// Proveravamo da li workflow već postoji sa istim task_id
+	// Proveravamo da li workflow već postoji sa istim task_id i project_id
 	result, err := session.Run(
-		`MATCH (w:Workflow {task_id: $task_id}) 
-		RETURN w.dependency_task AS dependency_task`,
+		`MATCH (w:Workflow {task_id: $task_id, project_id: $project_id}) 
+         RETURN w.dependency_task AS dependency_task`,
 		map[string]interface{}{
-			"task_id": workflow.TaskID,
+			"task_id":    workflow.TaskID,
+			"project_id": workflow.ProjectID, // Dodajemo ProjectID
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("error checking for existing workflow: %v", err)
 	}
 
-	// Ako workflow postoji, samo dodajemo novi dependency_task
+	// Ako workflow postoji, dodajemo novu zavisnost
 	if result.Next() {
-		// Uzmi postojeće zavisnosti
 		existingDeps, _ := result.Record().Get("dependency_task")
 		var currentDeps []string
 
@@ -53,13 +53,13 @@ func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models
 		// Dodajemo nove zavisnosti ako nisu već prisutne
 		for _, dep := range workflow.DependencyTask {
 			if !contains(currentDeps, dep) {
-				// Dodajemo zavisnost u postojeći workflow
 				_, err = session.Run(
-					`MATCH (w:Workflow {task_id: $task_id})
-					 SET w.dependency_task = w.dependency_task + $new_dep`,
+					`MATCH (w:Workflow {task_id: $task_id, project_id: $project_id})
+                     SET w.dependency_task = w.dependency_task + $new_dep`,
 					map[string]interface{}{
-						"task_id": workflow.TaskID,
-						"new_dep": dep,
+						"task_id":    workflow.TaskID,
+						"project_id": workflow.ProjectID, // Koristimo ProjectID
+						"new_dep":    dep,
 					},
 				)
 				if err != nil {
@@ -70,35 +70,21 @@ func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models
 	} else {
 		// Ako workflow ne postoji, kreiramo novi workflow
 		_, err := session.Run(
-			`CREATE (w:Workflow {id: $id, task_id: $task_id, dependency_task: $dependency_task, is_active: $is_active})`,
+			`CREATE (w:Workflow {id: $id, task_id: $task_id, dependency_task: $dependency_task, project_id: $project_id, is_active: $is_active})`,
 			map[string]interface{}{
 				"id":              uuid.New().String(),
 				"task_id":         workflow.TaskID,
 				"dependency_task": workflow.DependencyTask,
+				"project_id":      workflow.ProjectID, // Dodajemo ProjectID
 				"is_active":       workflow.IsActive,
 			},
 		)
 		if err != nil {
 			return fmt.Errorf("error creating workflow: %v", err)
 		}
-
-		// Povezivanje sa zavisnostima
-		for _, dep := range workflow.DependencyTask {
-			_, err = session.Run(
-				`MATCH (w:Workflow {task_id: $task_id}), (dep:Workflow {task_id: $dep_task_id})
-				 CREATE (w)-[:DEPENDS_ON]->(dep)`,
-				map[string]interface{}{
-					"task_id":     workflow.TaskID,
-					"dep_task_id": dep,
-				},
-			)
-			if err != nil {
-				return fmt.Errorf("error creating dependency relationship: %v", err)
-			}
-		}
 	}
 
-	// Sada proveravamo da li postoji ciklus
+	// Provera ciklusa ostaje nepromenjena
 	err = r.checkAndHandleCycle(workflow)
 	if err != nil {
 		return fmt.Errorf("error handling cycle for workflow %s: %v", workflow.TaskID, err)
@@ -170,8 +156,9 @@ func (r *WorkflowRepository) GetAllWorkflows(ctx context.Context) ([]*models.Wor
 	session := r.driver.NewSession(neo4j.SessionConfig{})
 	defer session.Close()
 
+	// Izmenjeni Cypher upit da vraća i project_id
 	result, err := session.Run(
-		"MATCH (w:Workflow) RETURN w.id AS id, w.task_id AS task_id, w.dependency_task AS dependency_task, w.is_active AS is_active",
+		"MATCH (w:Workflow) RETURN w.id AS id, w.task_id AS task_id, w.dependency_task AS dependency_task, w.is_active AS is_active, w.project_id AS project_id",
 		nil, // Nema parametara jer želimo sve workflow-e
 	)
 	if err != nil {
@@ -203,6 +190,11 @@ func (r *WorkflowRepository) GetAllWorkflows(ctx context.Context) ([]*models.Wor
 			return nil, fmt.Errorf("is_active not found in the result")
 		}
 
+		projectIDRaw, found := record.Get("project_id")
+		if !found {
+			return nil, fmt.Errorf("project_id not found in the result")
+		}
+
 		id, ok := idRaw.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid type for id: expected string, got %T", idRaw)
@@ -232,11 +224,17 @@ func (r *WorkflowRepository) GetAllWorkflows(ctx context.Context) ([]*models.Wor
 			return nil, fmt.Errorf("invalid type for is_active: expected bool, got %T", isActiveRaw)
 		}
 
+		projectID, ok := projectIDRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid type for project_id: expected string, got %T", projectIDRaw)
+		}
+
 		workflow := &models.Workflow{
 			ID:             uuid.MustParse(id), // Konvertujemo string u UUID
 			TaskID:         taskID,
 			DependencyTask: dependencyTask, // Niz zavisnih taskova
 			IsActive:       isActive,
+			ProjectID:      projectID, // Dodajemo project_id
 		}
 
 		workflows = append(workflows, workflow)
@@ -405,4 +403,64 @@ func (r *WorkflowRepository) GetTaskDependencies(ctx context.Context, taskID str
 
 	log.Printf("Zavisni taskovi za task_id %s: %v", taskID, dependencies)
 	return dependencies, nil
+}
+func (r *WorkflowRepository) GetAllWorkflowsByProjectID(ctx context.Context, projectID string) ([]*models.Workflow, error) {
+	session := r.driver.NewSession(neo4j.SessionConfig{})
+	defer session.Close()
+
+	// Cypher upit za dohvaćanje svih workflow-e po project_id
+	result, err := session.Run(
+		`MATCH (w:Workflow {project_id: $project_id}) 
+         RETURN w.id AS id, 
+                w.task_id AS task_id, 
+                w.dependency_task AS dependency_task, 
+                w.project_id AS project_id, 
+                w.is_active AS is_active`,
+		map[string]interface{}{"project_id": projectID},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error running the query: %v", err)
+	}
+
+	var workflows []*models.Workflow
+
+	for result.Next() {
+		record := result.Record()
+
+		idRaw, _ := record.Get("id")
+		taskIDRaw, _ := record.Get("task_id")
+		dependencyTaskRaw, _ := record.Get("dependency_task")
+		projectIDRaw, _ := record.Get("project_id")
+		isActiveRaw, _ := record.Get("is_active")
+
+		id, _ := idRaw.(string)
+		taskID, _ := taskIDRaw.(string)
+		projectID, _ := projectIDRaw.(string)
+		isActive, _ := isActiveRaw.(bool)
+
+		var dependencyTask []string
+		if depTasks, ok := dependencyTaskRaw.([]interface{}); ok {
+			for _, dep := range depTasks {
+				if depStr, ok := dep.(string); ok {
+					dependencyTask = append(dependencyTask, depStr)
+				}
+			}
+		}
+
+		workflow := &models.Workflow{
+			ID:             uuid.MustParse(id),
+			TaskID:         taskID,
+			DependencyTask: dependencyTask,
+			ProjectID:      projectID,
+			IsActive:       isActive,
+		}
+
+		workflows = append(workflows, workflow)
+	}
+
+	if err := result.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over the result: %v", err)
+	}
+
+	return workflows, nil
 }
