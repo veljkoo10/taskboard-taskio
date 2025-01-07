@@ -753,7 +753,6 @@ func (uh *TasksHandler) DownloadFileHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Failed to send file", http.StatusInternalServerError)
 	}
 }
-
 func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Request) {
 	// Čitanje taskID iz URL-a
 	vars := mux.Vars(r)
@@ -766,11 +765,14 @@ func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Reque
 	// Putanja direktorijuma na HDFS-u za dati task
 	dirPath := fmt.Sprintf("/user/hdfs/tasks/%s", taskID)
 
-	// Pozivanje funkcije za učitavanje fajlova iz HDFS direktorijuma
 	files, err := service.ReadFilesFromHDFSDirectory(dirPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to read files from HDFS: %v", err), http.StatusInternalServerError)
-		return
+		if err.Error() == "failed to read directory: readdir /user/hdfs/tasks/"+taskID+": file does not exist" {
+			files = []string{}
+		} else {
+			http.Error(w, fmt.Sprintf("Failed to read files from HDFS: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Postavljanje zaglavlja odgovora na JSON
@@ -782,6 +784,7 @@ func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 }
+
 func CheckTaskExistsHandler(w http.ResponseWriter, r *http.Request) {
 	// Parsiranje `task_id` iz URL-a
 	vars := mux.Vars(r)

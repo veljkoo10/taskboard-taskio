@@ -1023,14 +1023,18 @@ body {
 
 /* Stil za linkove fajlova */
 .file-link {
-  color: #007bff;
+  color: #5cb85c;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 1.1rem;
+  cursor: pointer;
 }
-
+.file-link-span {
+  color: #5cb85c;
+  text-decoration: none;
+  font-size: 1.1rem;
+}
 .file-link:hover {
-  text-decoration: underline;
-  color: #0056b3;
+  color: #449d44; /* Tamnija nijansa na hover */
 }
 
 /* Poruka za praznu listu fajlova */

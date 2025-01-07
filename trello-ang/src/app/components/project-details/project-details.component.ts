@@ -1,4 +1,4 @@
-import {Component, Input, SimpleChanges,ElementRef,  ChangeDetectionStrategy} from '@angular/core';
+import {Component, Input, SimpleChanges, ElementRef, ChangeDetectionStrategy, ViewChild} from '@angular/core';
 import { Project } from '../../model/project.model';
 import { ProjectService } from 'src/app/services/project.service';
 import { UserService } from 'src/app/services/user.service';
@@ -48,6 +48,7 @@ export class ProjectDetailsComponent {
   selectedDependency: any;
   workflows: any[] = [];
   dependencyFormError: string = '';
+  @ViewChild('fileInput') fileInput!: ElementRef; // Referenca na input element
 
   constructor(
     private taskService: TaskService,
@@ -232,7 +233,6 @@ addDependency(): void {
     // Proveri da li postoji objekat project i uzmi njegov ID
     if (this.project) {
       const projectIdStr = String(this.project.id);
-      console.log('KUPUUSSSSSSS:', projectIdStr);
 
       // Pozivanje servisa sa projectIdStr
       this.taskService.getWorkflowByProjectId(projectIdStr).subscribe((data) => {
@@ -326,7 +326,6 @@ addDependency(): void {
   loadTasks() {
     if (this.project) {
         const projectIdStr = String(this.project.id);
-        console.log("PROJEEEEEEEEEEEEEKAT",projectIdStr)
       this.taskService.getTasks().subscribe(tasks => {
         this.pendingTasks = [];
         this.inProgressTasks = [];
@@ -759,38 +758,47 @@ addDependency(): void {
 
   }
   loadTaskFiles(taskId: string): void {
-  this.taskFiles = [];
-  this.cdRef.detectChanges();
-  this.taskService.getTaskFiles(taskId).subscribe(
-    (files) => {
-      console.log('Files loaded for task:', files);  // Proverite da li fajlovi stižu
-      if (files && Array.isArray(files)) {
-        this.taskFiles = files;  // Direktno dodelite niz fajlova
-      } else {
-        console.error('Invalid file data format');
-      }
-    },
-    (error) => {
-      console.error('Error loading task files:', error);
-    }
-  );
-}
+    this.taskFiles = [];
+    this.cdRef.detectChanges();
 
-downloadTaskFile(taskId: string, fileNamee: string): void {
-  this.taskService.downloadFile(taskId, fileNamee).subscribe(
-    (blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileNamee; // Postavlja ime fajla
-      a.click();
-      window.URL.revokeObjectURL(url); // Oslobađa memoriju nakon preuzimanja
-    },
-    (error) => {
-      console.error('Error downloading file:', error);
-    }
-  );
-}
+    this.taskService.getTaskFiles(taskId).subscribe(
+      (files) => {
+        console.log('Files loaded for task:', files);
+        if (files && Array.isArray(files) && files.length > 0) {
+          this.taskFiles = files;
+        } else {
+          this.taskFiles = [];
+          console.log('No files available for this task');
+        }
+        this.cdRef.detectChanges();
+      },
+      (error) => {
+        this.taskFiles = [];
+      }
+    );
+  }
+
+  formatFileName(fileName: string): string {
+    if (!fileName) return '';
+    return fileName.charAt(0).toUpperCase() + fileName.slice(1);
+  }
+
+
+  downloadTaskFile(taskId: string, fileNamee: string): void {
+    this.taskService.downloadFile(taskId, fileNamee).subscribe(
+      (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileNamee; // Postavlja ime fajla
+        a.click();
+        window.URL.revokeObjectURL(url); // Oslobađa memoriju nakon preuzimanja
+      },
+      (error) => {
+        console.error('Error downloading file:', error);
+      }
+    );
+  }
 
   selectedFile: File | null = null;
   onFileSelected(event: any): void {
@@ -799,6 +807,7 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
       this.selectedFile = file;
     }
   }
+
 
 
   uploadFile(): void {
@@ -823,8 +832,12 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
         this.isSuccessMessage = true;
         this.cdRef.detectChanges();
         this.loadTaskFiles(this.selectedTask.id);
-        // Osvežavanje stranice
 
+        // Resetovanje input polja za fajl
+        this.fileInput.nativeElement.value = '';
+        this.selectedFile = null;
+
+        // Osvežavanje detalja zadatka
         this.isTaskDetailsVisible = false;
         this.isTaskDetailsVisible = true;
       },
@@ -832,7 +845,6 @@ downloadTaskFile(taskId: string, fileNamee: string): void {
         console.error('Greška prilikom upload-a fajla:', error);
         this.message = 'Greška prilikom upload-a fajla.';
         this.isSuccessMessage = false;
-
       }
     );
   }

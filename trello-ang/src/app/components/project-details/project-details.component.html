@@ -198,24 +198,31 @@
         </div>
       </div>
 
+      <div class="task-files">
+        <div>
+          <h4>Task Files:</h4>
+          <!-- Provera da li ima fajlova -->
+          <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
+            <li *ngFor="let file of taskFiles; let i = index">
+              <!-- Prikaz rednog broja i formatiranog imena fajla -->
+              <span class="file-link-span">{{ i + 1 }}. </span>
+              <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
+                {{ formatFileName(file) }}
+              </a>
+            </li>
+          </ul>
+          <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
 
-        <div class="task-files">
-          <div>
-            <h4>Task Files</h4>
-            <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
-              <li *ngFor="let file of taskFiles">
-                <!-- Klik na link poziva funkciju downloadFile -->
-                <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
-                  {{file}}
-                </a>
-              </li>
-            </ul>
-            <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
-            <input *ngIf="isManager()" type="file" (change)="onFileSelected($event)" id="fileInput"  />
-            <button *ngIf="isManager()" (click)="uploadFile()" class="btn btn-upload-file">Upload File</button>
-          </div>
+          <input #fileInput type="file" (change)="onFileSelected($event)" id="fileInput" />
 
+          <!-- Dugme za upload prikazujemo samo ako je fajl selektovan -->
+          <button *ngIf="fileInput?.files?.length! > 0" (click)="uploadFile()" class="btn btn-upload-file">Upload File</button>
+        </div>
       </div>
+
+
+
+
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
         <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage

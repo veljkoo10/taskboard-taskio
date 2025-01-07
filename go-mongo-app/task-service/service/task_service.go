@@ -863,8 +863,10 @@ func ReadFilesFromHDFSDirectory(dirPath string) ([]string, error) {
 		fileNames = append(fileNames, file.Name())
 	}
 
+	// Ako nema fajlova, vraćamo praznu listu
 	return fileNames, nil
 }
+
 func TaskExists(taskID string) (bool, error) {
 	// Validacija i sanitizacija ulaza
 	taskID = SanitizeInput(taskID)
