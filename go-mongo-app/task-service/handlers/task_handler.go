@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -588,42 +589,55 @@ func (uh *TasksHandler) UpdateTaskStatusHandler(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(updatedTask)
 }
 func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
-	// Proveri HTTP metodu (POST)
+	// Definiši maksimalnu veličinu fajla (npr. 10MB)
+	const MaxFileSize = 5 * 1024 * 1024 // 10MB
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Parsiraj form-data (više fajlova + taskID)
-	err := r.ParseMultipartForm(10 << 20) // Max veličina fajla 10MB
+	err := r.ParseMultipartForm(MaxFileSize)
 	if err != nil {
+		if strings.Contains(err.Error(), "request body too large") {
+			http.Error(w, "File is too large. Maximum size is 10MB.", http.StatusRequestEntityTooLarge)
+			return
+		}
 		http.Error(w, fmt.Sprintf("Failed to parse form: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Dobavi taskID iz forme
 	taskID := r.FormValue("taskID")
 	if taskID == "" {
 		http.Error(w, "Task ID is required", http.StatusBadRequest)
 		return
 	}
 
-	// Dobavi sve fajlove iz forme
+	exists, err := service.TaskExists(taskID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Task does not exist", http.StatusNotFound)
+		return
+	}
+
 	files := r.MultipartForm.File["file"]
 	if len(files) == 0 {
 		http.Error(w, "No files uploaded", http.StatusBadRequest)
 		return
 	}
 
-	// Definiši HDFS direktorijum
 	hdfsDirPath := fmt.Sprintf("/user/hdfs/tasks/%s", taskID)
-
-	// Lista putanja fajlova
 	var filePaths []string
 
-	// Obradi sve fajlove
 	for _, fileHeader := range files {
-		// Otvori fajl
+		if err := validateFileSize(fileHeader, MaxFileSize); err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusRequestEntityTooLarge)
+			return
+		}
+
 		file, err := fileHeader.Open()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to open file: %v", err), http.StatusBadRequest)
@@ -631,7 +645,6 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 		}
 		defer file.Close()
 
-		// Preuzmi sadržaj fajla u privremeni lokalni fajl
 		localFilePath := "/tmp/" + fileHeader.Filename
 		fileBytes, err := ioutil.ReadAll(file)
 		if err != nil {
@@ -645,43 +658,48 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		// Upload fajla na HDFS
 		err = service.UploadFileToHDFS(localFilePath, hdfsDirPath, fileHeader.Filename)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to upload file to HDFS: %v", err), http.StatusInternalServerError)
 			return
 		}
 
-		// Dodaj putanju fajla u listu
 		hdfsFilePath := path.Join(hdfsDirPath, fileHeader.Filename)
 		filePaths = append(filePaths, hdfsFilePath)
 	}
 
-	// Ažuriraj MongoDB task sa listom fajlova
 	objectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid task ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	collection := db.Client.Database("testdb").Collection("tasks") // Prilagodi ime baze i kolekcije
+	collection := db.Client.Database("testdb").Collection("tasks")
 	_, err = collection.UpdateOne(
 		r.Context(),
 		bson.M{"_id": objectID},
-		bson.M{"$push": bson.M{"filePaths": bson.M{"$each": filePaths}}}, // Dodaj sve nove fajlove u niz
+		bson.M{"$push": bson.M{"filePaths": bson.M{"$each": filePaths}}},
 	)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to update task in MongoDB: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Uspešan odgovor
-	w.Header().Set("Content-Type", "application/json") // Postavi Content-Type na application/json
+	w.Header().Set("Content-Type", "application/json")
 	response := map[string]string{
 		"message": "Files uploaded and task updated successfully",
 	}
 	json.NewEncoder(w).Encode(response)
 }
+
+// validateFileSize proverava da li je fajl prevelik.
+func validateFileSize(fileHeader *multipart.FileHeader, maxSize int64) error {
+	if fileHeader.Size > maxSize {
+		return fmt.Errorf("File %s is too large. Maximum size is 1MB.", fileHeader.Filename)
+	}
+	return nil
+}
+
 func (uh *TasksHandler) DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)

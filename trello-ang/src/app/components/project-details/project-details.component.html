@@ -198,13 +198,12 @@
         </div>
       </div>
 
+      <!-- your.component.html -->
       <div class="task-files">
         <div>
           <h4>Task Files:</h4>
-          <!-- Provera da li ima fajlova -->
           <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
             <li *ngFor="let file of taskFiles; let i = index">
-              <!-- Prikaz rednog broja i formatiranog imena fajla -->
               <span class="file-link-span">{{ i + 1 }}. </span>
               <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
                 {{ formatFileName(file) }}
@@ -213,10 +212,9 @@
           </ul>
           <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
 
-          <input #fileInput type="file" (change)="onFileSelected($event)" id="fileInput" />
+          <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput" />
 
-          <!-- Dugme za upload prikazujemo samo ako je fajl selektovan -->
-          <button *ngIf="fileInput?.files?.length! > 0" (click)="uploadFile()" class="btn btn-upload-file">Upload File</button>
+          <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">Upload Files</button>
         </div>
       </div>
 
@@ -234,6 +232,29 @@
     </div>
   </div>
 </div>
+  <!-- Custom Modal for Oversized Files -->
+  <div class="modal-background" *ngIf="isOversizedFileModalVisible" (click)="closeOversizedFileModal()"></div>
+
+  <div id="oversizedFileModal" class="modal" *ngIf="isOversizedFileModalVisible">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Oversized Files</h3>
+          <button type="button" class="btn-close" (click)="closeOversizedFileModal()">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <p class="file-red-p">These files are larger than the maximum allowed size (5MB) and will not be uploaded:</p>
+          <ul class="oversized-file-list">
+            <li *ngFor="let file of oversizedFiles">{{ file }}</li>
+          </ul>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeOversizedFileModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
   <div class="modal-background" *ngIf="isAddTaskUserVisible" (click)="closeAddUserToTask()"></div>

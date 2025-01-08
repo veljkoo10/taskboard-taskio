@@ -3,7 +3,7 @@ events {}
 http {
     # Dodaj resolver da bi NGINX mogao da razjasni imena servisa
     resolver 127.0.0.11 valid=30s;
-
+    client_max_body_size 10M;
     # Redirect HTTP to HTTPS
     server {
         listen 80;

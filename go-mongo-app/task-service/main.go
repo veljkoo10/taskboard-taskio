@@ -67,8 +67,8 @@ func main() {
 	server := &http.Server{
 		Handler:      c.Handler(router),
 		Addr:         ":8080",
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  60 * time.Second,
 	}
 
 	fmt.Println("Task service started on port 8082")

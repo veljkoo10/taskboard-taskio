@@ -49,7 +49,9 @@ export class ProjectDetailsComponent {
   workflows: any[] = [];
   dependencyFormError: string = '';
   @ViewChild('fileInput') fileInput!: ElementRef; // Referenca na input element
-
+  oversizedFiles: string[] = [];
+  isOversizedFileModalVisible = false;
+  selectedFiles: File[] = [];
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
@@ -800,19 +802,40 @@ addDependency(): void {
     );
   }
 
-  selectedFile: File | null = null;
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
+
+  onFilesSelected(event: any): void {
+    const files = event.target.files;
+    const MAX_FILE_SIZE_MB = 5;
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+    if (files && files.length > 0) {
+      const oversizedFiles = [];
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].size > MAX_FILE_SIZE_BYTES) {
+          oversizedFiles.push(files[i].name);
+        }
+      }
+
+      if (oversizedFiles.length > 0) {
+        this.oversizedFiles = oversizedFiles;
+        this.isOversizedFileModalVisible = true;
+        this.selectedFiles = [];
+        this.isTaskDetailsVisible = false;
+        return;
+      }
+
+      this.selectedFiles = Array.from(files);
     }
   }
 
+  closeOversizedFileModal(): void {
+    this.isOversizedFileModalVisible = false;
+    this.isTaskDetailsVisible = true;
+  }
 
-
-  uploadFile(): void {
-    if (!this.selectedFile) {
-      console.error('No file selected!');
+  uploadFiles(): void {
+    if (!this.selectedFiles || this.selectedFiles.length === 0) {
+      console.error('No files selected!');
       return;
     }
 
@@ -823,31 +846,34 @@ addDependency(): void {
 
     const formData = new FormData();
     formData.append('taskID', this.selectedTask.id);
-    formData.append('file', this.selectedFile);
+
+    this.selectedFiles.forEach((file) => {
+      formData.append('file', file);
+    });
 
     this.taskService.uploadFile(formData).subscribe(
       (response) => {
-        console.log('Fajl je uspešno upload-ovan!', response);
-        this.message = 'Fajl je uspešno upload-ovan!';
+        console.log('Fajlovi su uspešno upload-ovani!', response);
+        this.message = 'Fajlovi su uspešno upload-ovani!';
         this.isSuccessMessage = true;
         this.cdRef.detectChanges();
         this.loadTaskFiles(this.selectedTask.id);
 
-        // Resetovanje input polja za fajl
         this.fileInput.nativeElement.value = '';
-        this.selectedFile = null;
+        this.selectedFiles = [];
 
-        // Osvežavanje detalja zadatka
         this.isTaskDetailsVisible = false;
         this.isTaskDetailsVisible = true;
       },
       (error) => {
-        console.error('Greška prilikom upload-a fajla:', error);
-        this.message = 'Greška prilikom upload-a fajla.';
+        this.message = 'Greška prilikom upload-a fajlova.';
         this.isSuccessMessage = false;
       }
     );
   }
+
+
+
 
   removeUserFromTask(userId: string): void {
     if (!this.selectedTask?.id) {

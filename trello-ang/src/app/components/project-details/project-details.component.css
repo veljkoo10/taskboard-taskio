@@ -533,7 +533,10 @@ body {
 .modal-footer .btn-success:hover {
   background-color: #216e4e;
 }
-
+.file-red-p{
+  color:red;
+  font-size: 1.0rem;
+}
 /* Dodatna stilizacija za modal */
 .modal-body h4 {
   font-size: 1.4rem;
@@ -1198,5 +1201,29 @@ p {
   padding: 10px 15px;
   border-radius: 4px;
   cursor: pointer;
+}
+/* Stilizacija samo za ul sa klasom .oversized-file-list */
+.oversized-file-list {
+  list-style-type: none; /* Uklanja standardne tačke ili brojeve */
+  padding-left: 0; /* Uklanja default padding s leva */
+}
+
+.oversized-file-list li {
+  font-weight: bold; /* Pravimo tekst u listi boldovanim */
+  margin-bottom: 10px; /* Razmak između stavki u listi */
+  padding-left: 20px; /* Dodajemo razmak sa leve strane */
+  position: relative; /* Da bi mogli da postavimo liniju sa leve strane */
+}
+
+/* Dodavanje linije sa leve strane umesto tačaka samo za .oversized-file-list */
+.oversized-file-list li::before {
+  content: ""; /* Dodaje praznu vrednost */
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%); /* Poravnanje linije sa centrom teksta */
+  width: 10px; /* Širina linije */
+  height: 2px; /* Visina linije */
+  background-color: #4CAF50; /* Boja linije */
 }
 
