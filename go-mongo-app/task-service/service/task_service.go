@@ -16,6 +16,9 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"task-service/db"
 	"task-service/models"
@@ -863,8 +866,31 @@ func ReadFilesFromHDFSDirectory(dirPath string) ([]string, error) {
 		fileNames = append(fileNames, file.Name())
 	}
 
-	// Ako nema fajlova, vraćamo praznu listu
+	// Sortiraj fajlove prema numeričkim ID-ovima u imenu
+	sort.Slice(fileNames, func(i, j int) bool {
+		iID := extractNumericID(fileNames[i])
+		jID := extractNumericID(fileNames[j])
+		return iID < jID
+	})
+
 	return fileNames, nil
+}
+
+// extractNumericID funkcija koja iz imena fajla ekstrahuje numerički ID
+func extractNumericID(fileName string) int {
+	// Pretpostavljamo da ime fajla sadrži broj (npr. "file_123.txt")
+	re := regexp.MustCompile(`\d+`)
+	match := re.FindString(fileName)
+	if match == "" {
+		return 0 // Ako nema broja, vratiti 0 kao podrazumevanu vrednost
+	}
+
+	id, err := strconv.Atoi(match)
+	if err != nil {
+		return 0 // Ako dođe do greške u konverziji, vratiti 0
+	}
+
+	return id
 }
 
 func TaskExists(taskID string) (bool, error) {

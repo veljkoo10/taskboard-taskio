@@ -7,6 +7,7 @@ import { TaskService } from 'src/app/services/task.service'; // Import TaskServi
 import {AuthService} from "../../services/auth.service";
 import {forkJoin} from "rxjs";
 import * as d3 from 'd3';
+import {ConsoleLogger} from "@angular/compiler-cli";
 
 @Component({
   selector: 'app-project-details',
@@ -368,15 +369,20 @@ addDependency(): void {
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
       (data) => {
-        this.users = this.sortUsersAlphabetically(
-          data.filter(user => !this.isUserInProject(user.id))
-        );
+        console.log('All active users:', data); // Ispis svih korisnika u konzoli
+        const filteredUsers = data.filter(user => !this.isUserInProject(user.id));
+        console.log('Filtered users:', filteredUsers); // Ispis filtriranih korisnika
+        this.users = this.sortUsersAlphabetically(filteredUsers);
+        console.log('Sorted users:', this.users); // Ispis sortiranih korisnika
       },
       (error) => {
         console.error('Error fetching active users:', error);
       }
     );
   }
+
+
+
 
 
 
@@ -426,6 +432,8 @@ addDependency(): void {
             (response) => {
               this.loadUsersForProject();
               this.loadActiveUsers();
+              this.users = [...this.users]; // Reset za Angular detekciju promena
+              this.projectUsers = [...this.projectUsers]; // Reset za Angular detekciju promena
               this.selectedUsers = [];
               this.availableSlots = this.getAvailableSpots();
             },
@@ -434,6 +442,7 @@ addDependency(): void {
               console.error('Error adding users to project:', error);
             }
           );
+
         },
         (error) => {
           console.error('Error while checking project status', error);
@@ -442,6 +451,9 @@ addDependency(): void {
     } else {
       this.showNoUsersProjectSelectedModal();
     }
+  }
+  trackByUserId(index: number, user: any): number {
+    return user.id; // Unikatan identifikator za svakog korisnika
   }
 
 
@@ -933,6 +945,7 @@ addDependency(): void {
   }
 
   removeUserFromProject(userId: string): void {
+    console.log("OBRISOOOO")
     if (!this.project?.id) {
       console.error('Project ID is missing.');
       return;
