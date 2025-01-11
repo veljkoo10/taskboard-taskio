@@ -1,4 +1,4 @@
-import {Component, Input, SimpleChanges, ElementRef, ChangeDetectionStrategy, ViewChild} from '@angular/core';
+import {Component, Input, SimpleChanges, ElementRef, ViewChild} from '@angular/core';
 import { Project } from '../../model/project.model';
 import { ProjectService } from 'src/app/services/project.service';
 import { UserService } from 'src/app/services/user.service';
@@ -13,7 +13,6 @@ import {ConsoleLogger} from "@angular/compiler-cli";
   selector: 'app-project-details',
   templateUrl: './project-details.component.html',
   styleUrls: ['./project-details.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectDetailsComponent {
   @Input() project: Project | null = null;

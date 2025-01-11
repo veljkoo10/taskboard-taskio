@@ -49,13 +49,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   goToNotifications(): void {
     this.isProfileMenuOpen = false;
+    this.stopNotificationCheck();
+    this.hasNotifications = false;
     this.router.navigate(['/notification']);
-    this.hasNotifications = false;  // Reset the notification dot when navigating to the notifications page
 
-    // Stop notification checking when on /notification page
-    if (this.notificationCheckInterval) {
-      clearInterval(this.notificationCheckInterval);  // Stop the notification check
-    }
   }
 
 
@@ -93,6 +90,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
     this.stopNotificationCheck();
     this.hasNotifications = false;
+
   }
 
   isManager(): boolean {
