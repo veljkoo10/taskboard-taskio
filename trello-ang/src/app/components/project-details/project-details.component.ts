@@ -369,11 +369,8 @@ addDependency(): void {
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
       (data) => {
-        console.log('All active users:', data); // Ispis svih korisnika u konzoli
         const filteredUsers = data.filter(user => !this.isUserInProject(user.id));
-        console.log('Filtered users:', filteredUsers); // Ispis filtriranih korisnika
         this.users = this.sortUsersAlphabetically(filteredUsers);
-        console.log('Sorted users:', this.users); // Ispis sortiranih korisnika
       },
       (error) => {
         console.error('Error fetching active users:', error);
@@ -740,8 +737,11 @@ addDependency(): void {
       (isMember) => {
         if (isMember) {
           document.querySelector('#status-block')?.setAttribute('style', "display: block");
+          document.querySelector('#fileInput')?.setAttribute('style', "display: block");
         } else {
           document.querySelector('#status-block')?.setAttribute('style', "display: none");
+          document.querySelector('#fileInput')?.setAttribute('style', "display: none");
+
           // Ako korisnik nije član, prikaži alert
           //alert('You are not a member of this task and cannot update its status.');
         }
@@ -848,37 +848,65 @@ addDependency(): void {
   uploadFiles(): void {
     if (!this.selectedFiles || this.selectedFiles.length === 0) {
       console.error('No files selected!');
+      this.message = 'Niste odabrali fajlove za upload.';
+      this.isSuccessMessage = false;
       return;
     }
 
     if (!this.selectedTask?.id) {
       console.error('Task ID is missing.');
+      this.message = 'ID taska nije pronađen.';
+      this.isSuccessMessage = false;
       return;
     }
 
-    const formData = new FormData();
-    formData.append('taskID', this.selectedTask.id);
+    const taskId = this.selectedTask.id;
+    const userId = this.user.id;
 
-    this.selectedFiles.forEach((file) => {
-      formData.append('file', file);
-    });
+    // Proveri da li je korisnik član taska
+    this.taskService.isUserOnTask(taskId, userId).subscribe(
+      (isMember) => {
+        if (isMember) {
+          // Ako je korisnik član, pripremi i pošalji fajlove
+          const formData = new FormData();
+          formData.append('taskID', taskId);
 
-    this.taskService.uploadFile(formData).subscribe(
-      (response) => {
-        console.log('Fajlovi su uspešno upload-ovani!', response);
-        this.message = 'Fajlovi su uspešno upload-ovani!';
-        this.isSuccessMessage = true;
-        this.cdRef.detectChanges();
-        this.loadTaskFiles(this.selectedTask.id);
+          this.selectedFiles.forEach((file) => {
+            formData.append('file', file);
+          });
 
-        this.fileInput.nativeElement.value = '';
-        this.selectedFiles = [];
+          // Pozivanje servisa za upload fajlova
+          this.taskService.uploadFile(formData).subscribe(
+            (response) => {
+              console.log('Fajlovi su uspešno upload-ovani!', response);
+              //this.message = 'Fajlovi su uspešno upload-ovani!';
+              this.isSuccessMessage = true;
 
-        this.isTaskDetailsVisible = false;
-        this.isTaskDetailsVisible = true;
+              // Resetovanje UI
+              this.cdRef.detectChanges();
+              this.loadTaskFiles(taskId);
+
+              this.fileInput.nativeElement.value = '';
+              this.selectedFiles = [];
+            },
+            (error) => {
+              console.error('Error uploading files:', error);
+
+              // Prikazivanje greške za upload
+              //this.message = 'Greška prilikom upload-a fajlova. Pokušajte ponovo.';
+              this.isSuccessMessage = false;
+            }
+          );
+        } else {
+          // Poruka ako korisnik nije član taska
+          console.error('User is not a member of the task.');
+          //this.message = 'Niste član ovog taska i nemate dozvolu za upload fajlova.';
+          this.isSuccessMessage = false;
+        }
       },
       (error) => {
-        this.message = 'Greška prilikom upload-a fajlova.';
+        console.error('Error checking task membership:', error);
+        this.message = 'Došlo je do greške prilikom provere članstva u tasku.';
         this.isSuccessMessage = false;
       }
     );

@@ -454,7 +454,7 @@ func AddUserToTask(taskID string, userID string) error {
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
-		bson.M{"$addToSet": bson.M{"Users": userID}},
+		bson.M{"$addToSet": bson.M{"users": userID}},
 	)
 	if err != nil {
 		return err
@@ -508,7 +508,7 @@ func RemoveUserFromTask(taskID string, userID string) error {
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
-		bson.M{"$pull": bson.M{"Users": userID}},
+		bson.M{"$pull": bson.M{"users": userID}},
 	)
 	if err != nil {
 		return err

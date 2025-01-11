@@ -168,7 +168,7 @@
         <h6>Description: {{ selectedTask?.description }}</h6>
 
         <!-- Status Promena za Clanove -->
-        <div *ngIf="!isManager() && selectedTask" id="status-block">
+        <div *ngIf="!isManager()" id="status-block">
           <label>Status:</label>
           <div class="radio-group">
             <label class="radio-label">
@@ -208,7 +208,7 @@
           </ul>
           <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
 
-          <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput" />
+          <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput"  />
 
           <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">Upload Files</button>
         </div>

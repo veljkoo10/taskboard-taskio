@@ -92,7 +92,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isProfileMenuOpen = false;
     this.router.navigate(['/login']);
     this.stopNotificationCheck();
-
+    this.hasNotifications = false;
   }
 
   isManager(): boolean {
