@@ -55,7 +55,7 @@ func main() {
 	router.HandleFunc("/tasks/upload", tasksHandler.UploadFileHandler).Methods("POST")
 	router.HandleFunc("/tasks/{taskID}/download/{fileName:.+}", tasksHandler.DownloadFileHandler).Methods("GET")
 	router.HandleFunc("/tasks/files/{taskID}", tasksHandler.GetTaskFilesHandler).Methods("GET", "OPTIONS")
-	router.HandleFunc("/tasks/{task_id}/exists", handlers.CheckTaskExistsHandler).Methods("GET")
+	router.HandleFunc("/tasks/exists", tasksHandler.TaskExistsHandler).Methods("POST")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

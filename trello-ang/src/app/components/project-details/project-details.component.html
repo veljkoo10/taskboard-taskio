@@ -387,7 +387,10 @@
           <ul class="custom-dependency-task-list">
             <li *ngFor="let task of existingTasks; trackBy: trackByTaskId" class="custom-dependency-task-item">
               <label class="custom-checkbox">
-                <input type="checkbox" [value]="task" (change)="toggleTaskDependency(task)" />
+                <input type="checkbox"   [value]="task.id"
+                       [checked]="selectedDependencies.includes(task.id) || selectedSessionTasks.includes(task.id)"
+                       (change)="toggleTaskDependency(task)"
+                       [disabled]="selectedDependencies.includes(task.id)"/>
                 <span class="custom-checkbox-label">{{ task.name | titlecase }}</span>
               </label>
             </li>
@@ -405,6 +408,4 @@
     </div>
   </div>
 </div>
-
-
 

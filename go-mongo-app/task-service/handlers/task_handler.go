@@ -802,30 +802,32 @@ func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 }
+func (uh *TasksHandler) TaskExistsHandler(w http.ResponseWriter, r *http.Request) {
+	// Ekstrakcija taskID iz tela zahteva
+	var body struct {
+		TaskID string `json:"task_id"`
+	}
 
-func CheckTaskExistsHandler(w http.ResponseWriter, r *http.Request) {
-	// Parsiranje `task_id` iz URL-a
-	vars := mux.Vars(r)
-	taskID, ok := vars["task_id"]
-	if !ok {
-		http.Error(w, "Task ID is required in URL", http.StatusBadRequest)
+	// Dekodiramo JSON telo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	// Pozivanje servisne funkcije za proveru postojanja zadatka
-	exists, err := service.TaskExists(taskID)
+	// Pozivamo TaskExists funkciju da proverimo postojanje zadatka
+	exists, err := service.TaskExists(body.TaskID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Vraćanje rezultata u JSON formatu
+	// Vraćanje odgovora
 	w.Header().Set("Content-Type", "application/json")
-	response := map[string]interface{}{
-		"task_id": taskID,
-		"exists":  exists,
-	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	if exists {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]bool{"exists": true})
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]bool{"exists": false})
 	}
 }

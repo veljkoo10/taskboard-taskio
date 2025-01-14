@@ -25,13 +25,11 @@ func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request)
 		ProjectID      string   `json:"project_id"`
 	}
 
-	// Dekodiraj telo zahteva u strukturu
 	if err := json.NewDecoder(r.Body).Decode(&workflowRequest); err != nil {
 		http.Error(w, fmt.Sprintf("Error decoding request: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Provera da li su task_id i project_id prazni
 	if workflowRequest.TaskID == "" {
 		http.Error(w, "task_id cannot be empty", http.StatusBadRequest)
 		return
@@ -40,46 +38,38 @@ func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "project_id cannot be empty", http.StatusBadRequest)
 		return
 	}
-
-	// Provera da li postoje zavisnosti
 	if len(workflowRequest.DependencyTask) == 0 {
 		http.Error(w, "dependency_task cannot be empty", http.StatusBadRequest)
 		return
 	}
 
-	// Pre nego što dodaš novi workflow, proveri da li bi nove zavisnosti mogle stvoriti ciklus
-	err := h.repo.CheckForCycle(workflowRequest.TaskID, workflowRequest.DependencyTask)
+	err := h.repo.CheckForCycle(r.Context(), workflowRequest.TaskID, workflowRequest.DependencyTask)
 	if err != nil {
-		// Ako postoji ciklus, odbijamo kreiranje workflow-a
 		http.Error(w, fmt.Sprintf("Cycle detected: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Kreiraj novi workflow
 	workflow := models.Workflow{
 		TaskID:         workflowRequest.TaskID,
 		DependencyTask: workflowRequest.DependencyTask,
-		ProjectID:      workflowRequest.ProjectID, // Postavljamo ProjectID
-		IsActive:       true,                      // Aktivni workflow
+		ProjectID:      workflowRequest.ProjectID,
+		IsActive:       true,
 	}
 
-	// Pozivamo metodu koja zapravo kreira workflow u bazi
 	err = h.repo.CreateWorkflow(r.Context(), workflow)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error creating workflow: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Uspešan odgovor sa HTTP status kodom 201 (Created)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated) // HTTP status za kreirani resurs
+	w.WriteHeader(http.StatusCreated)
 	response := map[string]string{
 		"message":    "Workflow dependency successfully created",
 		"task_id":    workflow.TaskID,
 		"project_id": workflow.ProjectID,
 	}
 
-	// JSON odgovor koji potvrđuje uspešno kreiranje
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
 	}

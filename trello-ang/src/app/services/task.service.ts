@@ -129,9 +129,6 @@ export class TaskService {
   getTaskFiles(taskId: string): Observable<{ fileName: string, content: string }[]> {
     return this.http.get<{ fileName: string, content: string }[]>(`${this.taskUrl}/files/${taskId}`);
   }
-  getAllWorkflows() {
-    return this.http.get<any[]>(`${this.workflow}/getWorkflows`);
-  }
 
   getWorkflowByProjectId(projectId: string): Observable<any[]> {
       const url = `${this.workflow}/project/${projectId}`;
@@ -141,7 +138,16 @@ export class TaskService {
           return throwError(error);
         }));
   }
-
+  getTaskDependencies(taskId: string): Observable<string[]> {
+    return this.http.get<any>(`${this.workflow}/${taskId}/dependencies`)
+      .pipe(
+        map(response => {
+          // Proverava da li je dependency_tasks niz, inače postavlja praznu listu
+          const dependencies = response?.dependency_tasks ?? [];
+          return dependencies.map((taskId: any) => String(taskId));  // Konvertuje svaki ID u string
+        })
+      );
+  }
 
 }
 

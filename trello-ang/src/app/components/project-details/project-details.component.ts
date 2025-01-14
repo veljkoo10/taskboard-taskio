@@ -57,6 +57,9 @@ export class ProjectDetailsComponent {
   selectedTaskUsers: any[] = [];
   draggedTask: any = null;
   sourceList: string = '';
+  isLoadingDependencies: boolean = false;
+  selectedSessionTasks: number[] = [];
+  allTasks: any[] = [];
 
   constructor(
     private taskService: TaskService,
@@ -95,30 +98,69 @@ export class ProjectDetailsComponent {
   }
 
   showAddDependencyModal(): void {
-    // Učitaj taskove i ažuriraj existingTasks
+    // Osiguraj da dependsOn bude niz
+    if (!Array.isArray(this.selectedTask.dependsOn)) {
+      this.selectedTask.dependsOn = []; // Inicijalizuj kao prazan niz
+    }
+
+    // Resetuj selekcije za trenutnu sesiju
+    this.selectedSessionTasks = [...this.selectedTask.dependsOn];
+
     this.loadExistingTasks();
+    this.isLoadingDependencies = true;
 
-    // Proveri da li su taskovi ažurirani
-    console.log('Updated Existing Tasks:', this.existingTasks);
+    // Pozovi API za učitavanje zavisnosti
+    this.taskService.getTaskDependencies(this.selectedTask.id).subscribe(
+      (dependencies) => {
+        // Proveri validnost zavisnosti
+        if (dependencies && Array.isArray(dependencies)) {
+          this.selectedDependencies = dependencies; // Postavi zavisnosti ako su validne
+          console.log('Selektovane zavisnosti:', this.selectedDependencies);
+        } else {
+          this.selectedDependencies = []; // Postavi prazne zavisnosti ako API vrati nevalidne podatke
+          console.error('Zavisnosti nisu validne:', dependencies);
+        }
 
-    // Postavi modal kao vidljiv
-    this.isAddDependencyModalVisible = true;
-    this.isTaskDetailsVisible=false
-    // Osveži prikaz ako je potrebno
-    this.cdRef.detectChanges();
+        // Zatvori indikator učitavanja
+        this.isLoadingDependencies = false;
+
+        // Prikaži modal i sakrij detalje taska
+        this.isAddDependencyModalVisible = true;
+        this.isTaskDetailsVisible = false;
+      },
+      (error) => {
+        // Obradi grešku
+        console.error('Greška prilikom učitavanja zavisnosti:', error);
+
+        // Postavi prazne zavisnosti i zatvori indikator učitavanja
+        this.selectedDependencies = [];
+        this.isLoadingDependencies = false;
+
+        // Prikaži korisniku poruku o grešci
+        this.dependencyFormError = 'Došlo je do greške prilikom učitavanja zavisnosti. Pokušajte ponovo.';
+
+        // Sakrij modal
+        this.isAddDependencyModalVisible = false;
+      }
+    );
   }
 
-  loadExistingTasks() {
+  loadExistingTasks(): void {
     if (!this.selectedTask || !this.selectedTask.id) {
+      console.log('Nema selektovanog taska ili ID nije validan.');
       return;
     }
 
-    // Ispisujemo ID selektovanog taska u konzoli
-    console.log('Selected Task ID:', this.selectedTask.id);
+    // Resetuj listu zadataka na osnovu svih zadataka
+    this.existingTasks = [...this.allTasks];
 
-    // Filtriramo sve zadatke tako da ne uključimo onaj koji je selektovan
+    // Filtriraj listu da ne uključuje selektovani zadatak
     this.existingTasks = this.existingTasks.filter(task => task.id !== this.selectedTask.id);
-    // Detekcija promene (ako je potrebno)
+
+    console.log('Selektovani Task ID:', this.selectedTask.id);
+    console.log('Filtrirani zadaci:', this.existingTasks);
+
+    // Osveži prikaz ako je potrebno
     this.cdRef.detectChanges();
   }
 
@@ -142,24 +184,52 @@ export class ProjectDetailsComponent {
 
   // Upravljanje selektovanim zavisnostima
   toggleTaskDependency(task: any): void {
-    const index = this.selectedDependencies.findIndex(t => t === task.id); // Tražimo ID taska u listi
-    if (index === -1) {
-      this.selectedDependencies.push(task.id); // Dodajemo ID zavisnosti
+    console.log('Pre selekcije - session:', this.selectedSessionTasks);
+    console.log('Pre selekcije - dependencies:', this.selectedDependencies);
+
+    const taskIndexInSession = this.selectedSessionTasks.indexOf(task.id);
+    const taskIndexInDependencies = this.selectedDependencies.indexOf(task.id);
+
+    // Provera da li task nije u zavisnostima
+    if (taskIndexInDependencies === -1) {
+      if (taskIndexInSession === -1) {
+        // Ako task nije selektovan ni u sesiji, dodaj ga
+        this.selectedSessionTasks.push(task.id);
+        console.log(`Task ${task.id} dodat u selectedSessionTasks`);
+      } else {
+        // Ako task jeste u sesiji, ukloni ga
+        this.selectedSessionTasks.splice(taskIndexInSession, 1);
+        console.log(`Task ${task.id} uklonjen iz selectedSessionTasks`);
+      }
     } else {
-      this.selectedDependencies.splice(index, 1); // Uklanjamo ID ako je već selektovan
+      // Ako je task već u zavisnostima, ne može se ukloniti
+      console.log(`Task ${task.id} je već u zavisnostima i ne može se ukloniti.`);
     }
+
+    console.log('Nakon selekcije - session:', this.selectedSessionTasks);
+    console.log('Nakon selekcije - dependencies:', this.selectedDependencies);
   }
 
   // Potvrda i dodavanje zavisnosti
   confirmDependencies(): void {
-    if (this.selectedDependencies.length === 0) {
+    console.log('Zavisnosti pre potvrde:', this.selectedSessionTasks);
+
+    // Proveri da li su zavisnosti selektovane
+    if (this.selectedSessionTasks.length === 0) {
       this.dependencyFormError = 'Please select at least one task.';
       return;
     }
+
+    // Sinhronizuj zavisnosti sa trenutnim sesijama
+    this.selectedDependencies = [...this.selectedSessionTasks];
+
+    // Potvrdi zavisnosti
     this.createWorkflow();
     this.closeAddDependencyModal();
     this.cdRef.detectChanges();
     this.renderGraph();
+
+    console.log('Potvrđene zavisnosti:', this.selectedDependencies);
   }
 
   addDependency(): void {
@@ -327,6 +397,9 @@ export class ProjectDetailsComponent {
         this.doneTasks = [];
         this.existingTasks = [];  // Resetovanje pre novog učitavanja
 
+        // Čuvanje svih zadataka (samo za kasniji reset i filtriranje)
+        this.allTasks = tasks.filter(task => String(task.project_id) === projectIdStr);
+
         tasks.forEach(task => {
           if (String(task.project_id) === projectIdStr) {
             switch (task.status.toLowerCase()) {
@@ -347,6 +420,8 @@ export class ProjectDetailsComponent {
             }
           }
         });
+
+        // Poziv za detekciju promena u slučaju da postoji problem sa UI
         this.cdRef.detectChanges();
 
       }, (error) => {
@@ -1013,8 +1088,7 @@ export class ProjectDetailsComponent {
         this.workflows.flatMap((workflow) => [
           workflow.task_id,
           ...workflow.dependency_task,
-        ])
-      )
+        ]))
     ).map((id) => ({
       id,
       x: Math.random() * 800,
@@ -1026,8 +1100,7 @@ export class ProjectDetailsComponent {
       workflow.dependency_task.map((dep: string) => ({
         source: workflow.task_id,
         target: dep,
-      }))
-    );
+      })))
 
     // Kreiramo markere za strelice
     newSvg
@@ -1079,8 +1152,20 @@ export class ProjectDetailsComponent {
             if (!event.active) simulation.alphaTarget(0.3).restart();
           })
           .on('drag', (event, d) => {
-            d.x = event.x;
-            d.y = event.y;
+            // Ograničavamo poziciju čvora koji se prevlači
+            const margin = 20;
+            const maxX = (newSvg.node()?.getBoundingClientRect().width || 800) - margin;
+            const maxY = (newSvg.node()?.getBoundingClientRect().height || 600) - margin;
+
+            // Ažuriramo pozicije tako da čvorovi ostanu unutar grafičkog prostora
+            d.x = Math.min(Math.max(event.x, margin), maxX);
+            d.y = Math.min(Math.max(event.y, margin), maxY);
+
+            // Ograničavanje svih čvorova tokom prevlačenja
+            nodes.forEach((node) => {
+              node.x = Math.min(Math.max(node.x, margin), maxX);
+              node.y = Math.min(Math.max(node.y, margin), maxY);
+            });
           })
           .on('end', (event, d) => {
             if (!event.active) simulation.alphaTarget(0);
@@ -1104,21 +1189,37 @@ export class ProjectDetailsComponent {
       return name.charAt(0).toUpperCase() + name.slice(1);
     }
 
-    // Ažuriranje imena taskova
-    for (const node1 of nodes) {
-      try {
-        const task = await this.taskService.getTaskById(node1.id).toPromise();
-        const taskName = task?.name || `Task ${node1.id}`;
-        text
-          .filter((t: any) => t.id === node1.id)
-          .text(formatName(taskName)); // Formatiramo naziv pre postavljanja
-      } catch (error) {
-        console.error(`Greška prilikom dohvatanja imena za ID ${node1.id}`, error);
-      }
+    // Ažuriranje imena taskova koristeći Promise.all
+    try {
+      await Promise.all(
+        nodes.map(async (node1) => {
+          try {
+            const task = await this.taskService.getTaskById(node1.id).toPromise();
+            const taskName = task?.name || `Task ${node1.id}`;
+            text
+              .filter((t: any) => t.id === node1.id)
+              .text(formatName(taskName)); // Formatiramo naziv pre postavljanja
+          } catch (error) {
+            console.error(`Greška prilikom dohvatanja imena za ID ${node1.id}`, error);
+          }
+        })
+      );
+    } catch (error) {
+      console.error('Greška u Promise.all:', error);
     }
 
     // Ažuriranje pozicija tokom simulacije
     simulation.on('tick', () => {
+      // Ograničavanje svih čvorova tokom simulacije
+      const margin = 20;
+      const maxX = (newSvg.node()?.getBoundingClientRect().width || 800) - margin;
+      const maxY = (newSvg.node()?.getBoundingClientRect().height || 600) - margin;
+
+      nodes.forEach((d) => {
+        d.x = Math.min(Math.max(d.x, margin), maxX);
+        d.y = Math.min(Math.max(d.y, margin), maxY);
+      });
+
       link
         .attr('x1', (d: any) => d.source.x)
         .attr('y1', (d: any) => d.source.y)
@@ -1129,7 +1230,6 @@ export class ProjectDetailsComponent {
 
       text.attr('x', (d: any) => d.x).attr('y', (d: any) => d.y);
     });
-
   }
 
   onDragStart(event: DragEvent, task: any, source: string) {

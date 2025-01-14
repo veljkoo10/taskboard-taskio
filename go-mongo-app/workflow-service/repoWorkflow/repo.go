@@ -1,11 +1,13 @@
 package repoWorkflow
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,73 +23,99 @@ func NewWorkflowRepository(driver neo4j.Driver) *WorkflowRepository {
 }
 
 func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models.Workflow) error {
+	// Proveravamo da li osnovni task postoji
+	exists, err := taskExists(workflow.TaskID)
+	if err != nil {
+		return fmt.Errorf("error checking if task exists: %v", err)
+	}
+	if !exists {
+		return fmt.Errorf("task with task_id %s does not exist", workflow.TaskID)
+	}
+
+	// Proveravamo da li neki od dependency_task postoji
+	for _, dep := range workflow.DependencyTask {
+		exists, err := taskExists(dep)
+		if err != nil {
+			return fmt.Errorf("error checking if dependency task exists: %v", err)
+		}
+		if !exists {
+			return fmt.Errorf("dependency task with task_id %s does not exist", dep)
+		}
+	}
+
 	session := r.driver.NewSession(neo4j.SessionConfig{})
 	defer session.Close()
 
-	// Proveravamo da li workflow već postoji sa istim task_id i project_id
+	// Proveri postojeće zavisnosti
+	existingDeps := []string{}
 	result, err := session.Run(
 		`MATCH (w:Workflow {task_id: $task_id, project_id: $project_id}) 
-         RETURN w.dependency_task AS dependency_task`,
+		 RETURN w.dependency_task AS dependency_task`,
 		map[string]interface{}{
 			"task_id":    workflow.TaskID,
-			"project_id": workflow.ProjectID, // Dodajemo ProjectID
+			"project_id": workflow.ProjectID,
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("error checking for existing workflow: %v", err)
 	}
 
-	// Ako workflow postoji, dodajemo novu zavisnost
 	if result.Next() {
-		existingDeps, _ := result.Record().Get("dependency_task")
-		var currentDeps []string
-
-		if deps, ok := existingDeps.([]interface{}); ok {
-			for _, dep := range deps {
-				if depStr, ok := dep.(string); ok {
-					currentDeps = append(currentDeps, depStr)
+		if deps, ok := result.Record().Get("dependency_task"); ok {
+			if depList, valid := deps.([]interface{}); valid {
+				for _, dep := range depList {
+					if depStr, isString := dep.(string); isString {
+						existingDeps = append(existingDeps, depStr)
+					}
 				}
 			}
 		}
+	}
 
-		// Dodajemo nove zavisnosti ako nisu već prisutne
-		for _, dep := range workflow.DependencyTask {
-			if !contains(currentDeps, dep) {
-				_, err = session.Run(
-					`MATCH (w:Workflow {task_id: $task_id, project_id: $project_id})
-                     SET w.dependency_task = w.dependency_task + $new_dep`,
-					map[string]interface{}{
-						"task_id":    workflow.TaskID,
-						"project_id": workflow.ProjectID, // Koristimo ProjectID
-						"new_dep":    dep,
-					},
-				)
-				if err != nil {
-					return fmt.Errorf("error adding dependency_task: %v", err)
-				}
+	// Kombinuj nove i postojeće zavisnosti
+	newDeps := []string{}
+	for _, dep := range workflow.DependencyTask {
+		if !contains(existingDeps, dep) {
+			newDeps = append(newDeps, dep)
+		}
+	}
+
+	// Simuliraj zavisnosti i proveri ciklus
+	simulatedDeps := append(existingDeps, newDeps...)
+	if err := r.CheckForCycle(ctx, workflow.TaskID, simulatedDeps); err != nil {
+		return fmt.Errorf("cycle detected: %v", err)
+	}
+
+	// Ako nema ciklusa, ažuriraj ili kreiraj čvor
+	if len(existingDeps) > 0 {
+		for _, dep := range newDeps {
+			_, err = session.Run(
+				`MATCH (w:Workflow {task_id: $task_id, project_id: $project_id})
+				 SET w.dependency_task = w.dependency_task + $new_dep`,
+				map[string]interface{}{
+					"task_id":    workflow.TaskID,
+					"project_id": workflow.ProjectID,
+					"new_dep":    dep,
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("error adding dependency_task: %v", err)
 			}
 		}
 	} else {
-		// Ako workflow ne postoji, kreiramo novi workflow
 		_, err := session.Run(
 			`CREATE (w:Workflow {id: $id, task_id: $task_id, dependency_task: $dependency_task, project_id: $project_id, is_active: $is_active})`,
 			map[string]interface{}{
 				"id":              uuid.New().String(),
 				"task_id":         workflow.TaskID,
 				"dependency_task": workflow.DependencyTask,
-				"project_id":      workflow.ProjectID, // Dodajemo ProjectID
+				"project_id":      workflow.ProjectID,
 				"is_active":       workflow.IsActive,
 			},
 		)
 		if err != nil {
 			return fmt.Errorf("error creating workflow: %v", err)
 		}
-	}
-
-	// Provera ciklusa ostaje nepromenjena
-	err = r.checkAndHandleCycle(workflow)
-	if err != nil {
-		return fmt.Errorf("error handling cycle for workflow %s: %v", workflow.TaskID, err)
 	}
 
 	return nil
@@ -325,44 +353,77 @@ func (r *WorkflowRepository) CheckTaskDependency(ctx context.Context, taskID str
 	return false, nil
 }
 
-// Provera ciklusa u workflow zavisnostima
-func (r *WorkflowRepository) CheckForCycle(taskID string, dependencyTasks []string) error {
+func (r *WorkflowRepository) CheckForCycle(ctx context.Context, startTaskID string, dependencies []string) error {
+	// Kreiraj graf iz baze
+	graph := make(map[string][]string)
+
+	// Popuni graf zavisnostima iz baze
 	session := r.driver.NewSession(neo4j.SessionConfig{})
 	defer session.Close()
 
-	// Proveravamo svaki dependency task pre nego što ga dodamo
-	for _, depTaskID := range dependencyTasks {
-		// Cypher upit za proveru ciklusa u zavisnostima
-		cycleCheckResult, err := session.Run(
-			`MATCH (start:Workflow {task_id: $task_id}),
-					  (end:Workflow {task_id: $dep_task_id})
-			 MATCH path = (start)-[:DEPENDS_ON*]->(end)
-			 WHERE start <> end
-			 RETURN COUNT(path) AS path_count`,
-			map[string]interface{}{
-				"task_id":     taskID,
-				"dep_task_id": depTaskID,
-			},
-		)
-		if err != nil {
-			log.Printf("Error checking cycle: %v", err)
-			return fmt.Errorf("error checking for cycle: %v", err)
+	result, err := session.Run(`MATCH (w:Workflow) RETURN w.task_id AS task_id, w.dependency_task AS dependency_task`, nil)
+	if err != nil {
+		return fmt.Errorf("error fetching workflows: %v", err)
+	}
+
+	for result.Next() {
+		// Umesto GetByIndex, koristi Get
+		taskID, ok := result.Record().Get("task_id")
+		if !ok {
+			return fmt.Errorf("task_id not found in record")
 		}
 
-		// Proveravamo da li postoji ciklus
-		if cycleCheckResult.Next() {
-			pathCount, _ := cycleCheckResult.Record().Get("path_count")
-			if pathCount.(int64) > 0 {
-				// Ako postoji ciklus, postavljamo is_active na false
-				log.Printf("Cyclic dependency detected between task %s and %s", taskID, depTaskID)
-				return fmt.Errorf("cyclic dependency detected between task %s and %s", taskID, depTaskID)
+		deps, ok := result.Record().Get("dependency_task")
+		if !ok {
+			return fmt.Errorf("dependency_task not found in record")
+		}
+
+		// Pretpostavimo da je deps lista (ako nije, moraćeš da prilagodiš ovo)
+		if depList, valid := deps.([]interface{}); valid {
+			for _, dep := range depList {
+				if depStr, isString := dep.(string); isString {
+					graph[taskID.(string)] = append(graph[taskID.(string)], depStr)
+				}
 			}
 		}
 	}
 
-	// Ako ne postoji ciklus, proces može da nastavi
+	// Dodaj novu zavisnost u graf za privremenu proveru
+	graph[startTaskID] = append(graph[startTaskID], dependencies...)
+
+	// Pokreni DFS
+	visited := make(map[string]bool)
+	stack := make(map[string]bool)
+
+	var dfs func(task string) bool
+	dfs = func(task string) bool {
+		if stack[task] {
+			return true // Ciklus pronađen
+		}
+		if visited[task] {
+			return false
+		}
+
+		visited[task] = true
+		stack[task] = true
+
+		for _, neighbor := range graph[task] {
+			if dfs(neighbor) {
+				return true
+			}
+		}
+
+		stack[task] = false
+		return false
+	}
+
+	if dfs(startTaskID) {
+		return fmt.Errorf("cyclic dependency detected")
+	}
+
 	return nil
 }
+
 func (r *WorkflowRepository) GetTaskDependencies(ctx context.Context, taskID string) ([]string, error) {
 	session := r.driver.NewSession(neo4j.SessionConfig{})
 	defer session.Close()
@@ -463,4 +524,48 @@ func (r *WorkflowRepository) GetAllWorkflowsByProjectID(ctx context.Context, pro
 	}
 
 	return workflows, nil
+}
+func taskExists(taskID string) (bool, error) {
+	// URL do task_service
+	url := "http://task-service:8080/tasks/exists" // Pretpostavka da koristiš HTTP POST za provjeru
+
+	// Priprema tela zahteva
+	requestBody := map[string]string{"task_id": taskID}
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request body: %v", err)
+	}
+
+	// Slanje HTTP POST zahteva task_service-u
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return false, fmt.Errorf("failed to send request to task_service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Čitanje odgovora
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	// Provera statusnog koda
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("received non-OK response: %s", body)
+	}
+
+	// Parsiranje odgovora
+	var result map[string]bool
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse response body: %v", err)
+	}
+
+	// Ekstrakcija polja 'exists'
+	exists, ok := result["exists"]
+	if !ok {
+		return false, fmt.Errorf("response missing 'exists' field")
+	}
+
+	return exists, nil
 }
