@@ -3,7 +3,6 @@ import {Router} from "@angular/router";
 import {AuthService} from "../../services/auth.service";
 import { User } from '../../model/user.model';
 import {UserService} from "../../services/user.service";
-import * as CryptoJS from 'crypto-js';
 
 
 @Component({
@@ -24,7 +23,6 @@ export class LoginComponent {
   message:string='';
   isSuccess: boolean = false;
 
-  SECRET_KEY = 'my-secret-key-12345';
 
   user: User = new User('', '', '', '', '', '','');
   recaptchaResponse: string = '';
@@ -56,15 +54,10 @@ export class LoginComponent {
       (response) => {
         const { access_token, role, user_id } = response;
 
-        // Enkripcija podataka pre skladištenja
-        const encryptedToken = CryptoJS.AES.encrypt(access_token, this.SECRET_KEY).toString();
-        const encryptedRole = CryptoJS.AES.encrypt(role, this.SECRET_KEY).toString();
-        const encryptedUserId = CryptoJS.AES.encrypt(user_id.toString(), this.SECRET_KEY).toString();
-
-        // Smeštanje enkriptovanih podataka u localStorage
-        localStorage.setItem('access_token', encryptedToken);
-        localStorage.setItem('role', encryptedRole);
-        localStorage.setItem('user_id', encryptedUserId);
+        // Smeštanje podataka u localStorage
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('role', role);
+        localStorage.setItem('user_id', user_id.toString());
         this.router.navigate(['/dashboard']);
       },
       (error) => {
@@ -77,6 +70,7 @@ export class LoginComponent {
       }
     );
   }
+
 
   sendMagicLink() {
     if (!this.email || !this.magicLinkUsername) {

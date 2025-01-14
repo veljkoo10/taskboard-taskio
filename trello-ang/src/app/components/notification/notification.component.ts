@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { NotificationService } from '../../services/notification.service';
 import { Notification, NotificationStatus } from '../../model/notification.model';
-import * as CryptoJS from 'crypto-js';
 
 @Component({
   selector: 'app-notification',
@@ -12,7 +11,6 @@ export class NotificationComponent implements OnInit, OnDestroy {
 
   notifications: Notification[] = [];
   noNotificationsMessage: string = "You have no notifications.";
-  private SECRET_KEY = 'my-secret-key-12345';
 
   @Output() unreadCountChanged = new EventEmitter<number>(); // Emituj broj nepročitanih notifikacija
 
@@ -23,25 +21,16 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const encryptedUserId = localStorage.getItem('user_id');
-    if (encryptedUserId) {
-      try {
-        const userId = this.decryptUserId(encryptedUserId);
-        this.loadNotifications(userId);
-      } catch (error) {
-        console.error('Error decrypting user ID', error);
-      }
+    const userId = localStorage.getItem('user_id');
+    if (userId) {
+      this.loadNotifications(userId);
     } else {
+      console.error('No user ID found in localStorage.');
     }
   }
 
   ngOnDestroy(): void {
     this.markAllUnreadAsRead();
-  }
-
-  decryptUserId(encryptedUserId: string): string {
-    const bytes = CryptoJS.AES.decrypt(encryptedUserId, this.SECRET_KEY);
-    return bytes.toString(CryptoJS.enc.Utf8);
   }
 
   loadNotifications(userId: string): void {
@@ -64,31 +53,27 @@ export class NotificationComponent implements OnInit, OnDestroy {
       }
     );
   }
+
   markAllUnreadAsRead(): void {
-    const encryptedUserId = localStorage.getItem('user_id');
-    if (!encryptedUserId) {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
       console.error('No user ID found in localStorage.');
       return;
     }
 
-    try {
-      const userId = this.decryptUserId(encryptedUserId);
-      this.notificationService.markNotificationAsRead(userId).subscribe(
-        () => {
-          this.notifications.forEach(notification => {
-            if (notification.status === NotificationStatus.Unread) {
-              notification.status = NotificationStatus.Read;
-            }
-          });
+    this.notificationService.markNotificationAsRead(userId).subscribe(
+      () => {
+        this.notifications.forEach(notification => {
+          if (notification.status === NotificationStatus.Unread) {
+            notification.status = NotificationStatus.Read;
+          }
+        });
 
-          this.unreadCountChanged.emit(this.unreadCount);
-        },
-        (error) => {
-          console.error(`Error marking notifications as read for user ID ${userId}`, error);
-        }
-      );
-    } catch (error) {
-      console.error('Error decrypting user ID', error);
-    }
+        this.unreadCountChanged.emit(this.unreadCount);
+      },
+      (error) => {
+        console.error(`Error marking notifications as read for user ID ${userId}`, error);
+      }
+    );
   }
 }

@@ -13,34 +13,39 @@
 
   <!-- Task status section -->
   <div class="task-status">
-    <div class="status-item to-do">
+    <div class="status-item to-do" (drop)="onDrop($event, 'pending')" (dragover)="allowDrop($event)">
       <p>Pending</p>
       <ul>
-        <!-- Display all pending tasks -->
-        <li *ngFor="let task of pendingTasks" (click)="showTaskDetails(task)">
-
+        <li *ngFor="let task of pendingTasks"
+            draggable="true"
+            (dragstart)="onDragStart($event, task, 'pending')"
+            (click)="showTaskDetails(task)">
           <span class="task-icon">⏳</span>
           {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
 
-    <div class="status-item in-progress">
+    <div class="status-item in-progress" (drop)="onDrop($event, 'work in progress')" (dragover)="allowDrop($event)">
       <p>Work in Progress</p>
       <ul>
-        <!-- Display all tasks with 'in-progress' status -->
-        <li *ngFor="let task of inProgressTasks" (click)="showTaskDetails(task)">
+        <li *ngFor="let task of inProgressTasks"
+            draggable="true"
+            (dragstart)="onDragStart($event, task, 'work in progress')"
+            (click)="showTaskDetails(task)">
           <span class="task-icon">🔄</span>
           {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
 
-    <div class="status-item done">
+    <div class="status-item done" (drop)="onDrop($event, 'done')" (dragover)="allowDrop($event)">
       <p>Done</p>
       <ul>
-        <!-- Display all tasks with 'done' status -->
-        <li *ngFor="let task of doneTasks" (click)="showTaskDetails(task)">
+        <li *ngFor="let task of doneTasks"
+            draggable="true"
+            (dragstart)="onDragStart($event, task, 'done')"
+            (click)="showTaskDetails(task)">
           <span class="task-icon">✔️</span>
           {{ task.name | titlecase }}
         </li>
@@ -48,11 +53,13 @@
     </div>
   </div>
 
-    <div class="workflow-container">
-      <div id="workflowGraph" style="width: 100%; height: 600px;"></div>
-    </div>
 
-    <!-- Modal Background -->
+
+  <div class="workflow-container">
+    <div id="workflowGraph" style="width: 100%; height: 600px;"></div>
+  </div>
+
+  <!-- Modal Background -->
 
 
   <!-- Modal Background -->
@@ -72,13 +79,13 @@
             <div class="form-group">
               <label for="taskName">Task name:</label>
               <input type="text" id="taskName" class="form-control" name="name" placeholder="Enter name"
-                [(ngModel)]="taskName" required />
+                     [(ngModel)]="taskName" required />
             </div>
 
             <div class="form-group">
               <label for="taskDescription">Task description:</label>
               <textarea id="taskDescription" class="form-control" name="description" rows="4"
-                placeholder="Enter description" [(ngModel)]="taskDescription" required></textarea>
+                        placeholder="Enter description" [(ngModel)]="taskDescription" required></textarea>
             </div>
 
           </form>
@@ -154,80 +161,80 @@
 
 
   <!-- Task Details Modal -->
-<div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
+  <div class="modal-background" *ngIf="isTaskDetailsVisible" (click)="closeTaskDetails()"></div>
 
-<div id="taskModal" class="modal" *ngIf="isTaskDetailsVisible">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">Task Details</h3>
-        <button type="button" class="btn-close" (click)="closeTaskDetails()">&#10005;</button>
-      </div>
-      <div class="modal-body">
-        <h6>Task Name: {{ selectedTask?.name }}</h6>
-        <h6>Description: {{ selectedTask?.description }}</h6>
+  <div id="taskModal" class="modal" *ngIf="isTaskDetailsVisible">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Task Details</h3>
+          <button type="button" class="btn-close" (click)="closeTaskDetails()">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <h6>Task Name: {{ selectedTask?.name }}</h6>
+          <h6>Description: {{ selectedTask?.description }}</h6>
 
-        <!-- Status Promena za Clanove -->
-        <div *ngIf="!isManager()" id="status-block">
-          <label>Status:</label>
-          <div class="radio-group">
-            <label class="radio-label">
-              <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status"
-                (change)="updateTaskStatus('pending')" [disabled]="isStatusDisabled('pending')" />
-              Pending
-            </label>
-            <label class="radio-label">
-              <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status"
-                (change)="updateTaskStatus('work in progress')" [disabled]="isStatusDisabled('work in progress')" />
-              Work in Progress
-            </label>
-            <label class="radio-label">
-              <input type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status"
-                (change)="updateTaskStatus('done')" [disabled]="isStatusDisabled('done')" />
-              Done
-            </label>
+          <!-- Status Promena za Clanove -->
+          <div *ngIf="!isManager()" id="status-block">
+            <label>Status:</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status"
+                       (change)="updateTaskStatus('pending')" />
+                Pending
+              </label>
+              <label class="radio-label">
+                <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status"
+                       (change)="updateTaskStatus('work in progress')" />
+                Work in Progress
+              </label>
+              <label class="radio-label">
+                <input type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status"
+                       (change)="updateTaskStatus('done')" />
+                Done
+              </label>
+            </div>
 
-          </div>
-          <div *ngIf="dependencyMessage" class="dependency-message">
-            <span>{{ dependencyMessage }}</span>
+            <div *ngIf="dependencyMessage" class="dependency-message">
+              <span>{{ dependencyMessage }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- your.component.html -->
-      <div class="task-files">
-        <div>
-          <h4>Task Files:</h4>
-          <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
-            <li *ngFor="let file of taskFiles; let i = index">
-              <span class="file-link-span">{{ i + 1 }}. </span>
-              <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
-                {{ formatFileName(file) }}
-              </a>
-            </li>
-          </ul>
-          <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
+        <!-- your.component.html -->
+        <div class="task-files">
+          <div>
+            <h4>Task Files:</h4>
+            <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
+              <li *ngFor="let file of taskFiles; let i = index">
+                <span class="file-link-span">{{ i + 1 }}. </span>
+                <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
+                  {{ formatFileName(file) }}
+                </a>
+              </li>
+            </ul>
+            <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
 
-          <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput"  />
+            <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput"  />
 
-          <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">Upload Files</button>
+            <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">Upload Files</button>
+          </div>
         </div>
-      </div>
 
 
 
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
-        <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage
-          Members</button>
-        <button *ngIf="isManager()"  class="btn btn-add-dependency" (click)="showAddDependencyModal()">
-          Add Dependency
-        </button>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cancelAddTaskUserModal()">Cancel</button>
+          <button *ngIf="isManager()" (click)="showAddTaskUserModal(selectedTask)" class="btn btn-success">Manage
+            Members</button>
+          <button *ngIf="isManager()"  class="btn btn-add-dependency" (click)="showAddDependencyModal()">
+            Add Dependency
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>
   <!-- Custom Modal for Oversized Files -->
   <div class="modal-background" *ngIf="isOversizedFileModalVisible" (click)="closeOversizedFileModal()"></div>
 

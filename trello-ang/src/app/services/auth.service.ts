@@ -102,10 +102,7 @@ export class AuthService {
     );
   }
 
-  // Provera da li je korisnik autentifikovan
-  isAuthenticated(): boolean {
-    return !!this.getDecryptedData('access_token');
-  }
+
 
   // Logout korisnika
   logout(): void {
@@ -115,13 +112,5 @@ export class AuthService {
     localStorage.removeItem('_grecaptcha');
   }
 
-  // Funkcija za dekriptovanje podataka iz localStorage
-getDecryptedData(key: string): string {
-  const encryptedData = localStorage.getItem(key);
-  if (encryptedData) {
-    const bytes = CryptoJS.AES.decrypt(encryptedData, this.SECRET_KEY);
-    return bytes.toString(CryptoJS.enc.Utf8); // Dekodira u originalni string
-  }
-  return '';
-}
+
 }

@@ -55,9 +55,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   }
 
-
-
-
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService,
               private notificationService: NotificationService,
               private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
@@ -68,8 +65,8 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  isLoggedIn() {
-    return this.authService.getDecryptedData('access_token') != '';
+  isLoggedIn(): boolean {
+    return localStorage.getItem('access_token') != null;
   }
 
   goToDashboard() {
@@ -79,10 +76,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard']);
     }
   }
-
-
-
-
 
   logout(): void {
     this.authService.logout();
@@ -94,11 +87,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   isManager(): boolean {
-    return this.authService.getDecryptedData('role') === 'Manager';
+    return localStorage.getItem('role') === 'Manager';
   }
 
   isMember(): boolean {
-    return this.authService.getDecryptedData('role') === 'Member';
+    return localStorage.getItem('role') === 'Member';
   }
 
   goToProfile(): void {
@@ -125,7 +118,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   checkForNotifications() {
-    const userID = this.authService.getDecryptedData('user_id');
+    const userID = localStorage.getItem('user_id');
 
     if (userID) {
       this.notificationService.getNotificationsByUserID(userID).subscribe(
@@ -202,7 +195,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // Clear any previous error messages
     this.errorMessage = '';
 
-    const managerId = this.authService.getDecryptedData('user_id');
+    const managerId = localStorage.getItem('user_id');
     if (!managerId) {
       this.errorMessage = 'Manager ID is missing. Please log in again.';
       return;
@@ -264,17 +257,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.project = new Project();
     this.errorMessage = '';
     this.successMessage = '';
-  }
-
-  loadProjects() {
-    this.projectService.getProjects().subscribe(
-      (data: Project[]) => {
-        this.projects = data;
-      },
-      (error) => {
-        console.error('Error fetching projects', error);
-      }
-    );
   }
 
   startNotificationCheck() {

@@ -8,6 +8,7 @@ import {AuthService} from "../../services/auth.service";
 import {forkJoin} from "rxjs";
 import * as d3 from 'd3';
 import {ConsoleLogger} from "@angular/compiler-cli";
+import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-project-details',
@@ -52,6 +53,11 @@ export class ProjectDetailsComponent {
   oversizedFiles: string[] = [];
   isOversizedFileModalVisible = false;
   selectedFiles: File[] = [];
+  isAddTaskUserVisible: boolean = false;
+  selectedTaskUsers: any[] = [];
+  draggedTask: any = null;
+  sourceList: string = '';
+
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
@@ -88,7 +94,6 @@ export class ProjectDetailsComponent {
     return this.project.max_people - this.projectUsers.length-1;
   }
 
-
   showAddDependencyModal(): void {
     // Učitaj taskove i ažuriraj existingTasks
     this.loadExistingTasks();
@@ -117,64 +122,58 @@ export class ProjectDetailsComponent {
     this.cdRef.detectChanges();
   }
 
-
-
   trackByTaskId(index: number, task: any): string {
     return task.id; // Assumes each task has a unique id
   }
 
-
-closeAddDependecyModalAll():void{
-  this.isAddDependencyModalVisible = false;
-  this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
-  this.dependencyFormError = '';
-}
-
-// Zatvaranje modala
-closeAddDependencyModal(): void {
-  this.isAddDependencyModalVisible = false;
-  this.isTaskDetailsVisible=true;
-  this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
-  this.dependencyFormError = '';
-}
-
-// Upravljanje selektovanim zavisnostima
-toggleTaskDependency(task: any): void {
-  const index = this.selectedDependencies.findIndex(t => t === task.id); // Tražimo ID taska u listi
-  if (index === -1) {
-    this.selectedDependencies.push(task.id); // Dodajemo ID zavisnosti
-  } else {
-    this.selectedDependencies.splice(index, 1); // Uklanjamo ID ako je već selektovan
-  }
-}
-
-// Potvrda i dodavanje zavisnosti
-confirmDependencies(): void {
-  if (this.selectedDependencies.length === 0) {
-    this.dependencyFormError = 'Please select at least one task.';
-    return;
+  closeAddDependecyModalAll():void{
+    this.isAddDependencyModalVisible = false;
+    this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
+    this.dependencyFormError = '';
   }
 
-  this.createWorkflow();
-  this.closeAddDependencyModal();
-  this.cdRef.detectChanges();
-  this.renderGraph();
-
-
-}
-
-addDependency(): void {
-  if (!this.selectedDependency) {
-    this.dependencyFormError = 'Please select a task.';
-    return;
+  // Zatvaranje modala
+  closeAddDependencyModal(): void {
+    this.isAddDependencyModalVisible = false;
+    this.isTaskDetailsVisible=true;
+    this.selectedDependencies = []; // Resetovanje selektovanih zavisnosti
+    this.dependencyFormError = '';
   }
 
-  this.selectedDependencies.push(this.selectedDependency.id);
-  this.closeAddDependencyModal();
-  this.renderGraph()
-}
+  // Upravljanje selektovanim zavisnostima
+  toggleTaskDependency(task: any): void {
+    const index = this.selectedDependencies.findIndex(t => t === task.id); // Tražimo ID taska u listi
+    if (index === -1) {
+      this.selectedDependencies.push(task.id); // Dodajemo ID zavisnosti
+    } else {
+      this.selectedDependencies.splice(index, 1); // Uklanjamo ID ako je već selektovan
+    }
+  }
 
-// Funkcija koja poziva createWorkflow iz TaskService
+  // Potvrda i dodavanje zavisnosti
+  confirmDependencies(): void {
+    if (this.selectedDependencies.length === 0) {
+      this.dependencyFormError = 'Please select at least one task.';
+      return;
+    }
+    this.createWorkflow();
+    this.closeAddDependencyModal();
+    this.cdRef.detectChanges();
+    this.renderGraph();
+  }
+
+  addDependency(): void {
+    if (!this.selectedDependency) {
+      this.dependencyFormError = 'Please select a task.';
+      return;
+    }
+
+    this.selectedDependencies.push(this.selectedDependency.id);
+    this.closeAddDependencyModal();
+    this.renderGraph()
+  }
+
+  // Funkcija koja poziva createWorkflow iz TaskService
   createWorkflow(): void {
     if (!this.selectedTask.id || this.selectedDependencies.length === 0 || !this.projectId) {
       console.error('Invalid data for creating workflow');
@@ -194,7 +193,6 @@ addDependency(): void {
       }
     );
   }
-
 
   resetAddMemberForm() {
     this.isAddMemberFormVisible = false;
@@ -226,8 +224,6 @@ addDependency(): void {
     } else {
       console.error('Project Title is missing!');
     }
-
-
     this.renderGraph()
   }
 
@@ -262,11 +258,8 @@ addDependency(): void {
     }
   }
 
-
-
-
   getUserInfoFromToken(): any {
-    const token = this.authService.getDecryptedData('access_token');
+    const token = localStorage.getItem('access_token');
     if (token) {
       try {
         const payloadBase64 = token.split('.')[1];
@@ -321,13 +314,13 @@ addDependency(): void {
     }
   }
 
-
   isManager(): boolean {
-    return this.authService.getDecryptedData('role') === 'Manager';
+    return localStorage.getItem('role') === 'Manager';
   }
+
   loadTasks() {
     if (this.project) {
-        const projectIdStr = String(this.project.id);
+      const projectIdStr = String(this.project.id);
       this.taskService.getTasks().subscribe(tasks => {
         this.pendingTasks = [];
         this.inProgressTasks = [];
@@ -354,8 +347,6 @@ addDependency(): void {
             }
           }
         });
-
-        // Poziv za detekciju promena u slučaju da postoji problem sa UI
         this.cdRef.detectChanges();
 
       }, (error) => {
@@ -363,7 +354,6 @@ addDependency(): void {
       });
     }
   }
-
 
   loadActiveUsers() {
     this.userService.getActiveUsers().subscribe(
@@ -376,11 +366,6 @@ addDependency(): void {
       }
     );
   }
-
-
-
-
-
 
   isSelected(user: any): boolean {
     return this.selectedUsers.includes(user);
@@ -395,6 +380,7 @@ addDependency(): void {
     }
     this.cdRef.detectChanges();
   }
+
   sortUsersAlphabetically(users: any[]): any[] {
     return users.sort((a, b) => a.username.localeCompare(b.username));
   }
@@ -409,7 +395,6 @@ addDependency(): void {
 
   addSelectedUsersToProject() {
     const project = this.project as any;
-
     if (project && this.selectedUsers.length > 0) {
 
       // Provera da li je projekat aktivan pre nego što dodate korisnike
@@ -420,7 +405,6 @@ addDependency(): void {
             this.selectedUsers = [];
             return;
           }
-
           // Ako je projekat aktivan, nastavljamo sa dodavanjem korisnika
           const userIds = this.selectedUsers.map(user => user.id);
 
@@ -448,16 +432,19 @@ addDependency(): void {
       this.showNoUsersProjectSelectedModal();
     }
   }
+
   trackByUserId(index: number, user: any): number {
     return user.id; // Unikatan identifikator za svakog korisnika
   }
 
-
-
   updateTaskStatus(status: string) {
-    if (this.selectedTask) {
-      const taskId = this.selectedTask.id;
+    // Proveri da li je zadatak izabran
+    const task = this.selectedTask || this.draggedTask;
+
+    if (task) {
+      const taskId = task.id;
       const userId = this.user.id;
+      console.log("FUNKCIJA", status);
 
       // Proveri da li je korisnik menadžer
       if (this.user.role === 'Manager') {
@@ -465,17 +452,17 @@ addDependency(): void {
         return; // Prekida izvršavanje ako je korisnik menadžer
       }
 
+      console.log("FUNKCIJA", taskId);
+      console.log("FUNKCIJA", userId);
+
       // Proveri da li je korisnik član taska
       this.taskService.isUserOnTask(taskId, userId).subscribe(
         (isMember) => {
           if (isMember) {
-            // Ako je korisnik član, ažuriraj status
-            this.selectedTask.status = status;
-
-            // Pozivanje servisa za ažuriranje statusa
+            // Ažuriranje statusa zadatka
             this.taskService.updateTaskStatus(taskId, status).subscribe(
               (response) => {
-                this.loadTasks();
+                this.loadTasks();  // Ponovo učitaj sve zadatke
                 // Resetovanje poruke o zavisnostima
                 this.dependencyMessage = null;
               },
@@ -505,23 +492,6 @@ addDependency(): void {
   }
 
 
-  isStatusDisabled(status: string): boolean {
-    if (this.selectedTask) {
-      if (status === 'done' && this.selectedTask.status !== 'work in progress') {
-        // Može da postavi "done" samo ako je "work in progress"
-        return true;
-      }
-      if (status === 'work in progress' && this.selectedTask.status !== 'pending') {
-        // Može da postavi "work in progress" samo ako je "pending"
-        return true;
-      }
-    }
-    return false;
-  }
-
-  isAddTaskUserVisible: boolean = false;
-  selectedTaskUsers: any[] = []; // Stores selected users for the task
-
   showAddTaskUserModal(task: any) {
     this.selectedTask = task; // Ensure task is valid
     this.isAddTaskUserVisible = true; // Toggle visibility
@@ -538,7 +508,6 @@ addDependency(): void {
     this.selectedTaskUsers = [];
     this.isTaskDetailsVisible=true;
     this.message = null;
-
   }
 
   // Toggle User Selection for Task
@@ -553,41 +522,41 @@ addDependency(): void {
 
   addSelectedUsersToTask() {
     if (this.selectedTask && this.selectedTaskUsers.length > 0) {
-    const taskId = this.selectedTask.id;
-    const userIds = this.selectedTaskUsers.map(user => user.id);
-    const username = this.selectedTaskUsers.map(user => user.username)
+      const taskId = this.selectedTask.id;
+      const userIds = this.selectedTaskUsers.map(user => user.id);
+      const username = this.selectedTaskUsers.map(user => user.username)
 
-    userIds.forEach(userId => {
-      // Proveri da li je korisnik već dodeljen ovom tasku
-      const isAlreadyAssigned = this.taskUsers.some(user => user.id === userId);
+      userIds.forEach(userId => {
+        // Proveri da li je korisnik već dodeljen ovom tasku
+        const isAlreadyAssigned = this.taskUsers.some(user => user.id === userId);
 
-      if (!isAlreadyAssigned) {
-        this.taskService.addUserToTask(taskId, userId).subscribe(
-          response => {
+        if (!isAlreadyAssigned) {
+          this.taskService.addUserToTask(taskId, userId).subscribe(
+            response => {
 
-            // Ažuriraj lokalni niz taskUsers
-            const addedUser = this.taskAvUsers.find(user => user.id === userId);
-            if (addedUser) {
-              // Dodaj korisnika u taskUsers
-              this.taskUsers.push(addedUser);
-              // Ukloni korisnika iz projectUsers
-              this.taskAvUsers = this.taskAvUsers.filter(user => user.id !== userId);
+              // Ažuriraj lokalni niz taskUsers
+              const addedUser = this.taskAvUsers.find(user => user.id === userId);
+              if (addedUser) {
+                // Dodaj korisnika u taskUsers
+                this.taskUsers.push(addedUser);
+                // Ukloni korisnika iz projectUsers
+                this.taskAvUsers = this.taskAvUsers.filter(user => user.id !== userId);
+              }
+            },
+            error => {
+              console.error(`Error adding user ${userId} to task ${taskId}:`, error);
+              this.showAddUserErrorModal();
             }
-          },
-          error => {
-            console.error(`Error adding user ${userId} to task ${taskId}:`, error);
-            this.showAddUserErrorModal();
-          }
-        );
-      } else {
+          );
+        } else {
           this.showUserAlreadyAddedModal();
-      }
-    });
+        }
+      });
 
-  } else {
+    } else {
       this.showNoUsersSelectedModal();
+    }
   }
-}
 
   showNoUsersSelectedModal() {
     const modal = document.querySelector('.no-users-selected-modal');
@@ -643,7 +612,6 @@ addDependency(): void {
     }
   }
 
-
   showCreateTaskForm() {
     const projectId = this.project as any;
     this.isCreateTaskFormVisible = true;
@@ -657,21 +625,6 @@ addDependency(): void {
     this.cdRef.detectChanges();
     document.querySelector('#addMemberModal')?.setAttribute("style", "display:block; opacity: 100%; margin-top: 20px");
   }
-  addMemberToProject(user: any) {
-    const project = this.project as any;
-    if (project && user) {
-
-      this.projectService.addMemberToProject(project.id, user.id).subscribe(
-        (response) => {
-          this.loadActiveUsers();
-          this.isAddMemberFormVisible = false;
-        },
-        (error) => {
-          console.error('Error adding user to project:', error);
-        }
-      );
-    }
-  }
 
   cancelCreateTask() {
     this.isCreateTaskFormVisible = false;
@@ -683,7 +636,6 @@ addDependency(): void {
   cancelAddMember() {
     this.isAddMemberFormVisible = false;
   }
-
 
   createTask() {
     if (!this.taskName || !this.taskDescription) {
@@ -721,6 +673,7 @@ addDependency(): void {
       modal.setAttribute('style', 'display: flex; opacity: 1;');
     }
   }
+
   closeMissingProjectIdModal() {
     const modal = document.querySelector('.exist-task-name');
     if (modal) {
@@ -768,12 +721,11 @@ addDependency(): void {
       }
     );
     this.loadTaskFiles(task.id);
-
   }
+
   loadTaskFiles(taskId: string): void {
     this.taskFiles = [];
     this.cdRef.detectChanges();
-
     this.taskService.getTaskFiles(taskId).subscribe(
       (files) => {
         console.log('Files loaded for task:', files);
@@ -796,7 +748,6 @@ addDependency(): void {
     return fileName.charAt(0).toUpperCase() + fileName.slice(1);
   }
 
-
   downloadTaskFile(taskId: string, fileNamee: string): void {
     this.taskService.downloadFile(taskId, fileNamee).subscribe(
       (blob) => {
@@ -812,7 +763,6 @@ addDependency(): void {
       }
     );
   }
-
 
   onFilesSelected(event: any): void {
     const files = event.target.files;
@@ -911,9 +861,6 @@ addDependency(): void {
     );
   }
 
-
-
-
   removeUserFromTask(userId: string): void {
     if (!this.selectedTask?.id) {
       console.error('Task ID is missing.');
@@ -921,24 +868,24 @@ addDependency(): void {
     }
 
     if(this.selectedTask.status !== "done"){
-    this.taskService.removeUserFromTask(this.selectedTask.id, userId).subscribe(
-      (response) => {
+      this.taskService.removeUserFromTask(this.selectedTask.id, userId).subscribe(
+        (response) => {
 
-        // Ukloni korisnika iz lokalne liste korisnika na tasku
-        const removedUser = this.taskUsers.find(user => user.id === userId);
-        this.taskUsers = this.taskUsers.filter(user => user.id !== userId);
+          // Ukloni korisnika iz lokalne liste korisnika na tasku
+          const removedUser = this.taskUsers.find(user => user.id === userId);
+          this.taskUsers = this.taskUsers.filter(user => user.id !== userId);
 
-        // Vraćanje korisnika u listu dostupnih korisnika na projektu
-        if (removedUser) {
-          this.taskAvUsers.push(removedUser);
-          this.taskAvUsers = this.sortUsersAlphabetically(this.taskAvUsers);
+          // Vraćanje korisnika u listu dostupnih korisnika na projektu
+          if (removedUser) {
+            this.taskAvUsers.push(removedUser);
+            this.taskAvUsers = this.sortUsersAlphabetically(this.taskAvUsers);
+          }
+        },
+        (error) => {
+          console.error('Error removing user from task:', error);
         }
-      },
-      (error) => {
-        console.error('Error removing user from task:', error);
-      }
-    );
-  }
+      );
+    }
     else{
       this.message = "Cant remove member from done task!";
       this.isSuccessMessage = false;
@@ -963,10 +910,12 @@ addDependency(): void {
     }
 
   }
+
   closeAddUserToTask(){
     this.isAddTaskUserVisible=false;
     this.selectedUsers=[];
   }
+
   cancelAddTaskUserModal(){
     this.isTaskDetailsVisible = false;
   }
@@ -1001,6 +950,7 @@ addDependency(): void {
       this.showDeletePeopleProjectModal();  // Show modal instead of alert
     }
   }
+
   showDeletePeopleProjectModal() {
     const modal = document.querySelector('.delete-people-project-modal');
     if (modal) {
@@ -1013,7 +963,6 @@ addDependency(): void {
       modal.setAttribute('style', 'display: none; opacity: 0;');
     }
   }
-
 
   isProjectActive(): boolean {
 
@@ -1034,6 +983,7 @@ addDependency(): void {
   showMaxPeople(){
     document.querySelector(".max-people-error-modal")?.setAttribute("style", "display:flex; opacity: 100%; margin-top: 20px")
   }
+
   async renderGraph() {
     const svg = d3
       .select(this.el.nativeElement)
@@ -1182,4 +1132,131 @@ addDependency(): void {
 
   }
 
+  onDragStart(event: DragEvent, task: any, source: string) {
+    // Služi samo za postavljanje podataka za dragovanje
+    this.draggedTask = task;
+    this.sourceList = source;
+
+    // Postavljanje podataka za dragovanje
+    event.dataTransfer?.setData('text', JSON.stringify(task));
+
+    // Prikazivanje ID-a i statusa zadatka
+    console.log(`Task ID: ${task.id}, Status: ${source}`);
+  }
+
+  allowDrop(event: DragEvent) {
+    event.preventDefault();
+  }
+
+  onDrop(event: DragEvent, targetList: string) {
+    event.preventDefault();
+
+    if (!this.draggedTask || this.sourceList === targetList) {
+      return;
+    }
+
+    const userId = this.user.id;
+    this.taskService.isUserOnTask(this.draggedTask.id, userId).subscribe(
+      (isMember) => {
+        // Premesti zadatak odmah u ciljni spisak
+        this.moveTaskToTargetList(targetList);
+
+        if (!isMember) {
+          // Ako korisnik nije član, nakon 2 sekunde ukloni zadatak iz ciljnog spiska
+          this.dependencyMessage = 'You are not a member of this task and cannot keep it in the new list. Returning task in 2 seconds.';
+
+          // Nakon 2 sekunde, vraćanje zadatka u originalni spisak
+          setTimeout(() => {
+            this.removeTaskFromTargetList(targetList);  // Ukloni zadatak iz ciljnog spiska
+            this.restoreTaskToOriginalPosition();  // Vratiti zadatak u izvorni spisak
+            this.dependencyMessage = '';  // Očisti poruku
+          }, 2000); // 2 sekunde
+
+          return; // Prekida dalje izvršavanje ako korisnik nije član
+        }
+
+        // Ako je korisnik član, ažuriraj status zadatka
+        console.log(`Task ID: ${this.draggedTask.id}, Moved from: ${this.sourceList} to: ${targetList}`);
+
+        // Ažuriraj status zadatka odmah
+        this.updateTaskStatus(targetList);
+
+        // Resetovanje promenljivih za drag-and-drop
+        this.draggedTask = null;
+        this.sourceList = '';
+      },
+      (error) => {
+        console.error('Error checking task membership:', error);
+        this.dependencyMessage = 'An error occurred while checking task membership.';
+      }
+    );
+  }
+
+
+// Funkcija koja premesti zadatak u ciljnu listu odmah
+  moveTaskToTargetList(targetList: string) {
+    // Uklanjanje zadatka iz izvornog spiska
+    this.removeTaskFromSource();
+
+    // Dodavanje zadatka u ciljni spisak
+    switch (targetList) {
+      case 'pending':
+        this.pendingTasks.push(this.draggedTask);
+        break;
+      case 'work in progress':
+        this.inProgressTasks.push(this.draggedTask);
+        break;
+      case 'done':
+        this.doneTasks.push(this.draggedTask);
+        break;
+    }
+  }
+
+// Funkcija koja uklanja zadatak iz ciljnog spiska ako korisnik nije član
+  removeTaskFromTargetList(targetList: string) {
+    switch (targetList) {
+      case 'pending':
+        this.pendingTasks = this.pendingTasks.filter(task => task !== this.draggedTask);
+        break;
+      case 'work in progress':
+        this.inProgressTasks = this.inProgressTasks.filter(task => task !== this.draggedTask);
+        break;
+      case 'done':
+        this.doneTasks = this.doneTasks.filter(task => task !== this.draggedTask);
+        break;
+    }
+  }
+
+// Vraća zadatak na originalnu poziciju ako korisnik nije član
+  restoreTaskToOriginalPosition() {
+    switch (this.sourceList) {
+      case 'pending':
+        this.pendingTasks.push(this.draggedTask);
+        break;
+      case 'work in progress':
+        this.inProgressTasks.push(this.draggedTask);
+        break;
+      case 'done':
+        this.doneTasks.push(this.draggedTask);
+        break;
+    }
+
+    // Očistiti selektovani zadatak i izvor
+    this.draggedTask = null;
+    this.sourceList = '';
+  }
+
+  removeTaskFromSource() {
+    switch (this.sourceList) {
+      case 'pending':
+        this.pendingTasks = this.pendingTasks.filter(task => task !== this.draggedTask);
+        break;
+      case 'work in progress':
+        this.inProgressTasks = this.inProgressTasks.filter(task => task !== this.draggedTask);
+        break;
+      case 'done':
+        this.doneTasks = this.doneTasks.filter(task => task !== this.draggedTask);
+        break;
+    }
+  }
 }

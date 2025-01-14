@@ -19,6 +19,7 @@ import {RecaptchaModule} from "ng-recaptcha";
 import {CapitalizePipe} from "../../pipe/capitalize.pipe";
 import {RecaptchaValueAccessor} from "../../recaptcha/recaptcha-value-accessor.directive";
 import {NotificationComponent} from "../notification/notification.component";
+import {DragDropModule} from "@angular/cdk/drag-drop";
 
 @NgModule({
   declarations: [
@@ -40,7 +41,8 @@ import {NotificationComponent} from "../notification/notification.component";
     FormsModule,
     RegisterComponent,
     RouterModule.forRoot(appRoutes),
-    RecaptchaModule
+    RecaptchaModule,
+    DragDropModule
   ],
   providers: [
     AuthGuard,

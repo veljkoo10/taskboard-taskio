@@ -39,8 +39,8 @@ export class DashboardComponent implements OnInit {
 
 
   loadProjects() {
-    const userId = this.authService.getDecryptedData('user_id');
-    const token = this.authService.getDecryptedData('access_token');
+    const userId = localStorage.getItem('user_id');
+    const token = localStorage.getItem('access_token');
 
     if (userId && token) {
       this.projectService.getProjectsByUser(userId, token).subscribe(

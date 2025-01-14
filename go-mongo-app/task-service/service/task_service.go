@@ -727,7 +727,7 @@ func GetTaskIDsForProject(projectID string) ([]string, error) {
 	return project.Tasks, nil
 }
 func GetDependenciesFromWorkflowService(taskID string) (*models.Workflow, error) {
-	url := fmt.Sprintf("http://workflow-service:8084/workflow/%s/dependencies", taskID)
+	url := fmt.Sprintf("http://workflow-service:8080/workflow/%s/dependencies", taskID)
 
 	fmt.Println(url)
 	var workflow models.Workflow
