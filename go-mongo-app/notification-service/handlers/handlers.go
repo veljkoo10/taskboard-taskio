@@ -21,18 +21,78 @@ type KeyAccount struct{}
 
 type KeyRole struct{}
 
-// KeyNotification je ključ za kontekst
 type KeyNotification struct{}
 
-// NotificationHandler struktura
 type NotificationHandler struct {
 	logger *log.Logger
 	repo   *repoNotification.NotificationRepo
 }
 
-// NewNotificationHandler kreira novi NotificationHandler
 func NewNotificationHandler(l *log.Logger, r *repoNotification.NotificationRepo) *NotificationHandler {
 	return &NotificationHandler{logger: l, repo: r}
+}
+
+func (n *NotificationHandler) FetchNotificationByID(rw http.ResponseWriter, h *http.Request) {
+	vars := mux.Vars(h)
+	id := vars["id"]
+
+	notificationID, err := gocql.ParseUUID(id)
+	if err != nil {
+		http.Error(rw, "Invalid UUID format", http.StatusBadRequest)
+		n.logger.Println("Invalid UUID format:", err)
+		return
+	}
+
+	notification, err := n.repo.FetchByID(notificationID)
+	if err != nil {
+		http.Error(rw, "Notification not found", http.StatusNotFound)
+		n.logger.Println("Error fetching notification:", err)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(rw).Encode(notification)
+	if err != nil {
+		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
+	}
+}
+
+func (n *NotificationHandler) FetchNotificationsByUser(rw http.ResponseWriter, h *http.Request) {
+	vars := mux.Vars(h)
+	userID := vars["id"]
+
+	n.logger.Println("User ID:", userID)
+
+	notifications, err := n.repo.FetchByUserID(userID)
+	if err != nil {
+		http.Error(rw, "Error fetching notifications", http.StatusInternalServerError)
+		n.logger.Println("Error fetching notifications:", err)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(rw).Encode(notifications)
+	if err != nil {
+		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
+	}
+}
+
+func (n *NotificationHandler) FetchAllNotifications(rw http.ResponseWriter, r *http.Request) {
+	notifications, err := n.repo.FetchAllNotifications()
+	if err != nil {
+		http.Error(rw, "Error fetching all notifications", http.StatusInternalServerError)
+		n.logger.Println("Error fetching all notifications:", err)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(rw).Encode(notifications)
+	if err != nil {
+		http.Error(rw, "Unable to convert notifications to JSON", http.StatusInternalServerError)
+		n.logger.Fatal("Unable to encode response:", err)
+	}
 }
 
 func (n *NotificationHandler) CreateNotification(rw http.ResponseWriter, h *http.Request) {
@@ -67,54 +127,7 @@ func (n *NotificationHandler) CreateNotification(rw http.ResponseWriter, h *http
 	}
 }
 
-func (n *NotificationHandler) GetNotificationByID(rw http.ResponseWriter, h *http.Request) {
-	vars := mux.Vars(h)
-	id := vars["id"]
-
-	notificationID, err := gocql.ParseUUID(id)
-	if err != nil {
-		http.Error(rw, "Invalid UUID format", http.StatusBadRequest)
-		n.logger.Println("Invalid UUID format:", err)
-		return
-	}
-
-	notification, err := n.repo.GetByID(notificationID)
-	if err != nil {
-		http.Error(rw, "Notification not found", http.StatusNotFound)
-		n.logger.Println("Error fetching notification:", err)
-		return
-	}
-
-	rw.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(rw).Encode(notification)
-	if err != nil {
-		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-		n.logger.Fatal("Unable to encode response:", err)
-	}
-}
-
-func (n *NotificationHandler) GetNotificationsByUserID(rw http.ResponseWriter, h *http.Request) {
-	vars := mux.Vars(h)
-	userID := vars["id"]
-
-	n.logger.Println("User ID:", userID)
-
-	notifications, err := n.repo.GetByUserID(userID)
-	if err != nil {
-		http.Error(rw, "Error fetching notifications", http.StatusInternalServerError)
-		n.logger.Println("Error fetching notifications:", err)
-		return
-	}
-
-	rw.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(rw).Encode(notifications)
-	if err != nil {
-		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-		n.logger.Fatal("Unable to encode response:", err)
-	}
-}
-
-func (n *NotificationHandler) UpdateNotificationStatus(rw http.ResponseWriter, h *http.Request) {
+func (n *NotificationHandler) UpdateNotification(rw http.ResponseWriter, h *http.Request) {
 	vars := mux.Vars(h)
 	id := vars["id"]
 
@@ -160,21 +173,36 @@ func (n *NotificationHandler) UpdateNotificationStatus(rw http.ResponseWriter, h
 
 	rw.WriteHeader(http.StatusNoContent)
 }
-func (n *NotificationHandler) GetAllNotifications(rw http.ResponseWriter, r *http.Request) {
-	notifications, err := n.repo.GetAllNotifications()
-	if err != nil {
-		http.Error(rw, "Error fetching all notifications", http.StatusInternalServerError)
-		n.logger.Println("Error fetching all notifications:", err)
+
+func (n *NotificationHandler) MarkNotificationsAsRead(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+
+	if userID == "" {
+		http.Error(rw, "User ID is required", http.StatusBadRequest)
+		n.logger.Println("User ID is empty")
 		return
 	}
 
-	rw.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(rw).Encode(notifications)
+	err := n.repo.MarkAllAsRead(userID)
 	if err != nil {
-		http.Error(rw, "Unable to convert notifications to JSON", http.StatusInternalServerError)
-		n.logger.Fatal("Unable to encode response:", err)
+		http.Error(rw, "Failed to mark notifications as read", http.StatusInternalServerError)
+		n.logger.Printf("Error marking notifications as read for user %s: %v", userID, err)
+		return
 	}
+
+	rw.WriteHeader(http.StatusNoContent)
 }
+
+func Conn() (*nats.Conn, error) {
+	conn, err := nats.Connect("nats://nats:4222")
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	return conn, nil
+}
+
 func (n *NotificationHandler) NotificationListener() {
 	n.logger.Println("method started")
 	nc, err := Conn()
@@ -371,38 +399,8 @@ func (n *NotificationHandler) NotificationListener() {
 	select {}
 }
 
-func Conn() (*nats.Conn, error) {
-	conn, err := nats.Connect("nats://nats:4222")
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-	return conn, nil
-}
-func (n *NotificationHandler) MarkAsRead(rw http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["id"]
-
-	// Validacija userID-a
-	if userID == "" {
-		http.Error(rw, "User ID is required", http.StatusBadRequest)
-		n.logger.Println("User ID is empty")
-		return
-	}
-
-	// Poziv na repo za ažuriranje
-	err := n.repo.MarkAllAsRead(userID)
-	if err != nil {
-		http.Error(rw, "Failed to mark notifications as read", http.StatusInternalServerError)
-		n.logger.Printf("Error marking notifications as read for user %s: %v", userID, err)
-		return
-	}
-
-	rw.WriteHeader(http.StatusNoContent)
-}
 func (uh *NotificationHandler) MiddlewareExtractUserFromHeader(next func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(rw http.ResponseWriter, h *http.Request) {
-		// Retrieve the token from the Authorization header
 		authHeader := h.Header.Get("Authorization")
 		if authHeader == "" {
 			http.Error(rw, "No Authorization header found", http.StatusUnauthorized)
@@ -410,7 +408,6 @@ func (uh *NotificationHandler) MiddlewareExtractUserFromHeader(next func(http.Re
 			return
 		}
 
-		// Expect the format "Bearer <token>"
 		tokenString := ""
 		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
 			tokenString = authHeader[7:]
@@ -420,7 +417,6 @@ func (uh *NotificationHandler) MiddlewareExtractUserFromHeader(next func(http.Re
 			return
 		}
 
-		// Extract userID and role from the token directly
 		userID, role, err := uh.extractUserAndRoleFromToken(tokenString)
 		if err != nil {
 			uh.logger.Println("Token extraction failed:", err)
@@ -428,30 +424,21 @@ func (uh *NotificationHandler) MiddlewareExtractUserFromHeader(next func(http.Re
 			return
 		}
 
-		// Log the userID and role
 		uh.logger.Println("User ID is:", userID, "Role is:", role)
 
-		// Add userID and role to the request context
 		ctx := context.WithValue(h.Context(), KeyAccount{}, userID)
 		ctx = context.WithValue(ctx, KeyRole{}, role)
 
-		// Update the request with the new context
 		h = h.WithContext(ctx)
 
-		// Pass the request along the middleware chain
 		next(rw, h)
 	}
 }
 
-// Helper method to extract userID and role from JWT token
 func (uh *NotificationHandler) extractUserAndRoleFromToken(tokenString string) (userID string, role string, err error) {
-	// Parse the token
-	// Replace with your actual secret key
 	secretKey := []byte(os.Getenv("TOKEN_SECRET"))
 
-	// Parse and validate the token
 	parsedToken, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		// Validate the algorithm (ensure it's signed with HMAC)
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
@@ -462,13 +449,11 @@ func (uh *NotificationHandler) extractUserAndRoleFromToken(tokenString string) (
 		return "", "", fmt.Errorf("invalid token: %v", err)
 	}
 
-	// Extract claims from the token
 	claims, ok := parsedToken.Claims.(jwt.MapClaims)
 	if !ok {
 		return "", "", fmt.Errorf("invalid token claims")
 	}
 
-	// Extract userID and role from the claims
 	userID, ok = claims["id"].(string)
 	if !ok {
 		return "", "", fmt.Errorf("userID not found in token")
@@ -483,24 +468,20 @@ func (uh *NotificationHandler) extractUserAndRoleFromToken(tokenString string) (
 }
 
 func (uh *NotificationHandler) RoleRequired(next http.HandlerFunc, roles ...string) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) { // changed 'r' to 'req'
-		// Extract the role from the request context
-		role, ok := req.Context().Value(KeyRole{}).(string) // 'req' instead of 'r'
+	return func(rw http.ResponseWriter, req *http.Request) {
+		role, ok := req.Context().Value(KeyRole{}).(string)
 		if !ok {
 			http.Error(rw, "Role not found in context", http.StatusForbidden)
 			return
 		}
 
-		// Check if the user's role is in the list of required roles
 		for _, r := range roles {
 			if role == r {
-				// If the role matches, pass the request to the next handler in the chain
-				next(rw, req) // 'req' instead of 'r'
+				next(rw, req)
 				return
 			}
 		}
 
-		// If the role doesn't match any of the required roles, return a forbidden error
 		http.Error(rw, "Forbidden", http.StatusForbidden)
 	}
 }

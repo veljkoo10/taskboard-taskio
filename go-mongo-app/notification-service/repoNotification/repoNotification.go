@@ -64,17 +64,7 @@ func New(logger *log.Logger) (*NotificationRepo, error) {
 	}, nil
 }
 
-func (repo *NotificationRepo) DropKeyspace() error {
-	dropKeyspaceQuery := fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", "notifications")
-	if err := repo.session.Query(dropKeyspaceQuery).Exec(); err != nil {
-		repo.logger.Println("Error dropping keyspace:", err)
-		return err
-	}
-	repo.logger.Println("Keyspace dropped successfully.")
-	return nil
-}
-
-func (repo *NotificationRepo) GetNotificationsByUser(userID gocql.UUID) ([]models.Notification, error) {
+func (repo *NotificationRepo) FetchNotificationsByUser(userID gocql.UUID) ([]models.Notification, error) {
 	var notifications []models.Notification
 
 	iter := repo.session.Query(`
@@ -93,8 +83,14 @@ func (repo *NotificationRepo) GetNotificationsByUser(userID gocql.UUID) ([]model
 	return notifications, nil
 }
 
-func (repo *NotificationRepo) CloseSession() {
-	repo.session.Close()
+func (repo *NotificationRepo) DropKeyspace() error {
+	dropKeyspaceQuery := fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", "notifications")
+	if err := repo.session.Query(dropKeyspaceQuery).Exec(); err != nil {
+		repo.logger.Println("Error dropping keyspace:", err)
+		return err
+	}
+	repo.logger.Println("Keyspace dropped successfully.")
+	return nil
 }
 
 func (repo *NotificationRepo) CreateTables() {
@@ -132,7 +128,55 @@ func (repo NotificationRepo) Create(notification *models.Notification) error {
 	return nil
 }
 
-func (repo *NotificationRepo) GetByID(id gocql.UUID) (*models.Notification, error) {
+func (repo *NotificationRepo) CloseSession() {
+	repo.session.Close()
+}
+
+func (repo *NotificationRepo) FetchByUserID(userID string) ([]*models.Notification, error) {
+	var notifications []*models.Notification
+
+	iter := repo.session.Query(`
+        SELECT id, user_id, message, created_at, status
+        FROM notifications 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC`, userID).Iter()
+
+	for {
+		var notification models.Notification
+		if !iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status) {
+			break
+		}
+		notifications = append(notifications, &notification)
+	}
+
+	if err := iter.Close(); err != nil {
+		repo.logger.Println("Error closing iterator:", err)
+		return nil, err
+	}
+
+	return notifications, nil
+}
+
+func (repo *NotificationRepo) FetchAllNotifications() ([]models.Notification, error) {
+	var notifications []models.Notification
+
+	iter := repo.session.Query(`
+		SELECT id, user_id, message, created_at, status FROM notifications`).Iter()
+
+	var notification models.Notification
+	for iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status) {
+		notifications = append(notifications, notification)
+	}
+
+	if err := iter.Close(); err != nil {
+		repo.logger.Println("Error fetching all notifications:", err)
+		return nil, err
+	}
+
+	return notifications, nil
+}
+
+func (repo *NotificationRepo) FetchByID(id gocql.UUID) (*models.Notification, error) {
 	var notification models.Notification
 	err := repo.session.Query(`
 		SELECT id, user_id, message, created_at, status
@@ -158,63 +202,6 @@ func (repo *NotificationRepo) GetByID(id gocql.UUID) (*models.Notification, erro
 	return &notification, nil
 }
 
-func (repo *NotificationRepo) GetByUserID(userID string) ([]*models.Notification, error) {
-	var notifications []*models.Notification
-
-	iter := repo.session.Query(`
-        SELECT id, user_id, message, created_at, status
-        FROM notifications 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC`, userID).Iter()
-
-	for {
-		var notification models.Notification
-		if !iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status) {
-			break
-		}
-		notifications = append(notifications, &notification)
-	}
-
-	if err := iter.Close(); err != nil {
-		repo.logger.Println("Error closing iterator:", err)
-		return nil, err
-	}
-
-	return notifications, nil
-}
-
-func (repo *NotificationRepo) UpdateStatus(createdAt time.Time, userID string, id gocql.UUID, status models.NotificationStatus) error {
-	err := repo.session.Query(`
-        UPDATE notifications 
-        SET status = ? 
-        WHERE user_id = ? AND created_at = ? AND id = ?`,
-		status, userID, createdAt, id).Exec()
-
-	if err != nil {
-		repo.logger.Println("Error updating notification status:", err)
-		return err
-	}
-	return nil
-}
-
-func (repo *NotificationRepo) GetAllNotifications() ([]models.Notification, error) {
-	var notifications []models.Notification
-
-	iter := repo.session.Query(`
-		SELECT id, user_id, message, created_at, status FROM notifications`).Iter()
-
-	var notification models.Notification
-	for iter.Scan(&notification.ID, &notification.UserID, &notification.Message, &notification.CreatedAt, &notification.Status) {
-		notifications = append(notifications, notification)
-	}
-
-	if err := iter.Close(); err != nil {
-		repo.logger.Println("Error fetching all notifications:", err)
-		return nil, err
-	}
-
-	return notifications, nil
-}
 func (r *NotificationRepo) MarkAllAsRead(userID string) error {
 	var notificationIDs []struct {
 		ID        gocql.UUID `json:"id"`
@@ -242,10 +229,9 @@ func (r *NotificationRepo) MarkAllAsRead(userID string) error {
 	}
 
 	if len(notificationIDs) == 0 {
-		return nil // No unread notifications, nothing to update
+		return nil
 	}
 
-	// Update status for each notification
 	for _, notification := range notificationIDs {
 		err := r.session.Query("UPDATE notifications SET status = ? WHERE user_id = ? AND created_at = ? AND id = ?",
 			"read", userID, notification.CreatedAt, notification.ID).Exec()
@@ -256,6 +242,21 @@ func (r *NotificationRepo) MarkAllAsRead(userID string) error {
 
 	return nil
 }
+
+func (repo *NotificationRepo) UpdateStatus(createdAt time.Time, userID string, id gocql.UUID, status models.NotificationStatus) error {
+	err := repo.session.Query(`
+        UPDATE notifications 
+        SET status = ? 
+        WHERE user_id = ? AND created_at = ? AND id = ?`,
+		status, userID, createdAt, id).Exec()
+
+	if err != nil {
+		repo.logger.Println("Error updating notification status:", err)
+		return err
+	}
+	return nil
+}
+
 func EnsureKeyspaceAndTable(session *gocql.Session, logger *log.Logger) error {
 	var keyspaceCount int
 	err := session.Query("SELECT count(*) FROM system_schema.keyspaces WHERE keyspace_name = 'notifications'").Scan(&keyspaceCount)

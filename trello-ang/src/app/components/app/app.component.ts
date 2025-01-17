@@ -26,25 +26,26 @@ export class AppComponent implements OnInit, OnDestroy {
   private notificationCheckInterval: any;
 
   ngOnInit() {
+    // Ako korisnik nije menadžer, pokreni proveru notifikacija
+    if (!this.isManager() && window.location.pathname !== '/notification') {
+      this.startNotificationCheck();
+    }
+
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         const currentPath = window.location.pathname;
 
-        // Stop notification checking when navigating to /notification page
-        if (currentPath === '/notification') {
-          this.stopNotificationCheck();
-          this.hasNotifications = false;  // Reset notification dot
-        } else {
-          // Start notification check when navigating to other pages
-          this.startNotificationCheck();
+        // Ako korisnik nije menadžer, pokreni proveru notifikacija kada se navigira
+        if (!this.isManager()) {
+          if (currentPath === '/notification') {
+            this.stopNotificationCheck();  // Zaustavi proveru notifikacija na stranici /notification
+            this.hasNotifications = false;  // Resetuj notifikacije
+          } else {
+            this.startNotificationCheck(); // Pokreni proveru kada se ide na neku drugu stranicu
+          }
         }
       }
     });
-
-    // If not on /notification, start checking for notifications
-    if (!this.isManager() && window.location.pathname !== '/notification') {
-      this.startNotificationCheck();
-    }
   }
 
   goToNotifications(): void {

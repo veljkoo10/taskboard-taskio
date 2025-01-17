@@ -63,10 +63,10 @@ func main() {
 
 	// Set up HTTP router
 	r := mux.NewRouter()
-	r.HandleFunc("/notifications/user/{id}", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.GetNotificationsByUserID, "Member", "Manager"))).Methods("GET", "OPTIONS")
+	r.HandleFunc("/notifications/user/{id}", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.FetchNotificationsByUser, "Member", "Manager"))).Methods("GET", "OPTIONS")
 	r.HandleFunc("/notifications", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.CreateNotification, "Member"))).Methods("POST")
-	r.HandleFunc("/notifications/all", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.GetAllNotifications, "Member"))).Methods("GET")
-	r.HandleFunc("/notifications/{id}/mark-as-read", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.MarkAsRead, "Member"))).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/notifications/all", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.FetchAllNotifications, "Member"))).Methods("GET")
+	r.HandleFunc("/notifications/{id}/mark", notificationHandler.MiddlewareExtractUserFromHeader(notificationHandler.RoleRequired(notificationHandler.MarkNotificationsAsRead, "Member"))).Methods("PUT", "OPTIONS")
 
 	// Apply CORS middleware
 	r.Use(CORS)

@@ -22,7 +22,7 @@ export class NotificationService {
   }
 
   markNotificationAsRead(notificationId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/${notificationId}/mark-as-read`, {});
+    return this.http.put<any>(`${this.apiUrl}/${notificationId}/mark`, {});
   }
 
 

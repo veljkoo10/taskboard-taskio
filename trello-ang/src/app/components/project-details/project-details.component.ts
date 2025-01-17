@@ -5,7 +5,7 @@ import { UserService } from 'src/app/services/user.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { TaskService } from 'src/app/services/task.service'; // Import TaskService
 import {AuthService} from "../../services/auth.service";
-import {forkJoin} from "rxjs";
+import {catchError, EMPTY, forkJoin, Observable, switchMap, tap, throwError} from "rxjs";
 import * as d3 from 'd3';
 import {ConsoleLogger} from "@angular/compiler-cli";
 import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
@@ -512,59 +512,42 @@ export class ProjectDetailsComponent {
     return user.id; // Unikatan identifikator za svakog korisnika
   }
 
-  updateTaskStatus(status: string) {
-    // Proveri da li je zadatak izabran
+  updateTaskStatus(status: string): Observable<any> | void {
     const task = this.selectedTask || this.draggedTask;
 
     if (task) {
       const taskId = task.id;
       const userId = this.user.id;
-      console.log("FUNKCIJA", status);
 
-      // Proveri da li je korisnik menadžer
       if (this.user.role === 'Manager') {
         this.dependencyMessage = 'Managers are not allowed to update task status.';
         return; // Prekida izvršavanje ako je korisnik menadžer
       }
 
-      console.log("FUNKCIJA", taskId);
-      console.log("FUNKCIJA", userId);
-
-      // Proveri da li je korisnik član taska
-      this.taskService.isUserOnTask(taskId, userId).subscribe(
-        (isMember) => {
+      return this.taskService.isUserOnTask(taskId, userId).pipe(
+        switchMap((isMember) => {
           if (isMember) {
-            // Ažuriranje statusa zadatka
-            this.taskService.updateTaskStatus(taskId, status).subscribe(
-              (response) => {
-                this.loadTasks();  // Ponovo učitaj sve zadatke
-                // Resetovanje poruke o zavisnostima
+            return this.taskService.updateTaskStatus(taskId, status).pipe(
+              tap(() => {
+                this.loadTasks();
                 this.dependencyMessage = null;
-              },
-              (error) => {
-                console.error('Error updating task status:', error);
-
-                // Prikazivanje lepše greške u slučaju HTTP greške 400
-                if (error.status === 400) {
-                  const errorMessage = error.error?.message || 'First, it updates the status of the main task';
-                  this.dependencyMessage = `Error: ${errorMessage}`;
-                } else {
-                  // Prikazivanje opšte greške za ostale status kodove
-                  this.dependencyMessage = 'An unexpected error occurred. Please try again later.';
-                }
-              }
+              })
             );
           } else {
             this.dependencyMessage = 'You are not a member of this task and cannot update its status.';
+            return EMPTY; // Vraćamo prazan Observable ako korisnik nije član
           }
-        },
-        (error) => {
-          console.error('Error checking task membership:', error);
-          this.dependencyMessage = 'An error occurred while checking task membership.';
-        }
+        }),
+        catchError((error) => {
+          this.dependencyMessage = 'An unexpected error occurred. Please try again later.';
+          return throwError(() => error); // Prosljeđuje grešku dalje
+        })
       );
     }
+
+    return;
   }
+
 
 
   showAddTaskUserModal(task: any) {
@@ -1038,6 +1021,33 @@ export class ProjectDetailsComponent {
       modal.setAttribute('style', 'display: none; opacity: 0;');
     }
   }
+  showUserNotOnTaskModal() {
+    const modal = document.querySelector('.user-not-on-task-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+
+  closeUserNotOnTaskModal() {
+    const modal = document.querySelector('.user-not-on-task-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
+
+  showErrorModal() {
+    const modal = document.querySelector('.update-error-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+
+  closeErrorModal() {
+    const modal = document.querySelector('.update-error-modal');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0;');
+    }
+  }
 
   isProjectActive(): boolean {
 
@@ -1256,41 +1266,59 @@ export class ProjectDetailsComponent {
     }
 
     const userId = this.user.id;
+
     this.taskService.isUserOnTask(this.draggedTask.id, userId).subscribe(
       (isMember) => {
-        // Premesti zadatak odmah u ciljni spisak
-        this.moveTaskToTargetList(targetList);
+        this.moveTaskToTargetList(targetList); // Premesti zadatak odmah u ciljni spisak
 
         if (!isMember) {
-          // Ako korisnik nije član, nakon 2 sekunde ukloni zadatak iz ciljnog spiska
           this.dependencyMessage = 'You are not a member of this task and cannot keep it in the new list. Returning task in 2 seconds.';
 
-          // Nakon 2 sekunde, vraćanje zadatka u originalni spisak
           setTimeout(() => {
-            this.removeTaskFromTargetList(targetList);  // Ukloni zadatak iz ciljnog spiska
-            this.restoreTaskToOriginalPosition();  // Vratiti zadatak u izvorni spisak
-            this.dependencyMessage = '';  // Očisti poruku
-          }, 2000); // 2 sekunde
+            this.removeTaskFromTargetList(targetList); // Ukloni zadatak iz ciljnog spiska
+            this.restoreTaskToOriginalPosition();     // Vrati zadatak u originalni spisak
+            this.dependencyMessage = '';
+            this.showUserNotOnTaskModal();
+  // Očisti poruku
+          }, 500);
 
-          return; // Prekida dalje izvršavanje ako korisnik nije član
+          return; // Prekini dalje izvršavanje
         }
 
-        // Ako je korisnik član, ažuriraj status zadatka
-        console.log(`Task ID: ${this.draggedTask.id}, Moved from: ${this.sourceList} to: ${targetList}`);
+        const updateObservable = this.updateTaskStatus(targetList);
+        if (updateObservable) {
+          updateObservable.subscribe(
+            () => {
+              console.log(`Task ID: ${this.draggedTask.id}, successfully updated to: ${targetList}`);
+              this.draggedTask = null;
+              this.sourceList = '';
+            },
+            (error) => {
+              console.error('Error updating task status:', error);
+              this.dependencyMessage = 'An error occurred while updating task status. Reverting changes.';
 
-        // Ažuriraj status zadatka odmah
-        this.updateTaskStatus(targetList);
 
-        // Resetovanje promenljivih za drag-and-drop
-        this.draggedTask = null;
-        this.sourceList = '';
+              // Zadrži zadatak 2 sekunde u ciljnjoj listi pre vraćanja
+              setTimeout(() => {
+                this.removeTaskFromTargetList(targetList);
+                this.restoreTaskToOriginalPosition();
+                this.dependencyMessage = ''; // Očisti poruku
+                this.showErrorModal();
+
+              }, 500);
+            }
+          );
+        }
       },
       (error) => {
         console.error('Error checking task membership:', error);
         this.dependencyMessage = 'An error occurred while checking task membership.';
+        this.showErrorModal();
       }
     );
   }
+
+
 
 
 // Funkcija koja premesti zadatak u ciljnu listu odmah

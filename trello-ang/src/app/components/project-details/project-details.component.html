@@ -367,6 +367,23 @@
     </div>
   </div>
 
+  <div class="user-not-on-task-modal">
+    <div class="update-error-modal-content">
+      <h2>You are not a member of this task</h2>
+      <p>Please contact the task owner to get added.</p>
+      <button class="close-modal-button" (click)="closeUserNotOnTaskModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="update-error-modal" style="display: none; opacity: 0;">
+    <div class="update-error-modal-content">
+      <h4>A task is dependent on another task.</h4>
+      <p>First update the main task.</p>
+      <button (click)="closeErrorModal()">Close</button>
+    </div>
+  </div>
+
+
 </div>
 
 <!-- Modal za dodavanje zavisnosti -->
@@ -377,7 +394,7 @@
     <div class="custom-modal-content">
       <div class="custom-modal-header">
         <button (click)="closeAddDependencyModal()" type="button" class="btn-close">✕</button>
-        <h2 class="modal-title-container">Add Task Dependencies</h2>
+        <h2 class="modal-title-container-title">Add Task Dependencies</h2>
 
       </div>
 
@@ -408,4 +425,5 @@
     </div>
   </div>
 </div>
+
 
