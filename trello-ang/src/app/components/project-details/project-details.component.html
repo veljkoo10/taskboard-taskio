@@ -179,21 +179,20 @@
             <label>Status:</label>
             <div class="radio-group">
               <label class="radio-label">
-                <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status"
-                       (change)="updateTaskStatus('pending')" />
+                <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />
                 Pending
               </label>
               <label class="radio-label">
-                <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status"
-                       (change)="updateTaskStatus('work in progress')" />
+                <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />
                 Work in Progress
               </label>
               <label class="radio-label">
-                <input type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status"
-                       (change)="updateTaskStatus('done')" />
+                <input
+                  type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />
                 Done
               </label>
             </div>
+
 
             <div *ngIf="dependencyMessage" class="dependency-message">
               <span>{{ dependencyMessage }}</span>
@@ -215,7 +214,7 @@
             </ul>
             <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
 
-            <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput"  />
+            <input   *ngIf="!isManager()"  #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput"  />
 
             <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">Upload Files</button>
           </div>

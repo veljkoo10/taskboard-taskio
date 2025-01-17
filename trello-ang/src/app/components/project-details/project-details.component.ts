@@ -190,20 +190,26 @@ export class ProjectDetailsComponent {
     const taskIndexInSession = this.selectedSessionTasks.indexOf(task.id);
     const taskIndexInDependencies = this.selectedDependencies.indexOf(task.id);
 
-    // Provera da li task nije u zavisnostima
+    // Task nije u zavisnostima (nije validiran da bude dodat)
     if (taskIndexInDependencies === -1) {
       if (taskIndexInSession === -1) {
-        // Ako task nije selektovan ni u sesiji, dodaj ga
+        // Ako task nije selektovan, dodaj ga u sesiju
         this.selectedSessionTasks.push(task.id);
         console.log(`Task ${task.id} dodat u selectedSessionTasks`);
       } else {
-        // Ako task jeste u sesiji, ukloni ga
+        // Ako je task selektovan, ukloni ga iz sesije
         this.selectedSessionTasks.splice(taskIndexInSession, 1);
         console.log(`Task ${task.id} uklonjen iz selectedSessionTasks`);
       }
     } else {
-      // Ako je task već u zavisnostima, ne može se ukloniti
-      console.log(`Task ${task.id} je već u zavisnostima i ne može se ukloniti.`);
+      // Task je u zavisnostima, ali validacija sprečava da bude selektovan
+      console.log(`Task ${task.id} je u zavisnostima, ali validacija sprečava dodavanje.`);
+
+      // Omogućiti uklanjanje iz sesije i dalje
+      if (taskIndexInSession !== -1) {
+        this.selectedSessionTasks.splice(taskIndexInSession, 1);
+        console.log(`Task ${task.id} uklonjen iz selectedSessionTasks`);
+      }
     }
 
     console.log('Nakon selekcije - session:', this.selectedSessionTasks);
@@ -217,19 +223,28 @@ export class ProjectDetailsComponent {
     // Proveri da li su zavisnosti selektovane
     if (this.selectedSessionTasks.length === 0) {
       this.dependencyFormError = 'Please select at least one task.';
-      return;
+      return; // Ako nema selektovanih zadataka, nemoj zatvoriti modal
     }
 
     // Sinhronizuj zavisnosti sa trenutnim sesijama
     this.selectedDependencies = [...this.selectedSessionTasks];
 
-    // Potvrdi zavisnosti
+    // Pozivaj createWorkflow funkciju, koja može generisati grešku
     this.createWorkflow();
-    this.closeAddDependencyModal();
-    this.cdRef.detectChanges();
-    this.renderGraph();
 
-    console.log('Potvrđene zavisnosti:', this.selectedDependencies);
+    // Dodaj timeout ili proveru da li je greška ažurirana
+    setTimeout(() => {
+      if (this.dependencyFormError) {
+        return; // Nemoj zatvoriti modal ako postoji greška
+      }
+
+      // Ako nema greške, pozovi funkciju koja zatvara modal
+      this.closeAddDependencyModal();
+      this.cdRef.detectChanges();
+      this.renderGraph();
+
+      console.log('Potvrđene zavisnosti:', this.selectedDependencies);
+    }, 500);
   }
 
   addDependency(): void {
@@ -247,19 +262,25 @@ export class ProjectDetailsComponent {
   createWorkflow(): void {
     if (!this.selectedTask.id || this.selectedDependencies.length === 0 || !this.projectId) {
       console.error('Invalid data for creating workflow');
+      this.dependencyFormError = 'Invalid data for creating workflow.';
       return;
     }
 
     console.log(this.selectedDependencies);
-    // Pozivanje funkcije createWorkflow sa trenutnim taskId, zavisnostima i projectId
+
     this.taskService.createWorkflow(this.selectedTask.id, this.selectedDependencies, this.projectId).subscribe(
       (response) => {
         console.log('Workflow created successfully: uspesno', response);
+        this.dependencyFormError = ''; // Očistite grešku na uspešno kreiranje
         this.loadFlows();
         this.renderGraph();
       },
       (error) => {
-        console.error('Error creating workflow:', error);
+        if (error.status === 400 && error.error?.message) {
+          this.dependencyFormError = error.error.message; // Postavite grešku sa backend-a
+        } else {
+          this.dependencyFormError = 'It is not possible to create a workflow because it is entering a cycle';
+        }
       }
     );
   }
@@ -512,16 +533,27 @@ export class ProjectDetailsComponent {
     return user.id; // Unikatan identifikator za svakog korisnika
   }
 
-  updateTaskStatus(status: string): Observable<any> | void {
-    const task = this.selectedTask || this.draggedTask;
+  onStatusChange(): void {
+    const status = this.selectedTask.status;
+    this.updateTaskStatus(status)?.subscribe({
+      next: () => {
+        console.log('Status successfully updated to', status);
+      },
+      error: (err: any) => {
+        console.error('Error updating status:', err);
+      }
+    });
+  }
 
+  updateTaskStatus(status: string): Observable<any> {
+    const task = this.selectedTask || this.draggedTask;
     if (task) {
       const taskId = task.id;
       const userId = this.user.id;
 
       if (this.user.role === 'Manager') {
         this.dependencyMessage = 'Managers are not allowed to update task status.';
-        return; // Prekida izvršavanje ako je korisnik menadžer
+        return EMPTY; // Uvek vraćamo Observable
       }
 
       return this.taskService.isUserOnTask(taskId, userId).pipe(
@@ -535,18 +567,19 @@ export class ProjectDetailsComponent {
             );
           } else {
             this.dependencyMessage = 'You are not a member of this task and cannot update its status.';
-            return EMPTY; // Vraćamo prazan Observable ako korisnik nije član
+            return EMPTY; // Uvek vraćamo Observable
           }
         }),
         catchError((error) => {
-          this.dependencyMessage = 'An unexpected error occurred. Please try again later.';
-          return throwError(() => error); // Prosljeđuje grešku dalje
+          this.dependencyMessage = 'You cannot update the status of a task unless the tasks it depends on have been updated.';
+          return throwError(() => error); // Prosljeđuje Observable greške
         })
       );
     }
 
-    return;
+    return EMPTY; // Uvek vraćamo Observable
   }
+
 
 
 
