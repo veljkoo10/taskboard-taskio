@@ -24,6 +24,7 @@ export class AppComponent implements OnInit, OnDestroy {
   errorMessage: string = '';
   hasNotifications: boolean = false;
   private notificationCheckInterval: any;
+  private timeoutModalInterval: any;
 
   ngOnInit() {
     // Ako korisnik nije menadžer, pokreni proveru notifikacija
@@ -46,6 +47,10 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       }
     });
+
+    this.timeoutModalInterval = setTimeout(() => {
+      this.openLogoutModal();
+    }, 840000); // 840000 ms = 14 minuta
   }
 
   goToNotifications(): void {
@@ -59,6 +64,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService,
               private notificationService: NotificationService,
               private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
+
 
   ngOnDestroy() {
     if (this.notificationCheckInterval) {
@@ -77,7 +83,27 @@ export class AppComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard']);
     }
   }
+  logoutToken(){
+    this.authService.logout();
+    this.isProfileMenuOpen = false;
+    this.router.navigate(['/login']);
+    this.stopNotificationCheck();
+    this.hasNotifications = false;
+    this.closeLogoutModal();
 
+  }
+  openLogoutModal(): void {
+    const modal = document.querySelector('.modal-wrapper');
+    if (modal) {
+      modal.setAttribute('style', 'display: flex; opacity: 100%;');
+    }
+  }
+  closeLogoutModal(){
+    const modal = document.querySelector('.modal-wrapper');
+    if (modal) {
+      modal.setAttribute('style', 'display: none; opacity: 0%');
+    }
+  }
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;

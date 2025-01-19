@@ -41,6 +41,9 @@
 
   </div>
 </nav>
+
+
+
 <router-outlet></router-outlet>
 
 <div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" #addProjectModal>
@@ -82,6 +85,21 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" data-bs-dismiss="modal" (click)="resetForm()">Cancel</button>
         <button type="button" class="btn btn-success" (click)="createProject()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-wrapper add-user-error-modal" id="logoutReminderModal" tabindex="-1" aria-labelledby="logoutReminderLabel" aria-hidden="true">
+  <div class="modal-dialog modal-custom">
+    <div class="modal-content modal-error">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title title-highlight" id="logoutReminderLabel">Session Timeout</h5>
+      </div>
+      <div class="modal-body modal-body-custom">
+        Your token has expired. Log in again.
+      </div>
+      <div class="modal-footer modal-footer-custom">
+        <button type="button" class="btn btn-primary btn-primary-custom" (click)="logoutToken()">Logout</button>
       </div>
     </div>
   </div>

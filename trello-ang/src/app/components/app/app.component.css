@@ -146,7 +146,7 @@
 }
 
 .modal-content {
-  background-color: #f0f0f0;
+  background-color: #ffffff;
 }
 
 .btn-danger {
@@ -245,4 +245,80 @@ body {
 }
 .profile-icon {
   position: relative;
+}
+/* Custom stil za modal */
+.modal-wrapper {
+  z-index: 1000;
+  display: flex; /* Koristi flexbox za centriranje */
+  align-items: center; /* Vertikalno centriranje */
+  justify-content: center; /* Horizontalno centriranje */
+  background-color: rgba(0, 0, 0, 0.7); /* Poluprovidna pozadina */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.modal-custom {
+  max-width: 600px;
+  width: 100%; /* Osigurava da modal zauzima 100% širine do 600px */
+  margin: 0 auto; /* Automatsko poravnanje modala na sredinu */
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column; /* Poravnanje unutar modala */
+}
+
+.modal-header-custom {
+  border: 1px solid #d3d3d3;
+  font-weight: bold;
+  display: flex;
+  justify-content: center; /* Centriranje naslova u headeru */
+  align-items: center;
+  text-align: center; /* Centriranje teksta */
+  width: 100%; /* Osigurava da header zauzima celu širinu */
+}
+
+.title-highlight {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.close-btn-custom {
+  background-color: transparent;
+  border: none;
+  color: #721c24;
+  font-size: 1.2rem;
+}
+
+.close-btn-custom:hover {
+  color: #d9534f;
+}
+
+.modal-body-custom {
+  padding: 20px;
+  font-size: 1.2rem;
+  text-align: center; /* Centriranje teksta unutar tela modala */
+}
+
+.modal-footer-custom {
+  display: flex;
+  justify-content: center; /* Centriranje dugmadi u footeru */
+  padding: 15px;
+  border: 1px solid #d3d3d3;
+}
+
+.btn-primary-custom {
+  background-color: #2a8a68;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1.1rem;
+  border-radius: 5px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn-primary-custom:hover {
+  background-color: #216e4e;
+  transform: scale(1.05);
 }
