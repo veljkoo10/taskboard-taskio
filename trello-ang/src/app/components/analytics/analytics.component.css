@@ -1,0 +1,14 @@
+.analytics-container {
+    padding: 20px;
+    color: green; /* Zelena boja za tekst */
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+  }
+  h2 {
+    margin-bottom: 10px;
+    color: green; /* Zelena boja za naslov */
+  }
+  p {
+    margin: 5px 0;
+  }
+  

@@ -9,4 +9,5 @@ use (
 	workflow-service
 	Hdfs
 	event_sourcing
+	analytics-service
 )

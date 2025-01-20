@@ -64,6 +64,21 @@ services:
     networks:
       - app-network
 
+  analytics-service:
+    build: ./analytics-service
+    ports:
+      - "${ANALYTICS_SERVICE_PORT:-8088}:8080"
+    depends_on:
+      - nats
+      - mongo
+      - task-service
+    environment:
+      - NATS_URL=${NATS_URL:-nats://nats:4222}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/testdb}
+      - ENABLE_BOOTSTRAP=${ENABLE_BOOTSTRAP:-true}
+    networks:
+      - app-network
+
 
   event:
     build: ./workflow-service

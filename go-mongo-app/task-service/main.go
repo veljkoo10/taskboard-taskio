@@ -41,7 +41,7 @@ func main() {
 	tasksHandler := handlers.NewTasksHandler(logger, taskRepo, nc)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/tasks", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTasks, "Manager", "Member"))).Methods("GET")
+	router.HandleFunc("/tasks", tasksHandler.GetTasks).Methods("GET")
 	router.HandleFunc("/tasks/{taskId}", tasksHandler.GetTaskByID).Methods("GET", "OPTIONS")
 	router.HandleFunc("/tasks/create/{project_id}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.CreateTaskHandler, "Manager"))).Methods("POST")
 	router.HandleFunc("/tasks/{taskId}/users/{userId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.AddUserToTaskHandler, "Manager"))).Methods("PUT")

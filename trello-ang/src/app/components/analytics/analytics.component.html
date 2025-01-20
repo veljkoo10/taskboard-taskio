@@ -1,0 +1,36 @@
+<div class="analytics-container">
+    <h1>Analytics</h1>
+    
+    <!-- Ukupan broj zadataka -->
+    <p *ngIf="taskCount !== null">Total Tasks Assigned: {{ taskCount }}</p>
+    <p *ngIf="taskCount === null">Loading task count...</p>
+  
+    <!-- Broj zadataka po statusima -->
+    <div *ngIf="taskCountByStatus; else loadingStatus">
+      <p>Pending: {{ taskCountByStatus.pending }}</p>
+      <p>Work in Progress: {{ taskCountByStatus['work in progress'] }}</p>
+      <p>Done: {{ taskCountByStatus.done }}</p>
+    </div>
+    
+    <!-- Placeholder dok se statusi učitavaju -->
+    <ng-template #loadingStatus>
+      <p>Loading task status count...</p>
+    </ng-template>
+  
+    <h2>Projects and tasks on which the user is engaged:</h2>
+    <!-- Prikazivanje projekata i zadataka korisnika -->
+    <div *ngIf="userProjects; else loadingProjects">
+      <div *ngFor="let project of userProjects">
+        <h3>{{ project.project }}</h3>
+        <ul>
+          <li *ngFor="let task of project.tasks">{{ task }}</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Placeholder dok se projekti učitavaju -->
+    <ng-template #loadingProjects>
+      <p>Loading user projects...</p>
+    </ng-template>
+  </div>
+  

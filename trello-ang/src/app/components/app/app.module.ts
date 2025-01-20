@@ -20,6 +20,7 @@ import {CapitalizePipe} from "../../pipe/capitalize.pipe";
 import {RecaptchaValueAccessor} from "../../recaptcha/recaptcha-value-accessor.directive";
 import {NotificationComponent} from "../notification/notification.component";
 import {DragDropModule} from "@angular/cdk/drag-drop";
+import { AnalyticsComponent } from '../analytics/analytics.component';
 
 @NgModule({
   declarations: [
@@ -32,7 +33,8 @@ import {DragDropModule} from "@angular/cdk/drag-drop";
     VerifyMagicLinkComponent,
     CapitalizePipe,
     RecaptchaValueAccessor,
-    NotificationComponent
+    NotificationComponent,
+    AnalyticsComponent
   ],
   imports: [
     BrowserModule,

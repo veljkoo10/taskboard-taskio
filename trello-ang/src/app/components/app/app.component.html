@@ -17,6 +17,7 @@
 
     <!-- Right elements -->
     <div class="d-flex align-items-center position-relative">
+      <a class="nav-link custom-link position-relative" style="margin-right: 10px;" routerLink="/analytics" *ngIf="isMember()">Analytics</a>
       <!-- Profile icon -->
       <a class="nav-link custom-link position-relative" (click)="toggleProfileMenu()">
         <img [src]="profilePath" alt="Profile Icon" width="45" height="45" style="cursor: pointer;">

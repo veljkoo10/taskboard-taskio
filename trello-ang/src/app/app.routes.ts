@@ -8,6 +8,7 @@ import { MagicLinkComponent } from './components/magic-login/magic-login.compone
 import { VerifyMagicLinkComponent } from './components/verify-magic-link/verify-magic-link.component';
 import { AuthGuard } from './guards/auth.guard';
 import {NotificationComponent} from "./components/notification/notification.component";
+import { AnalyticsComponent } from './components/analytics/analytics.component';
 
 export const appRoutes: Routes = [
   {
@@ -38,6 +39,7 @@ export const appRoutes: Routes = [
     canActivate: [AuthGuard],
     data: { roles: ['Manager','Member'] }
   },
+  { path: 'analytics', component: AnalyticsComponent},
   { path: 'magic-login', component: MagicLinkComponent },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
