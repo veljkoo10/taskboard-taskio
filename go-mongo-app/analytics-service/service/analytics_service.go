@@ -103,6 +103,59 @@ func CountUserTasksByStatus(userID string) (map[string]int, error) {
 	return statusCount, nil
 }
 
+// CheckProjectStatus - Proverava da li je projekat završen
+func CheckProjectStatus(projectID string) (bool, error) {
+	endpoint := fmt.Sprintf("http://project-service:8080/projects/isActive/%s", projectID)
+	resp, err := http.Get(endpoint)
+	if err != nil {
+		return false, errors.New("failed to fetch project status")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("project-service returned status: %d", resp.StatusCode)
+	}
+
+	// Provera JSON odgovora
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, errors.New("failed to read project status response")
+	}
+
+	fmt.Printf("Response body: %s\n", string(body))
+
+	var response struct {
+		Result bool `json:"result"`
+	}
+
+	if err := json.Unmarshal(body, &response); err != nil {
+		return false, fmt.Errorf("failed to parse project status response: %v", err)
+	}
+
+	return response.Result, nil
+}
+
+// GetUserProjects - Dohvata sve projekte korisnika
+func GetUserProjects(userID string) ([]models.Project, error) {
+	endpoint := fmt.Sprintf("http://project-service:8080/projects/user/%s", userID)
+	resp, err := http.Get(endpoint)
+	if err != nil {
+		return nil, errors.New("failed to fetch projects")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("project-service returned status: %d", resp.StatusCode)
+	}
+
+	var projects []models.Project
+	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
+		return nil, errors.New("failed to decode projects")
+	}
+
+	return projects, nil
+}
+
 // GetUserTasksAndProject - Funkcija koja vraća taskove korisnika i ime projekta
 func GetUserTasksAndProject(userID string) (map[string]interface{}, error) {
 	// Pozivamo task-service da preuzmemo sve taskove

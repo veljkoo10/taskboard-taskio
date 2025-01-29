@@ -27,6 +27,7 @@ func main() {
 	router.HandleFunc("/analytics/countusers/{user_id}", handlers.CountUserTasks).Methods("GET")
 	router.HandleFunc("/analytics/countusersbystatus/{user_id}", handlers.CountUserTaskStatusHandler).Methods("GET")
 	router.HandleFunc("/analytics/usertaskproject/{user_id}", handlers.UserTasksAndProjectHandler).Methods("GET")
+	router.HandleFunc("/analytics/project-completion-ontime/{userId}", handlers.CheckIfProjectCompletedOnTime).Methods("GET")
 
 	// CORS setup
 	c := cors.New(cors.Options{

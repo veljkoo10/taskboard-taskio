@@ -10,6 +10,7 @@ export class AnalyticsComponent implements OnInit {
   taskCount: number | null = null;
   taskCountByStatus: { done: number; pending: number; 'work in progress': number } | null = null;
   userProjects: any = null;
+  projectCompletionStatuses: any = null;
 
   constructor(private analyticsService: AnalyticsService) {}
 
@@ -21,6 +22,7 @@ export class AnalyticsComponent implements OnInit {
       this.loadTaskCount(userId);
       this.loadTaskCountByStatus(userId)
       this.loadUserProjects(userId)
+      this.loadProjectCompletionStatuses(userId)
     } else {
       console.error('User ID not found in localStorage.');
     }
@@ -57,6 +59,17 @@ export class AnalyticsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to fetch user projects:', err);
+      },
+    });
+  }
+
+  private loadProjectCompletionStatuses(userId: string): void {
+    this.analyticsService.getProjectCompletionStatuses(userId).subscribe({
+      next: (data) => {
+        this.projectCompletionStatuses = data;
+      },
+      error: (err) => {
+        console.error('Failed to fetch project completion statuses:', err);
       },
     });
   }

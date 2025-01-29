@@ -32,5 +32,20 @@
     <ng-template #loadingProjects>
       <p>Loading user projects...</p>
     </ng-template>
+    <h2>Project Completion Status:</h2>
+    <div *ngIf="projectCompletionStatuses; else loadingProjectCompletion">
+      <div *ngFor="let status of projectCompletionStatuses">
+        <h3>{{ status.project }}</h3>
+        <p>Status: {{ status.completed ? 'Completed' : 'Not Completed' }}</p>
+        <p>On Time: {{ status.completedOnTime ? 'Yes' : 'No' }}</p>
+        <p>Expected End Date: {{ status.expectedEndDate }}</p>
+      </div>
+    </div>
+    
+    <ng-template #loadingProjectCompletion>
+      <p>Loading project completion statuses...</p>
+    </ng-template>
+    
+
   </div>
   

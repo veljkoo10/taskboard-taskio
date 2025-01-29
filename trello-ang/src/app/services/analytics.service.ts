@@ -46,5 +46,15 @@ export class AnalyticsService{
     return this.http.get<any>(url);
   }
 
+  getProjectCompletionStatuses(userId: string) {
+    const url = `https://localhost/taskio/analytics/project-completion-ontime/${userId}`;
+    return this.http.get<any[]>(url).pipe(
+      catchError((error) => {
+        console.error('Error fetching project completion statuses:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
 
 }

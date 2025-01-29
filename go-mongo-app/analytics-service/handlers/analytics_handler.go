@@ -8,6 +8,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"log"
 	"net/http"
+	"time"
 )
 
 type AnalyticsHandler struct {
@@ -106,4 +107,51 @@ func UserTasksAndProjectHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+// CheckIfProjectCompletedOnTime - Proverava da li su projekti korisnika završeni na vreme
+func CheckIfProjectCompletedOnTime(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userId"]
+
+	// Dohvatanje projekata korisnika
+	projects, err := service.GetUserProjects(userID)
+	if err != nil {
+		http.Error(w, "Failed to fetch user projects", http.StatusInternalServerError)
+		return
+	}
+
+	result := []map[string]interface{}{}
+
+	for _, project := range projects {
+		// Provera statusa projekta
+		isActive, err := service.CheckProjectStatus(project.ID.Hex())
+		if err != nil {
+			http.Error(w, "Failed to fetch project status", http.StatusInternalServerError)
+			return
+		}
+
+		// Parsiranje predviđenog datuma završetka
+		expectedEndDate, err := time.Parse("2006-01-02", project.ExpectedEndDate)
+		if err != nil {
+			http.Error(w, "Invalid project expected end date format", http.StatusInternalServerError)
+			return
+		}
+
+		completedOnTime := false
+		if !isActive {
+			// Ako projekat nije aktivan, uporedi trenutni datum sa očekivanim završetkom
+			completedOnTime = time.Now().Before(expectedEndDate) || time.Now().Equal(expectedEndDate)
+		}
+
+		result = append(result, map[string]interface{}{
+			"project":         project.Title,
+			"completed":       !isActive,
+			"completedOnTime": completedOnTime,
+			"expectedEndDate": project.ExpectedEndDate,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
