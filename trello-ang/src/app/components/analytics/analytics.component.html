@@ -16,6 +16,8 @@
     <ng-template #loadingStatus>
       <p>Loading task status count...</p>
     </ng-template>
+
+    <hr>
   
     <h2>Projects and tasks on which the user is engaged:</h2>
     <!-- Prikazivanje projekata i zadataka korisnika -->
@@ -32,6 +34,8 @@
     <ng-template #loadingProjects>
       <p>Loading user projects...</p>
     </ng-template>
+<hr>
+
     <h2>Project Completion Status:</h2>
     <div *ngIf="projectCompletionStatuses; else loadingProjectCompletion">
       <div *ngFor="let status of projectCompletionStatuses">
@@ -46,6 +50,21 @@
       <p>Loading project completion statuses...</p>
     </ng-template>
     
+    <hr>
+    <h2>Task Analytics</h2>
+  
+  <!-- Prikazivanje zadataka i njihovih statusa -->
+  <div *ngIf="taskAnalytics && taskAnalytics.length > 0">
+    <div *ngFor="let task of taskAnalytics">
+      <h3>Task ID: {{ task.task_id }}</h3>
+      <p><strong>Status Times:</strong></p>
+      <ul>
+        <li>Pending: {{ task.status_times.pending }} seconds</li>
+        <li>Work in Progress: {{ task.status_times['work in progress'] }} seconds</li>
+      </ul>
+      <p><strong>Last Status Change:</strong> {{ task.last_status_change | date: 'medium' }}</p>
+    </div>
+  </div>
 
   </div>
   

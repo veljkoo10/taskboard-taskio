@@ -1,6 +1,7 @@
 package main
 
 import (
+	bootstrap "analytics-service/bootstrap"
 	"analytics-service/db"
 	"analytics-service/handlers"
 	"fmt"
@@ -20,6 +21,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.DisconnectMongo()
+	bootstrap.ClearAnalytics()
 
 	router := mux.NewRouter()
 
@@ -28,6 +30,9 @@ func main() {
 	router.HandleFunc("/analytics/countusersbystatus/{user_id}", handlers.CountUserTaskStatusHandler).Methods("GET")
 	router.HandleFunc("/analytics/usertaskproject/{user_id}", handlers.UserTasksAndProjectHandler).Methods("GET")
 	router.HandleFunc("/analytics/project-completion-ontime/{userId}", handlers.CheckIfProjectCompletedOnTime).Methods("GET")
+	router.HandleFunc("/analytics/status-change", handlers.HandleStatusChange).Methods("POST")
+	router.HandleFunc("/analytics/tasks", handlers.HandleGetTaskAnalytics).Methods("GET")
+	router.HandleFunc("/analytics/user/{userID}", handlers.GetUserTaskAnalyticsHandler).Methods("GET")
 
 	// CORS setup
 	c := cors.New(cors.Options{

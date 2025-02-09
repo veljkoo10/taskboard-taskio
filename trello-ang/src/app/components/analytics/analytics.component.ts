@@ -11,11 +11,13 @@ export class AnalyticsComponent implements OnInit {
   taskCountByStatus: { done: number; pending: number; 'work in progress': number } | null = null;
   userProjects: any = null;
   projectCompletionStatuses: any = null;
+  taskAnalytics: any[] | null = null; // Podaci o zadacima
 
   constructor(private analyticsService: AnalyticsService) {}
 
   ngOnInit(): void {
     const userId = localStorage.getItem('user_id');
+
 
     if (userId) {
       // Pozivamo funkciju samo ako je userId definisan
@@ -23,6 +25,7 @@ export class AnalyticsComponent implements OnInit {
       this.loadTaskCountByStatus(userId)
       this.loadUserProjects(userId)
       this.loadProjectCompletionStatuses(userId)
+      this.loadTaskAnalytics(userId); // Poziv izdvojene funkcije
     } else {
       console.error('User ID not found in localStorage.');
     }
@@ -71,6 +74,19 @@ export class AnalyticsComponent implements OnInit {
       error: (err) => {
         console.error('Failed to fetch project completion statuses:', err);
       },
+    });
+  }
+
+  // Funkcija za učitavanje analitike zadataka korisnika
+  private loadTaskAnalytics(userId: string): void {
+    this.analyticsService.getUserTaskAnalytics(userId).subscribe({
+      next: (data) => {
+        this.taskAnalytics = data; // Postavljanje dobijenih podataka u promenljivu
+        console.log('Task Analytics:', this.taskAnalytics);
+      },
+      error: (err) => {
+        console.error('Error fetching task analytics:', err);
+      }
     });
   }
 }

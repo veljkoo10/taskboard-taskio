@@ -56,5 +56,13 @@ export class AnalyticsService{
     );
   }
 
-
+  getUserTaskAnalytics(userId: string): Observable<any> {
+    const url = `${this.baseUrl}/user/${userId}`; // Konstruišemo URL
+    return this.http.get<any>(url).pipe(
+      catchError((error) => {
+        console.error('Error fetching user task analytics:', error);
+        return throwError(() => new Error('Failed to fetch user task analytics.'));
+      })
+    );
+}
 }

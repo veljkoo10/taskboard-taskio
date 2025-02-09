@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -119,6 +120,14 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 		bson.M{"_id": taskObjectID},
 		bson.M{"$set": bson.M{"status": status}},
 	)
+
+	sendToAnalyticsService(map[string]interface{}{
+		"task_id":         taskID,
+		"previous_status": task.Status,
+		"new_status":      status,
+		"timestamp":       time.Now().UTC().Format(time.RFC3339),
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error updating task status: %w", err)
 	}
@@ -390,6 +399,12 @@ func CreateTask(projectID, name, description string, dependsOn []string) (*model
 		"description": description,
 		"depends_on":  dependsOn,
 	}
+
+	sendToAnalyticsService(map[string]interface{}{
+		"task_id":    task.ID.Hex(),
+		"new_status": "pending",
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+	})
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -920,4 +935,14 @@ func TaskExists(taskID string) (bool, error) {
 
 	// Ako nema greške, zadatak postoji
 	return true, nil
+}
+
+func sendToAnalyticsService(payload map[string]interface{}) {
+	url := "http://analytics-service:8080/analytics/status-change"
+	jsonPayload, _ := json.Marshal(payload)
+
+	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		log.Printf("Failed to send analytics data: %v", err)
+	}
 }
