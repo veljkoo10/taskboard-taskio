@@ -171,3 +171,49 @@ func (h *WorkflowHandler) GetFlowByProjectIDHandler(w http.ResponseWriter, r *ht
 		return
 	}
 }
+
+// DeleteWorkflowByTaskIDHandler je HTTP handler za brisanje workflow-a na osnovu taskID-a iz URL-a.
+func (h *WorkflowHandler) DeleteWorkflowByTaskIDHandler(w http.ResponseWriter, r *http.Request) {
+	// Dohvati taskID iz URL parametara
+	vars := mux.Vars(r)
+	taskID, ok := vars["task_id"]
+	if !ok || taskID == "" {
+		http.Error(w, "taskID is required in the URL", http.StatusBadRequest)
+		return
+	}
+
+	// Pozovi repository za brisanje workflow-a po taskID-u
+	err := h.repo.DeleteWorkflowsByTaskID(taskID)
+	if err != nil {
+		http.Error(w, "Failed to delete workflows: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Uspešan odgovor
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Workflows deleted successfully"}`))
+}
+
+func (h WorkflowHandler) GetWorkflowByTaskIDHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID, ok := vars["task_id"]
+	if !ok || taskID == "" {
+		http.Error(w, "taskID is required in the URL", http.StatusBadRequest)
+		return
+	}
+
+	// Pozovi repo metodu za pretragu workflow-a
+	found, err := h.repo.FindWorkflowByTaskID(taskID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Vrati rezultat
+	if found {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Workflow found"})
+	} else {
+		http.Error(w, "Workflow not found", http.StatusNotFound)
+	}
+}

@@ -53,6 +53,7 @@ func main() {
 	router.HandleFunc("/projects/title/{managerId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.HandleCheckProjectByTitle, "Manager"))).Methods("POST")
 	router.HandleFunc("/projects/{projectID}/tasks/{taskID}", projectsHandler.AddTaskToProjectHandler).Methods("PUT", "OPTIONS")
 	router.HandleFunc("/projects/isActive/{projectId}", projectsHandler.IsActiveProject).Methods("GET")
+	router.HandleFunc("/projects/delete/{projectID}", projectsHandler.DeleteProjectByIDHandler).Methods("DELETE")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

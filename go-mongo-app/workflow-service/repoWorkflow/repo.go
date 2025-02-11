@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 	"workflow-service/models"
 )
 
@@ -568,4 +569,66 @@ func taskExists(taskID string) (bool, error) {
 	}
 
 	return exists, nil
+}
+
+// DeleteWorkflowsByTaskID briše sve workflow-e koji imaju određeni TaskID.
+func (r *WorkflowRepository) DeleteWorkflowsByTaskID(taskID string) error {
+	session := r.driver.NewSession(neo4j.SessionConfig{
+		AccessMode: neo4j.AccessModeWrite, // Ispravan AccessMode
+	})
+	defer session.Close()
+
+	_, err := session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		query := `
+        MATCH (w:Workflow {task_id: $taskID})
+        DETACH DELETE w
+    `
+		params := map[string]interface{}{
+			"taskID": taskID,
+		}
+		_, err := tx.Run(query, params)
+		return nil, err
+	})
+
+	return err
+}
+
+func (r WorkflowRepository) FindWorkflowByTaskID(taskID string) (bool, error) {
+	// Otvori sesiju za Neo4j
+	session := r.driver.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+	defer session.Close()
+
+	// Pokreni transakciju za pretragu
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	fmt.Println(ctx)
+
+	query := `
+		MATCH (w:Workflow {task_id: $taskID})
+		RETURN w LIMIT 1
+	`
+
+	// Izvrši transakciju
+	found := false
+	_, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		result, err := tx.Run(query, map[string]interface{}{
+			"taskID": taskID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("query execution failed: %v", err)
+		}
+
+		// Proveri da li postoje rezultati
+		if result.Next() {
+			found = true
+		}
+		return nil, nil
+	})
+
+	if err != nil {
+		return false, fmt.Errorf("failed to search for workflow with task_id %s: %v", taskID, err)
+	}
+
+	return found, nil
 }

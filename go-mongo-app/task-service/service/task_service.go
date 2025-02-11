@@ -946,3 +946,101 @@ func sendToAnalyticsService(payload map[string]interface{}) {
 		log.Printf("Failed to send analytics data: %v", err)
 	}
 }
+
+func DeleteTaskByID(taskID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Poveži se na kolekciju "tasks" u MongoDB-u
+	collection := db.Client.Database("testdb").Collection("tasks")
+
+	// Pokušaj da parsiraš taskID kao ObjectID
+	objID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return fmt.Errorf("invalid taskID format: %v", err)
+	}
+
+	// Log za taskID
+	fmt.Println("Attempting to delete task with ObjectID:", objID)
+
+	// Dohvati task iz baze kako bismo dobili task podataka
+	var task models.Task
+	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&task)
+	if err != nil {
+		return fmt.Errorf("could not find task with ID %v: %v", taskID, err)
+	}
+
+	// 1. Pozovi brisanje workflow-a vezanog za ovaj task
+	err = deleteWorkflow(taskID)
+	if err != nil {
+		return fmt.Errorf("failed to delete workflow for task with ID %s: %v", taskID, err)
+	}
+
+	// 2. Obriši task iz MongoDB-a
+	filter := bson.M{"_id": objID}
+	result, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %v", err)
+	}
+
+	// Proveri rezultat
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("no task found with taskID: %s", taskID)
+	}
+
+	// Uspešno obrisano
+	fmt.Println("Task deleted successfully")
+	return nil
+}
+
+// deleteWorkflow šalje HTTP DELETE zahtev za brisanje workflow-a na workflow-service
+func deleteWorkflow(taskID string) error {
+	// URL za GET zahtev da proverimo da li workflow postoji za ovaj task
+	url := fmt.Sprintf("http://workflow-service:8080/check/%s", taskID)
+
+	// Napravimo GET zahtev da proverimo da li workflow postoji
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Setuj HTTP klijent sa timeout-om
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	// Pošaljemo zahtev
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Ako je status kod 404, znači da workflow za taj task ne postoji
+	if resp.StatusCode == http.StatusNotFound {
+		// Ako workflow ne postoji, ne radimo ništa i vraćamo nil (nema greške)
+		fmt.Printf("No workflow found for task %s, skipping workflow deletion\n", taskID)
+		return nil
+	}
+
+	// Ako je workflow pronađen, sada možemo da pošaljemo DELETE zahtev za brisanje workflow-a
+	deleteUrl := fmt.Sprintf("http://workflow-service:8080/delete/%s", taskID)
+	reqDelete, err := http.NewRequest("DELETE", deleteUrl, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %v", err)
+	}
+
+	// Pošaljemo DELETE zahtev za brisanje workflow-a
+	respDelete, err := client.Do(reqDelete)
+	if err != nil {
+		return fmt.Errorf("failed to send delete request: %v", err)
+	}
+	defer respDelete.Body.Close()
+
+	// Proveri status kod odgovora DELETE zahteva
+	if respDelete.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to delete workflow, received status: %s", respDelete.Status)
+	}
+
+	// Workflow uspešno obrisan
+	fmt.Printf("Workflow for task %s deleted successfully\n", taskID)
+	return nil
+}

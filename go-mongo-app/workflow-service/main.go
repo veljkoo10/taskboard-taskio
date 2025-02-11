@@ -51,6 +51,8 @@ func main() {
 	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.CheckDependencyHandler).Methods("GET")
 	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.GetTaskDependenciesHandler).Methods("GET")
 	r.HandleFunc("/workflow/project/{project_id}", workflowHandler.GetFlowByProjectIDHandler).Methods("GET")
+	r.HandleFunc("/workflow/delete/{task_id}", workflowHandler.DeleteWorkflowByTaskIDHandler).Methods("DELETE")
+	r.HandleFunc("/workflow/check/{task_id}", workflowHandler.GetWorkflowByTaskIDHandler).Methods("GET")
 
 	// Konfiguracija CORS-a
 	c := cors.New(cors.Options{

@@ -56,6 +56,7 @@ func main() {
 	router.HandleFunc("/tasks/{taskID}/download/{fileName:.+}", tasksHandler.DownloadFileHandler).Methods("GET")
 	router.HandleFunc("/tasks/files/{taskID}", tasksHandler.GetTaskFilesHandler).Methods("GET", "OPTIONS")
 	router.HandleFunc("/tasks/exists", tasksHandler.TaskExistsHandler).Methods("POST")
+	router.HandleFunc("/tasks/delete/{taskID}", tasksHandler.DeleteTaskByIDHandler).Methods("DELETE")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

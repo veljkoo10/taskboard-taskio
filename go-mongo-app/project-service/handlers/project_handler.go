@@ -470,3 +470,24 @@ func (uh *ProjectHandler) RoleRequired(next http.HandlerFunc, roles ...string) h
 		http.Error(rw, "Forbidden", http.StatusForbidden)
 	}
 }
+
+func (uh *ProjectHandler) DeleteProjectByIDHandler(w http.ResponseWriter, r *http.Request) {
+	// Dohvati projectID iz URL parametara
+	vars := mux.Vars(r)
+	projectID, ok := vars["projectID"]
+	if !ok || projectID == "" {
+		http.Error(w, "projectID is required in the URL", http.StatusBadRequest)
+		return
+	}
+
+	// Pozovi repository za brisanje project po taskID-u
+	err := service.DeleteProjectByID(projectID)
+	if err != nil {
+		http.Error(w, "Failed to delete project: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Uspešan odgovor
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"project deleted successfully"}`))
+}

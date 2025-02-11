@@ -549,3 +549,84 @@ func isValidRegexInput(input string) bool {
 func isValidTitle(title string) bool {
 	return regexp.MustCompile(`^[a-zA-Z0-9\s]+$`).MatchString(title)
 }
+
+// DeleteProjectByID briše projekat iz MongoDB-a i briše sve povezane taskove.
+func DeleteProjectByID(projectID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Poveži se na kolekciju "projects" u MongoDB-u
+	collection := db.Client.Database("testdb").Collection("projects")
+
+	// Pokušaj da parsiraš projectID kao ObjectID
+	objID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return fmt.Errorf("invalid projectID format: %v", err)
+	}
+
+	// Log za projectID
+	fmt.Println("Attempting to delete project with ObjectID:", objID)
+
+	// Dohvati projekat iz baze kako bismo dobili listu taskova
+	var project models.Project
+	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&project)
+	if err != nil {
+		return fmt.Errorf("could not find project with ID %v: %v", projectID, err)
+	}
+
+	// 2. Pozovi brisanje svih taskova vezanih za projekat
+	for _, taskID := range project.Tasks {
+		// Napravi DELETE zahtev za svaki task
+		err := deleteTask(taskID)
+		if err != nil {
+			return fmt.Errorf("failed to delete task with ID %s: %v", taskID, err)
+		}
+	}
+
+	// 3. Obriši projekat iz MongoDB-a
+	filter := bson.M{"_id": objID}
+	result, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to delete project: %v", err)
+	}
+
+	// Proveri rezultat
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("no project found with projectID: %s", projectID)
+	}
+
+	// Uspešno obrisano
+	fmt.Println("Project deleted successfully")
+	return nil
+}
+
+// deleteTask šalje HTTP DELETE zahtev za brisanje taska na task-service
+func deleteTask(taskID string) error {
+	// URL za DELETE zahtev
+	url := fmt.Sprintf("http://task-service:8080/tasks/delete/%s", taskID)
+
+	// Napravimo DELETE zahtev
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Setuj HTTP klijent sa timeout-om
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	// Pošaljemo zahtev
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Proveri status kod odgovora
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to delete task, received status: %s", resp.Status)
+	}
+
+	// Task uspešno obrisan
+	fmt.Printf("Task %s deleted successfully\n", taskID)
+	return nil
+}

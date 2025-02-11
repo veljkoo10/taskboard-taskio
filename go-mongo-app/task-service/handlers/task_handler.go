@@ -831,3 +831,25 @@ func (uh *TasksHandler) TaskExistsHandler(w http.ResponseWriter, r *http.Request
 		json.NewEncoder(w).Encode(map[string]bool{"exists": false})
 	}
 }
+
+// DeleteTaskByIDHandler je HTTP handler za brisanje taska na osnovu taskID-a iz URL-a.
+func (uh *TasksHandler) DeleteTaskByIDHandler(w http.ResponseWriter, r *http.Request) {
+	// Dohvati taskID iz URL parametara
+	vars := mux.Vars(r)
+	taskID, ok := vars["taskID"]
+	if !ok || taskID == "" {
+		http.Error(w, "taskID is required in the URL", http.StatusBadRequest)
+		return
+	}
+
+	// Pozovi repository za brisanje taska po taskID-u
+	err := service.DeleteTaskByID(taskID)
+	if err != nil {
+		http.Error(w, "Failed to delete task: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Uspešan odgovor
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Task deleted successfully"}`))
+}
