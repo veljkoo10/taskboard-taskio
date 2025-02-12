@@ -1323,3 +1323,8 @@ button:focus {
   outline: none;  /* Uklanja okvir oko dugmeta pri fokusu */
 }
 
+.success-message {
+  color: green;
+  font-weight: bold;
+  margin-top: 10px;
+}

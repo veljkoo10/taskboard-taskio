@@ -3,8 +3,18 @@
     <div class="action-buttons">
       <button *ngIf="isManager()" class="btn btn-primary" (click)="showAddMemberToProject()">User management</button>
       <button *ngIf="isManager()" class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
-
-
+      <button 
+      *ngIf="isManager()" 
+      style="background-color: red;" 
+      class="btn btn-danger" 
+      [disabled]="isProjectDeleted" 
+      (click)="deleteProject()">
+      Delete project
+    </button>
+    
+    <p *ngIf="isProjectDeleted" class="success-message">
+      Project has been successfully deleted.
+    </p>
     </div>
 
     <h2 class="project-title highlight">Project Name: <span class="project-name">{{ project.title | titlecase }}</span>
@@ -424,5 +434,3 @@
     </div>
   </div>
 </div>
-
-

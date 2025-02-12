@@ -60,6 +60,7 @@ export class ProjectDetailsComponent {
   isLoadingDependencies: boolean = false;
   selectedSessionTasks: number[] = [];
   allTasks: any[] = [];
+  isProjectDeleted: boolean = false;
 
   constructor(
     private taskService: TaskService,
@@ -68,6 +69,7 @@ export class ProjectDetailsComponent {
     private cdRef: ChangeDetectorRef,
     private authService: AuthService,
     private el: ElementRef
+    
   ) {}
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
@@ -1420,4 +1422,23 @@ export class ProjectDetailsComponent {
         break;
     }
   }
+
+  deleteProject(): void {
+   if (!this.project?.id) {
+      console.error('Project ID is missing.');
+      return;
+    }
+      if (this.project) {
+        // Pozovi servis za brisanje projekta
+        this.projectService.deleteProject(this.project.id).subscribe(() => {
+          // Postavi flag da je projekat obrisan
+          this.isProjectDeleted = true;
+          console.log('Project successfully deleted!');
+        }, (error) => {
+          console.error('Error deleting project:', error);
+        });
+      }
+    }
+
+
 }

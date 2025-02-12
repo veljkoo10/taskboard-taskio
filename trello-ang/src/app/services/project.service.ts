@@ -117,4 +117,13 @@ export class ProjectService {
     );
   }
 
+  deleteProject(projectId: string): Observable<any> {
+    const url = `${this.baseUrl}/delete/${projectId}`;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+    });
+
+    return this.http.delete(url, { headers });
+  }
+
 }
