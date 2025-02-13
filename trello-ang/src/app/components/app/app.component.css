@@ -1,8 +1,17 @@
 .custom-link {
+  display: flex;
+  align-items: center;
   font-size: 1.5rem;
   text-decoration: none;
   color: black;
+  gap: 5px; /* Dodaje razmak između slike i teksta umesto margin-right */
 }
+
+.custom-link img {
+  width: 20px; /* Proporcionalna veličina ikonice */
+  height: 20px;
+}
+
 /* Povećanje veličine logotipa */
 .logo-container {
   display: flex;
@@ -96,15 +105,22 @@
 .custom-alert .btn-close {
   margin-left: 15px;
 }
-
+.btn-close{
+  margin-right: 5px;
+}
+.btn-close:focus,
+.btn-close:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 
 .profile-menu a {
   display: block;
-  padding: 15px 20px; /* Increased padding for larger clickable area */
+  padding: 10px 20px; /* Increased padding for larger clickable area */
   color: black;
   text-decoration: none;
   text-align: center;
-  font-size: 1.5rem;  /* Larger font size */
+  font-size: 1.6rem;  /* Larger font size */
   font-weight: bold;
   transition: color 0.3s, background-color 0.3s, transform 0.3s ease;
 }
@@ -120,22 +136,39 @@
 }
 
 .add-project-link {
-   margin-top: 5px;
-   color: black;
-   padding: 10px 20px; /* Veći padding za bolji izgled */
-   border-radius: 5px;
-   font-size: 1.8rem; /* Veća veličina fonta */
-   font-weight: 600; /* Bold za istaknut tekst */
-   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Dobar font za čitljivost */
-   text-transform: capitalize; /* Prvo slovo veliko */
-   transition: background-color 0.3s, transform 0.2s;
-   cursor: pointer;
-   text-align: center;
-   margin-left: auto;
-   margin-right: auto;
-   display: inline-block;
- }
+  margin-top: 5px;
+  color: black;
+  padding: 10px 10px; /* Veći padding za bolji izgled */
+  border-radius: 5px;
+  font-size: 1.8rem; /* Veća veličina fonta */
+  font-weight: 600; /* Bold za istaknut tekst */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Dobar font za čitljivost */
+  text-transform: capitalize; /* Prvo slovo veliko */
+  transition: background-color 0.3s, transform 0.2s, color 0.3s; /* Added color transition */
+  cursor: pointer;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-block;
+  position: relative; /* Important for the line positioning */
+}
 
+.add-project-link::before {
+  content: ''; /* Creating an empty element */
+  position: absolute;
+  bottom: 0; /* Position the line at the bottom of the link */
+  left: 50%; /* Start from the center */
+  width: 0%; /* Start with 0% width */
+  height: 3px; /* Line thickness */
+  background-color: white; /* Black line initially */
+  transition: width 0.3s ease, left 0.3s ease; /* Added background-color transition */
+}
+
+.add-project-link:hover::before {
+  width: 84%; /* Expand to 80% width */
+  left: 8%; /* Move it to start from 10% to center it */
+  background-color: white; /* Change line color to white on hover */
+}
 .add-project-link:hover {
   transform: scale(1.1); /* Blago povećanje na hover */
   color: white; /* Kontrastni tekst na hover */
@@ -144,11 +177,15 @@
 .add-project-link:active {
   transform: scale(0.95); /* Blago smanjenje na aktivaciju */
 }
-
 .modal-content {
+  font-size: 1.1rem;
+  background-color: #ffffff;
+  margin-top: 10%;
+}
+.modal-content modal-error {
+  font-size: 1.1rem;
   background-color: #ffffff;
 }
-
 .btn-danger {
   background-color: #dc3545;
   border-color: #dc3545;
@@ -232,6 +269,21 @@ body {
 .project-list li:hover {
   transition: color 0.3s, background-color 0.3s;
 }
+.profile-icon {
+  position: relative;
+  display: inline-block;
+  width: 45px;
+  height: 45px;
+  transition: transform 0.3s ease; /* Smooth scaling for the entire icon */
+}
+
+.profile-icon img {
+  transition: transform 0.3s ease, filter 0.3s ease; /* Smooth scaling and filter effects */
+  width: 100%;
+  height: 100%;
+  border-radius: 50%; /* Optional: Make the image circular */
+}
+
 .notification-dot {
   position: absolute;
   top: 5px; /* Podesi poziciju u odnosu na profilnu sliku */
@@ -240,16 +292,16 @@ body {
   height: 12px;
   background-color: #e2f533;
   border-radius: 50%;
-  border: 2px solid white; /* Da tačkica ima beli okvir */
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  border: 2px solid white;
+  transform: translate(50%, -50%); /* Center dot on top-right */
 }
-.profile-icon {
-  position: relative;
+.profile-icon:hover {
+  transform: scale(1.2); /* Scale entire icon, including dot */
 }
 /* Custom stil za modal */
 .modal-wrapper {
-  z-index: 1000;
-  display: flex; /* Koristi flexbox za centriranje */
+  z-index: 1000000;
+  display: none; /* Koristi flexbox za centriranje */
   align-items: center; /* Vertikalno centriranje */
   justify-content: center; /* Horizontalno centriranje */
   background-color: rgba(0, 0, 0, 0.7); /* Poluprovidna pozadina */
@@ -267,6 +319,7 @@ body {
   border-radius: 10px;
   display: flex;
   flex-direction: column; /* Poravnanje unutar modala */
+  bottom: 5%;
 }
 
 .modal-header-custom {
@@ -278,7 +331,12 @@ body {
   text-align: center; /* Centriranje teksta */
   width: 100%; /* Osigurava da header zauzima celu širinu */
 }
-
+#logoutReminderModal .modal-content {
+  font-size: 1.1rem;
+  background-color: #ffffff;
+  margin-top: 0; /* Uklonjen margin-top */
+  margin-bottom: 10px;
+}
 .title-highlight {
   font-weight: bold;
   font-size: 1.5rem;
@@ -307,7 +365,13 @@ body {
   padding: 15px;
   border: 1px solid #d3d3d3;
 }
+.modal-footer .btn-success {
+  background-color: #2a8a68;
+}
 
+.modal-footer .btn-success:hover {
+  background-color: #216e4e;
+}
 .btn-primary-custom {
   background-color: #2a8a68;
   color: white;

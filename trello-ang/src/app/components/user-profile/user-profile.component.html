@@ -59,7 +59,7 @@
     </div>
 
     <div class="form-group">
-      <label for="oldPassword">Old Password</label>
+      <label for="oldPassword">Old Password:</label>
       <input
         type="password"
         id="oldPassword"
@@ -72,7 +72,7 @@
     </div>
 
     <div class="form-group">
-      <label for="newPassword">New Password</label>
+      <label for="newPassword">New Password:</label>
       <input
         type="password"
         id="newPassword"
@@ -85,7 +85,7 @@
     </div>
 
     <div class="form-group">
-      <label for="confirmPassword">Confirm New Password</label>
+      <label for="confirmPassword">Confirm New Password:</label>
       <input
         type="password"
         id="confirmPassword"
@@ -132,16 +132,14 @@
     <div class="modal-content">
       <div class="modal-header" [ngClass]="{ 'error': errorMessage }">
         <h5 class="modal-title">{{ successMessage ? 'Success' : 'Error' }}</h5>
-        <button type="button" class="close" (click)="closeResultModal()" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+
       </div>
 
       <div class="modal-body" [ngClass]="{ 'success': successMessage, 'error': errorMessage }">
         <p>{{ successMessage || errorMessage }}</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-black" (click)="closeResultModal()">OK</button>
+        <button type="button" class="btn btn-success" (click)="closeResultModal()">OK</button>
       </div>
     </div>
   </div>
@@ -153,9 +151,6 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Account Status</h5>
-        <button type="button" class="close" (click)="closeDeleteAccountModal()" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
       </div>
       <div class="modal-body">
         <p>{{ accountDeleteMessage }}</p>
@@ -182,6 +177,27 @@
     </div>
   </div>
 </div>
-
+<!-- Modal for Account Deletion Success -->
+<div class="modal" tabindex="-1" role="dialog" [ngClass]="{ 'show': accountDeleteSuccessVisible }" style="display: block;" *ngIf="accountDeleteSuccessVisible">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Account Deleted</h5>
+      </div>
+      <div class="modal-body">
+        <p>Your account has been successfully deleted.</p>
+      </div>
+      <div class="modal-footer">
+        <button
+          style="background-color: green;"
+          type="button"
+          class="btn btn-primary"
+          (click)="redirectToLogin()">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </html>

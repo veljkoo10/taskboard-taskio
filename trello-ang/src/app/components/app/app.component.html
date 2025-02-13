@@ -10,34 +10,48 @@
 
 
       <!-- Request link (visible for ADMIN only) -->
-      <h4 class="nav-link custom-link add-project-link ms-2" *ngIf="isManager()" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+      <h4 class="nav-link custom-link add-project-link ms-2" *ngIf="isManager() && isDashboard()" data-bs-toggle="modal" data-bs-target="#addProjectModal">
         Add project
       </h4>
+
     </div>
 
     <!-- Right elements -->
-    <div class="d-flex align-items-center position-relative">
-      <a class="nav-link custom-link position-relative" style="margin-right: 10px;" routerLink="/analytics" *ngIf="isMember()">Analytics</a>
-      <!-- Profile icon -->
-      <a class="nav-link custom-link position-relative" (click)="toggleProfileMenu()">
-        <img [src]="profilePath" alt="Profile Icon" width="45" height="45" style="cursor: pointer;">
-        <span class="notification-dot" *ngIf="hasNotifications"></span>
-      </a>
-
+    <div class="d-flex align-items-center position-relative" (mouseleave)="onHoverExit()">
       <!-- Profile menu -->
-      <div class="profile-menu shadow-lg rounded" *ngIf="isProfileMenuOpen">
-        <a class="nav-link custom-link p-2" (click)="goToProfile()">
-          Profile
+      <div class="d-flex align-items-center position-relative">
+        <a class="nav-link custom-link position-relative" (mouseenter)="onHover()"  >
+          <div class="profile-icon position-relative" style="width: 45px; height: 45px;">
+            <img [src]="profilePath" alt="Profile Icon" class="profile-image" style="width: 100%; height: 100%; cursor: pointer;">
+            <span class="notification-dot" *ngIf="hasNotifications"></span>
+          </div>
         </a>
-        <a class="nav-link custom-link p-2 position-relative" *ngIf="isMember()" (click)="goToNotifications()">
-          Notification
-          <span class="notification-dot" *ngIf="hasNotifications"></span>
-        </a>
-        <a class="nav-link custom-link p-2" (click)="logout()">
-          Logout
-        </a>
-      </div>
 
+        <!-- Profile menu -->
+        <div class="profile-menu shadow-lg rounded" *ngIf="isProfileMenuOpen" (mouseleave)="onHoverExit()">
+          <a class="nav-link custom-link p-2" (click)="goToProfile()">
+            <img [src]="userPath" alt="User Icon" width="20" height="20" style="cursor: pointer;">
+            Profile
+          </a>
+          <a class="nav-link custom-link position-relative d-flex align-items-center" *ngIf="isMember()" (click)="goToNotifications()">
+              <img [src]="notificationPath" alt="Notification Icon" width="20" height="20" style="cursor: pointer;">
+              <span class="notification-dot" *ngIf="hasNotifications"></span>
+            Notification
+          </a>
+          <a class="nav-link custom-link p-2 position-relative" *ngIf="isMember()" (click)="goToAnalytics()">
+            <img [src]="analiticsPath" alt="User Icon" width="20" height="20" style="cursor: pointer;">
+            Analytics
+          </a>
+          <a class="nav-link custom-link p-2 position-relative" *ngIf="!isMember()" (click)="goToHistory()">
+            <img [src]="activityPath" alt="Activity Icon" width="20" height="20" style="cursor: pointer;">
+            Activity
+          </a>
+          <a class="nav-link custom-link p-2 position-relative" (click)="logout()">
+            <img [src]="logoutPath" alt="Logout Icon" width="20" height="20" style="cursor: pointer;">
+            Logout
+          </a>
+        </div>
+      </div>
     </div>
 
   </div>

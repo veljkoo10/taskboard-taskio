@@ -25,10 +25,7 @@ body {
   background-color: #f9f9f9; /* Vizuelni efekat na hover */
 }
 
-.project-title .project-name {
-  color: black; /* Zelena boja */
-  font-weight: bold; /* Podebljan tekst */
-}
+
 .sidebar {
   position: fixed;
   top: 0;
@@ -70,40 +67,56 @@ body {
 .project-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap; /* Ensure flex items wrap when space is tight */
+  justify-content: flex-start; /* Poravnava sadržaj ka levoj strani */
+  flex-wrap: wrap;
+}
+
+.project-header .action-buttons {
+  display: flex;
+  gap: 10px; /* Razmak između dugmadi */
+}
+
+.project-header .action-buttons button {
+  margin-right: 10px; /* Razmak između dugmadi */
+}
+
+.project-title {
+  flex-grow: 1; /* Omogućava naslovu da zauzme preostali prostor */
+  font-size: 1.5rem;
+  margin: 0;
+  max-width: 1100px;
+  text-align: center; /* Poravnava tekst na sredinu */
+}
+
+.project-header:not(:has(.action-buttons button)) .project-title {
+  text-align: center; /* Naslov ostaje centriran */
+  margin-left: 350px; /* Dodajte još levo poravnanje kada nema dugmadi */
 }
 
 .action-buttons {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap; /* Allow buttons to wrap to next line */
-  justify-content: flex-start; /* Keep buttons aligned to the left */
-  transition: color 0.3s ease; /* Glatki prelaz za boju teksta */
+  flex-wrap: wrap;
+}
 
-}
 .action-buttons button:hover {
-  color: white; /* Boja teksta postaje bela na hover */
+  color: white;
 }
+
 .action-buttons .btn {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   background-color: #216e4e;
   color: black;
   font-weight: bold;
   border: none;
   cursor: pointer;
   padding: 10px 15px;
-  min-width: 150px; /* Set a minimum width for the buttons */
+  min-width: 150px;
 }
 
-.project-title {
-  flex-grow: 1;
-  font-size: 1.5rem;
-  margin: 0;
-  text-align: center;
-  position: relative; /* Dodajemo relative pozicioniranje */
-  left: -80px; /* Pomerite ulevo za željeni broj piksela */
+.project-title .project-name {
+  color: black;
+  font-weight: bold;
 }
 
 .task-status {
@@ -305,8 +318,8 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  background-color: rgba(0, 0, 0, 0.5); /* Poluprozirna crna pozadina */
+  z-index: 1000; /* Osigurajte da je iznad ostalog sadržaja */
 }
 
 .btn-danger {
@@ -329,6 +342,11 @@ body {
   font-weight: bold;
   color: black;
 }
+.file-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Razmak između inputa i dugmeta */
+}
 
 
 .modal {
@@ -336,7 +354,7 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 1000;
+  z-index: 1001;
   display: block!important;
 }
 .user-item button {
@@ -355,6 +373,7 @@ body {
 }
 
 .modal-content {
+  margin-top: 10%;
   background-color: white;
   border-radius: 5px;
 }
@@ -439,6 +458,12 @@ body {
   cursor: pointer;
   margin: 0;
   padding: 0;
+  margin-top: 5px;
+  margin-right: 5px;
+}
+.btn-close:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 
@@ -554,8 +579,9 @@ body {
 
 .radio-group {
   display: flex; /* Prikazuje sve radio dugmadi i labela u jednoj liniji */
-  gap: 20px; /* Razmak između radio dugmadi */
+  gap: 30px; /* Razmak između radio dugmadi */
   align-items: center; /* Poravnava radio dugmad i tekst po vertikali */
+  padding:5px;
 }
 
 .radio-group label {
@@ -648,6 +674,9 @@ body {
   z-index: 1050;
   background-color: rgba(0, 0, 0, 0.5);
 }
+.max-people-error-modal .modal-content {
+  margin-top: 0 !important;
+}
 .max-people-error-modal .modal-content h2{
   color:red;
 }
@@ -730,6 +759,9 @@ body {
   align-items: center;
   z-index: 1050;
   background-color: rgba(0, 0, 0, 0.5);
+}
+.delete-people-project-modal .modal-content {
+  margin-top: 0 !important;
 }
 
 .delete-people-project-modal .modal-content {
@@ -1242,6 +1274,7 @@ p {
   left: 0;
   width: 100%;
   height: 100%;
+  margin-bottom: 20%;
   background-color: rgba(0, 0, 0, 0.5);
   justify-content: center;
   align-items: center;
@@ -1323,8 +1356,104 @@ button:focus {
   outline: none;  /* Uklanja okvir oko dugmeta pri fokusu */
 }
 
-.success-message {
-  color: green;
+/* Pozadina za modal */
+.file-exists-modal-background {
+  background-color: rgba(0, 0, 0, 0.6); /* Tamnija pozadina za veći kontrast */
+}
+
+/* Glavni modal kontejner */
+.file-exists-modal {
+  position: fixed;
+  top: 55%; /* Pomeramo modal malo niže */
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(20px); /* Dodajemo dodatni pomeraj na Y osi */
+  z-index: 10000;
+  display: block !important;
+}
+
+/* Dialog unutar modala */
+.file-exists-modal-dialog {
+  width: 400px; /* Fiksna širina modala */
+  max-width: 90%; /* Maksimalna širina na manjim ekranima */
+}
+
+/* Sadržaj modala */
+.file-exists-modal-content {
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Header modala */
+.file-exists-modal-header {
+  border-bottom: 1px solid #ddd;
+  padding: 15px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  text-align: center; /* Centriranje teksta u headeru */
+  position: relative; /* Omogućava apsolutno pozicioniranje unutar headera */
+  display: block;
+}
+
+/* Naslov modala */
+.file-exists-modal-title {
+  font-size: 1.5rem;
   font-weight: bold;
-  margin-top: 10px;
+  margin: 0;
+  text-align: center; /* Centriranje naslova */
+}
+
+/* Dugme za zatvaranje modala */
+.file-exists-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #dc3545; /* Crvena boja za dugme */
+  cursor: pointer;
+  padding: 0;
+  position: absolute; /* Apsolutno pozicioniranje */
+  top: 50%; /* Pomeranje na sredinu visine */
+  right: 15px; /* Razmak od desne ivice */
+  transform: translateY(-50%); /* Centriranje vertikalno */
+}
+
+/* Telo modala */
+.file-exists-modal-body {
+  padding: 20px;
+  font-size: 1.2rem;
+  color: #333;
+  text-align: center; /* Centriranje teksta u telu modala */
+}
+
+/* Poruka o grešci */
+.file-exists-modal-message {
+  color: #dc3545; /* Crvena boja za poruku */
+  font-weight: bold;
+  margin: 0;
+  text-align: center; /* Centriranje poruke */
+}
+
+/* Footer modala */
+.file-exists-modal-footer {
+  border-top: 1px solid #ddd;
+  padding: 15px;
+  text-align: center; /* Centriranje dugmeta u footeru */
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+/* Dugme za zatvaranje u footeru */
+.file-exists-modal-close-btn {
+  background-color: #dc3545; /* Crvena boja za dugme */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.file-exists-modal-close-btn:hover {
+  background-color: #c82333; /* Tamnija crvena na hover */
 }

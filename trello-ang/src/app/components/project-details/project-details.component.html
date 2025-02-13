@@ -3,23 +3,26 @@
     <div class="action-buttons">
       <button *ngIf="isManager()" class="btn btn-primary" (click)="showAddMemberToProject()">User management</button>
       <button *ngIf="isManager()" class="btn btn-success" (click)="showCreateTaskForm()">Create task</button>
-      <button 
-      *ngIf="isManager()" 
-      style="background-color: red;" 
-      class="btn btn-danger" 
-      [disabled]="isProjectDeleted" 
-      (click)="deleteProject()">
-      Delete project
-    </button>
-    
-    <p *ngIf="isProjectDeleted" class="success-message">
-      Project has been successfully deleted.
-    </p>
+      <button
+        *ngIf="isManager()"
+        style="background-color: red;"
+        class="btn btn-danger"
+        [disabled]="isProjectDeleted"
+        (click)="deleteProject()">
+        Delete project
+      </button>
+
+      <p *ngIf="isProjectDeleted" class="success-message">
+        Project has been successfully deleted.
+      </p>
     </div>
 
-    <h2 class="project-title highlight">Project Name: <span class="project-name">{{ project.title | titlecase }}</span>
+    <h2 class="project-title highlight">
+      Project Name: <span class="project-name">{{ project.title | titlecase }}</span>
     </h2>
   </div>
+
+
 
   <!-- Task status section -->
   <div class="task-status">
@@ -210,25 +213,46 @@
           </div>
         </div>
 
-        <!-- your.component.html -->
         <div class="task-files">
           <div>
             <h4>Task Files:</h4>
             <ul *ngIf="taskFiles && taskFiles.length > 0" class="file-list">
               <li *ngFor="let file of taskFiles; let i = index">
-                <span class="file-link-span">{{ i + 1 }}. </span>
                 <a (click)="downloadTaskFile(selectedTask.id, file)" class="file-link">
-                  {{ formatFileName(file) }}
+                  {{ i + 1 }}.{{ formatFileName(file) }}
                 </a>
               </li>
             </ul>
             <p *ngIf="taskFiles.length === 0">No files available for this task.</p>
 
-            <input   *ngIf="!isManager()"  #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput"  />
-
-            <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">Upload Files</button>
+            <div *ngIf="!isManager()" class="file-upload-container">
+              <input #fileInput type="file" multiple (change)="onFilesSelected($event)" id="fileInput" />
+              <button *ngIf="selectedFiles && selectedFiles.length > 0" (click)="uploadFiles()" class="btn btn-upload-file">
+                Upload Files
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- Modal za grešku 409 (File already exists) -->
+        <div class="modal-background file-exists-modal-background" *ngIf="isFileExistsModalVisible" (click)="closeFileExistsModal()"></div>
+
+        <div id="fileExistsModal" class="modal file-exists-modal" *ngIf="isFileExistsModalVisible">
+          <div class="modal-dialog file-exists-modal-dialog">
+            <div class="modal-content file-exists-modal-content">
+              <div class="modal-header file-exists-modal-header">
+                <h3 class="modal-title file-exists-modal-title">Upload error</h3>
+              </div>
+              <div class="modal-body file-exists-modal-body">
+                <p class="file-red-p file-exists-modal-message">{{ errorMessage }}</p>
+              </div>
+              <div class="modal-footer file-exists-modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeFileExistsModal()">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
 
 
 
@@ -331,7 +355,7 @@
   <!-- Delete People Project Modal -->
   <div class="delete-people-project-modal" style="display: none;">
     <div class="modal-content">
-      <h2>Cannot Remove Members</h2>
+      <h2>Can't Remove Members</h2>
       <p *ngIf="project">Can't remove more people. Minimum number of people in project is: {{ project.min_people ?
         project.min_people -1 : 0 }}</p>
       <button (click)="closeDeletePeopleProjectModal()">Close</button>
@@ -347,10 +371,10 @@
     </div>
   </div>
 
-  <div id="missingProjectIdModal" class="exist-task-name" style="display: none;">
+  <div id="missingProjectIdModal" class="exist-task-name" style="display: none;" (click)="closeMissingProjectIdModal()">
     <div class="modal-content">
       <h2>Warning</h2>
-      <p>Project ID is missing. Could not create task .</p>
+      <p>There is already a task with this name .</p>
       <button (click)="closeMissingProjectIdModal()">Close</button>
     </div>
   </div>
@@ -404,7 +428,6 @@
       <div class="custom-modal-header">
         <button (click)="closeAddDependencyModal()" type="button" class="btn-close">✕</button>
         <h2 class="modal-title-container-title">Add Task Dependencies</h2>
-
       </div>
 
       <div class="custom-modal-body">
@@ -434,3 +457,5 @@
     </div>
   </div>
 </div>
+
+

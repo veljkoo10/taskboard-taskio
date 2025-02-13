@@ -9,6 +9,7 @@ import { VerifyMagicLinkComponent } from './components/verify-magic-link/verify-
 import { AuthGuard } from './guards/auth.guard';
 import {NotificationComponent} from "./components/notification/notification.component";
 import { AnalyticsComponent } from './components/analytics/analytics.component';
+import {HistoryComponent} from "./components/history/history.component";
 
 export const appRoutes: Routes = [
   {
@@ -38,6 +39,12 @@ export const appRoutes: Routes = [
     component: NotificationComponent,
     canActivate: [AuthGuard],
     data: { roles: ['Manager','Member'] }
+  },
+  {
+    path: 'history',
+    component: HistoryComponent,
+    canActivate: [AuthGuard],
+    data: { roles: ['Manager'] }
   },
   { path: 'analytics', component: AnalyticsComponent},
   { path: 'magic-login', component: MagicLinkComponent },

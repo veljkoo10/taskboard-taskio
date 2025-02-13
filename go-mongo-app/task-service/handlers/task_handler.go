@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"strings"
 	"task-service/db"
 	"task-service/service"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -36,6 +38,7 @@ type TasksHandler struct {
 func NewTasksHandler(l *log.Logger, r *db.TaskRepo, natsConn *nats.Conn) *TasksHandler {
 	return &TasksHandler{l, r, natsConn}
 }
+
 func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskID, ok := vars["taskId"]
@@ -59,6 +62,9 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
+
+	// Sačuvaj trenutni status pre promene
+	previousStatus := task.Status
 
 	// Provera za status "Work in Progress"
 	if requestBody.Status == "work in progress" {
@@ -113,6 +119,7 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	defer nc.Close()
+
 	message := struct {
 		TaskName   string   `json:"taskName"`
 		TaskStatus string   `json:"taskStatus"`
@@ -121,6 +128,28 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		TaskName:   task.Name,
 		TaskStatus: requestBody.Status,
 		MemberIds:  task.Users,
+	}
+
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	// Kreiraj event koji uključuje prethodni i trenutni status
+	event := map[string]interface{}{
+		"type": "Task Status Changed",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"taskId":         task.ID,
+			"projectId":      task.Project_ID,
+			"previousStatus": previousStatus,     // Status pre promene
+			"currentStatus":  requestBody.Status, // Novi status
+			"memberId":       task.Users,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	if err := t.sendEventToDatabase(event); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -144,6 +173,7 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 }
+
 func (uh *TasksHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := service.GetTasks()
 	if err != nil {
@@ -202,12 +232,68 @@ func (uh *TasksHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Task Created",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"taskId":    task.ID,
+			"projectId": task.Project_ID,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	// Send the event to the analytic service
+	if err := uh.sendEventToDatabase(event); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
+	}
+
 	// Send the created task as JSON response
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(task); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (uh *TasksHandler) sendEventToDatabase(event interface{}) error {
+	analyticsServiceURL := fmt.Sprintf("http://event_sourcing:8080/event/append")
+
+	// Marshal the event into JSON
+	eventData, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("Error marshalling event: %v", err)
+		return err
+	}
+
+	// Create a new POST request with the event data
+	req, err := http.NewRequest("POST", analyticsServiceURL, bytes.NewBuffer(eventData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return err
+	}
+
+	// Set the appropriate content-type header for the request
+	req.Header.Set("Content-Type", "application/json")
+
+	// Use the default HTTP client (without TLS)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Error sending request to analytics service: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Failed to send event to analytics service: %s", resp.Status)
+		return fmt.Errorf("failed to send event to analytics service: %s", resp.Status)
+	}
+
+	return nil
 }
 
 // AddUserToTaskHandler handles adding a user to a task.
@@ -245,6 +331,24 @@ func (t *TasksHandler) AddUserToTaskHandler(w http.ResponseWriter, r *http.Reque
 		TaskName: task.Name,
 	}
 
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Member Added to Task",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"memberId": userID,
+			"taskId":   task.ID,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	if err := t.sendEventToDatabase(event); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
+	}
+
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Error marshalling message:", err)
@@ -261,6 +365,7 @@ func (t *TasksHandler) AddUserToTaskHandler(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User added to task successfully"})
 }
+
 func Conn() (*nats.Conn, error) {
 	conn, err := nats.Connect("nats://nats:4222")
 	if err != nil {
@@ -303,6 +408,24 @@ func (t *TasksHandler) RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.
 	}{
 		UserID:   userID,
 		TaskName: task.Name,
+	}
+
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Member Removed from Task",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"memberId": userID,
+			"taskId":   task.ID,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	if err := t.sendEventToDatabase(event); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -589,8 +712,7 @@ func (uh *TasksHandler) UpdateTaskStatusHandler(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(updatedTask)
 }
 func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
-	// Definiši maksimalnu veličinu fajla (npr. 10MB)
-	const MaxFileSize = 5 * 1024 * 1024 // 10MB
+	const MaxFileSize = 5 * 1024 * 1024 // 5MB
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -600,7 +722,7 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 	err := r.ParseMultipartForm(MaxFileSize)
 	if err != nil {
 		if strings.Contains(err.Error(), "request body too large") {
-			http.Error(w, "File is too large. Maximum size is 10MB.", http.StatusRequestEntityTooLarge)
+			http.Error(w, "File is too large. Maximum size is 5MB.", http.StatusRequestEntityTooLarge)
 			return
 		}
 		http.Error(w, fmt.Sprintf("Failed to parse form: %v", err), http.StatusBadRequest)
@@ -638,6 +760,18 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 			return
 		}
 
+		// Provera da li fajl već postoji
+		hdfsFilePath := path.Join(hdfsDirPath, fileHeader.Filename)
+		exists, err := service.FileExistsInHDFS(hdfsFilePath)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error checking file existence: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if exists {
+			http.Error(w, fmt.Sprintf("File with name '%s' already exists", fileHeader.Filename), http.StatusConflict)
+			return
+		}
+
 		file, err := fileHeader.Open()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to open file: %v", err), http.StatusBadRequest)
@@ -664,7 +798,6 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		hdfsFilePath := path.Join(hdfsDirPath, fileHeader.Filename)
 		filePaths = append(filePaths, hdfsFilePath)
 	}
 
@@ -682,6 +815,32 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 	)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to update task in MongoDB: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	task, err := service.GetTaskByID(taskID)
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Document Added",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"taskId":    taskID,
+			"projectId": task.Project_ID,
+			"filePath":  task.FilePaths,
+			"memberId":  task.Users,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	if err := uh.sendEventToDatabase(event); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
 		return
 	}
 

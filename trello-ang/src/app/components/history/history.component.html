@@ -1,0 +1,72 @@
+<div class="table-container">
+  <!-- Title and project filter in separate lines -->
+  <div class="header-container">
+    <h1 class="unread-count">History Activity:</h1>
+  </div>
+
+  <!-- Filter container moved to the right -->
+  <div class="filter-container">
+    <select id="status-filter" (change)="onProjectChange($event)">
+      <option value="">All</option>
+      <option *ngFor="let project of projects" [value]="project.id">{{ project.title | titlecase }}</option>
+    </select>
+  </div>
+
+  <div class="message-wrapper">
+    <div *ngIf="filteredEvents.length === 0" class="no-activities">
+      <p>No activities found.</p>
+    </div>
+
+    <div *ngFor="let event of filteredEvents; let first = first" [class.first-event]="first" class="message">
+      <h2>{{ event.type }}</h2>
+      <p>Created at: {{ adjustTimeByOneHour(event.time) }}</p>
+
+      <!-- Prikazivanje specifične poruke samo za "Project Created" događaj -->
+      <p *ngIf="event.type === 'Project Created'" class="info-message">
+        Manager "{{ event.event.managerId ? (managerUsernames[event.event.managerId] | titlecase) || 'Loading...' : 'No Manager' }}"
+        created Project "{{ (projectTitles[event.event.projectId] | titlecase) || 'Loading...' }}"
+      </p>
+
+
+
+      <p *ngIf="event.type === 'Member Added to Project'" class="info-message">
+        Member "{{ event.event.memberId ? (memberUsernames[event.event.memberId] | titlecase) || 'Loading...' : 'No Member' }}"
+        added to "{{ event.event.projectId ? (projectTitles[event.event.projectId] | titlecase) || 'Loading...' : 'No Project' }}" Project
+      </p>
+
+      <p *ngIf="event.type === 'Member Removed from Project'" class="info-message">
+        Member "{{ event.event.memberId ? (memberUsernames[event.event.memberId] | titlecase) || 'Loading...' : 'No Member' }}"
+        removed from "{{ event.event.projectId ? (projectTitles[event.event.projectId] | titlecase) || 'Loading...' : 'No Project' }}" Project
+      </p>
+
+      <p *ngIf="event.type === 'Task Created' && event.event.taskId" class="info-message">
+        Created task with name "{{ taskNames[event.event.taskId] ? (taskNames[event.event.taskId] | titlecase) : 'Loading...' }}"
+      </p>
+
+      <p *ngIf="event.type === 'Member Added to Task' && event.event.taskId" class="info-message">
+        Member "{{ event.event.memberId ? (memberUsernames[event.event.memberId] | titlecase) || 'Loading...' : 'No Member' }}" added to "{{ taskNames[event.event.taskId] ? (taskNames[event.event.taskId] | titlecase) : 'Loading...' }}" task
+      </p>
+
+      <p *ngIf="event.type === 'Member Removed from Task' && event.event.taskId" class="info-message">
+        Member "{{ event.event.memberId ? (memberUsernames[event.event.memberId] | titlecase) || 'Loading...' : 'No Member' }}" removed from "{{ taskNames[event.event.taskId] ? (taskNames[event.event.taskId] | titlecase) : 'Loading...' }}" task
+      </p>
+
+      <p *ngIf="event.type === 'Task Status Changed' && event.event.taskId" class="info-message">
+        Member "{{ event.event.memberId ? (memberUsernames[event.event.memberId] | titlecase) : 'No Member' }}"
+        changing the "{{ taskNames[event.event.taskId] ? (taskNames[event.event.taskId] | titlecase) : 'Loading...' }}" task
+        status from "{{ event.event.previousStatus ? (event.event.previousStatus | titlecase) : 'Loading...' }}"
+        to "{{ event.event.currentStatus ? (event.event.currentStatus | titlecase) : 'Loading...' }}"
+      </p>
+
+
+      <p *ngIf="event.type === 'Document Added' && event.event.filePath && event.event.filePath.length > 0" class="info-message">
+        Member "{{ event.event.memberId ? (memberUsernames[event.event.memberId] | titlecase) || 'Loading...' : 'No Member' }}" added a file"
+        <span>{{ event.event.filePath[0].split('/').pop() }}</span>"
+        in task "{{ event.event.taskId && taskNames[event.event.taskId] ? (taskNames[event.event.taskId] | titlecase) : 'Loading...' }}"
+      </p>
+
+
+
+    </div>
+  </div>
+</div>

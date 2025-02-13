@@ -1,0 +1,70 @@
+.table-container {
+  font-size: 1.1rem;
+  margin-top: 2%;
+  margin-left: auto;
+  margin-right: auto;
+  width: 60%;
+  padding: 20px;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.header-container {
+  text-align: center;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.unread-count {
+  font-size: 2.5rem;
+  color: #343a40;
+  font-weight: bold;
+}
+
+.filter-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+#status-filter {
+  padding: 5px;
+  font-size: 1rem;
+  margin-right: 26%;
+}
+
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  max-height: 600px; /* Postavi maksimalnu visinu */
+  overflow-y: auto; /* Omogući vertikalno skrolovanje */
+  width: 100%;
+  border-radius: 10px;
+  scrollbar-width: none; /* Sakriva scrollbar u Firefoxu */
+  -ms-overflow-style: none; /* Sakriva scrollbar u Internet Exploreru i Edge-u */
+}
+
+.message-wrapper::-webkit-scrollbar {
+  display: none; /* Sakriva scrollbar u Chrome, Safari i Edge */
+}
+
+
+.message {
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: #e9ecef;
+  transition: transform 0.3s ease;
+  width: 50%; /* Smanjena širina kartica */
+  text-align: center;
+}
+
+.message:hover {
+  transform: scale(1.03);
+}

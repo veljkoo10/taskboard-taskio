@@ -1,6 +1,6 @@
 import { Component, HostListener, ChangeDetectorRef, ApplicationRef, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
 import { ProjectService } from "../../services/project.service";
-import {NavigationEnd, Router} from "@angular/router";
+import { NavigationEnd, Router } from "@angular/router";
 import { AuthService } from "../../services/auth.service";
 import { Project } from "../../model/project.model";
 import { DashboardComponent } from "../dashboard/dashboard.component";
@@ -16,6 +16,11 @@ export class AppComponent implements OnInit, OnDestroy {
   @ViewChild('projectForm') projectForm!: NgForm;
   logoPath: string = 'assets/trello4.png';
   profilePath: string = 'assets/user3.png';
+  userPath :string = 'assets/usernav.png';
+  notificationPath: string = 'assets/bell.png';
+  activityPath: string = 'assets/activity.png';
+  logoutPath: string = 'assets/logout.png';
+  analiticsPath: string = 'assets/data-analytics.png';
   selectedProject!: Project | null;
   isProfileMenuOpen: boolean = false;
   project: Project = new Project();
@@ -25,52 +30,60 @@ export class AppComponent implements OnInit, OnDestroy {
   hasNotifications: boolean = false;
   private notificationCheckInterval: any;
   private timeoutModalInterval: any;
+  private interval: any;
+  private secondsPassed: number = 0;
 
   ngOnInit() {
-    // Ako korisnik nije menadžer, pokreni proveru notifikacija
-    if (!this.isManager() && window.location.pathname !== '/notification') {
+    // Logovanje trenutnog URL-a pri inicijalizaciji
+    console.log(`Current component URL: ${this.router.url}`);
+
+    if (!['/login', '/register'].includes(this.router.url)) {
+      this.startTimer();
+    }
+
+    if (!this.isManager() && this.router.url !== '/notification') {
       this.startNotificationCheck();
     }
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        const currentPath = window.location.pathname;
+        const currentPath = this.router.url;
 
-        // Ako korisnik nije menadžer, pokreni proveru notifikacija kada se navigira
+        // Logovanje trenutnog URL-a nakon navigacije
+        console.log(`Navigated to URL: ${currentPath}`);
+
         if (!this.isManager()) {
           if (currentPath === '/notification') {
-            this.stopNotificationCheck();  // Zaustavi proveru notifikacija na stranici /notification
-            this.hasNotifications = false;  // Resetuj notifikacije
+            this.stopNotificationCheck();
+            this.hasNotifications = false;
           } else {
-            this.startNotificationCheck(); // Pokreni proveru kada se ide na neku drugu stranicu
+            this.startNotificationCheck();
+          }
+        }
+
+        // Proveri da li trenutna ruta nije /login ili /register pre pokretanja tajmera
+        if (!['/login', '/register'].includes(currentPath)) {
+          this.startTimer();
+        } else {
+          // Zaustavi tajmer ako je na isključenim rutama
+          if (this.interval) {
+            clearInterval(this.interval);
           }
         }
       }
     });
-
-    this.timeoutModalInterval = setTimeout(() => {
-      this.openLogoutModal();
-    }, 840000); // 840000 ms = 14 minuta
   }
+
 
   goToNotifications(): void {
     this.isProfileMenuOpen = false;
     this.stopNotificationCheck();
-    this.hasNotifications = false;
     this.router.navigate(['/notification']);
-
   }
 
   constructor(private projectService: ProjectService, private router: Router, private authService: AuthService,
               private notificationService: NotificationService,
               private changeDetectorRef: ChangeDetectorRef, private appRef: ApplicationRef) {}
-
-
-  ngOnDestroy() {
-    if (this.notificationCheckInterval) {
-      clearInterval(this.notificationCheckInterval);
-    }
-  }
 
   isLoggedIn(): boolean {
     return localStorage.getItem('access_token') != null;
@@ -83,34 +96,109 @@ export class AppComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard']);
     }
   }
-  logoutToken(){
+
+  startTimer() {
+    const excludedRoutes = ['/login', '/register'];
+
+    // Provera da li trenutni URL pripada isključenim rutama
+    if (excludedRoutes.includes(this.router.url)) {
+      return;
+    }
+
+    // Dohvatanje prethodno sačuvanog vremena iz localStorage
+    const savedTime = localStorage.getItem('secondsPassed');
+    this.secondsPassed = savedTime ? parseInt(savedTime, 10) : 0;
+
+    // Ako interval već postoji, resetuj ga
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+
+    // Postavljanje novog intervala koji povećava broj sekundi
+    this.interval = setInterval(() => {
+      this.secondsPassed++;
+
+      // Sačuvaj trenutno vreme u localStorage
+      localStorage.setItem('secondsPassed', this.secondsPassed.toString());
+    }, 1000);
+
+    // Ako postoji prethodni timeout za modal, resetuj ga
+    if (this.timeoutModalInterval) {
+      clearTimeout(this.timeoutModalInterval);
+    }
+
+    // Postavljanje timeouta za prikaz modalnog prozora nakon 12 minuta
+    const remainingTime = (12 * 60 * 1000) - (this.secondsPassed * 1000);
+    this.timeoutModalInterval = setTimeout(() => {
+      clearInterval(this.interval);
+      this.openLogoutModal();
+    }, remainingTime > 0 ? remainingTime : 0);
+  }
+
+  clearTimers() {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
+    if (this.timeoutModalInterval) {
+      clearTimeout(this.timeoutModalInterval);
+      this.timeoutModalInterval = null;
+    }
+
+    // Resetuj vrednost u localStorage
+    localStorage.removeItem('secondsPassed');
+  }
+
+
+  logoutToken() {
     this.authService.logout();
     this.isProfileMenuOpen = false;
     this.router.navigate(['/login']);
     this.stopNotificationCheck();
     this.hasNotifications = false;
     this.closeLogoutModal();
-
+    this.clearTimers();
   }
+
+  goToHistory(){
+    this.isProfileMenuOpen = false;
+    this.router.navigate(['/history']);
+  }
+  goToAnalytics(){
+    this.isProfileMenuOpen = false;
+    this.router.navigate(['/analytics']);
+  }
+  isDashboard(): boolean {
+    return this.router.url === '/dashboard';
+  }
+  ngOnDestroy() {
+    if (this.notificationCheckInterval) {
+      clearInterval(this.notificationCheckInterval);
+    }
+    this.clearTimers();
+  }
+
   openLogoutModal(): void {
     const modal = document.querySelector('.modal-wrapper');
     if (modal) {
       modal.setAttribute('style', 'display: flex; opacity: 100%;');
     }
   }
-  closeLogoutModal(){
+
+  closeLogoutModal() {
     const modal = document.querySelector('.modal-wrapper');
     if (modal) {
       modal.setAttribute('style', 'display: none; opacity: 0%');
     }
   }
+
   logout(): void {
     this.authService.logout();
     this.isProfileMenuOpen = false;
     this.router.navigate(['/login']);
     this.stopNotificationCheck();
     this.hasNotifications = false;
-
+    this.clearTimers();
   }
 
   isManager(): boolean {
@@ -125,7 +213,13 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isProfileMenuOpen = false;
     this.router.navigate(['/profile']);
   }
+  onHover() {
+    this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
 
+  onHoverExit() {
+    this.isProfileMenuOpen = false;
+  }
   toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }
@@ -151,14 +245,13 @@ export class AppComponent implements OnInit, OnDestroy {
       this.notificationService.getNotificationsByUserID(userID).subscribe(
         (notifications) => {
           if (notifications === null || notifications === undefined) {
-            this.stopNotificationCheck(); // Stop checking if the data is invalid
+            this.stopNotificationCheck();
           } else {
             this.handleNotifications(notifications);
           }
         },
-        (error) => {
-          console.error('Error fetching notifications', error);
-          this.stopNotificationCheck(); // Stop checking on error
+        () => {
+          this.stopNotificationCheck();
         }
       );
     } else {
@@ -166,22 +259,15 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-
-
   handleNotifications(notifications: any[]) {
     if (notifications && Array.isArray(notifications)) {
       const unreadNotifications = notifications.filter(notification => notification.status === 'unread');
       this.hasNotifications = unreadNotifications.length > 0;
-
-      // Trigger change detection to update the view
       this.changeDetectorRef.detectChanges();
     } else {
-      console.error('Invalid notifications data:', notifications);
-      this.stopNotificationCheck(); // Stop checking on invalid data
+      this.stopNotificationCheck();
     }
   }
-
-
 
   createProject(): void {
     if (!this.project.title || !this.project.description ||
@@ -205,13 +291,11 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Check if the number of users exceeds max_people
     if (this.project.users.length > this.project.max_people) {
       this.errorMessage = `You can have a maximum of ${this.project.max_people} users!`;
       return;
     }
 
-    // Validate the expected end date
     const currentDate = new Date();
     const expectedEndDate = new Date(this.project.expected_end_date);
     if (expectedEndDate <= currentDate) {
@@ -219,7 +303,6 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Clear any previous error messages
     this.errorMessage = '';
 
     const managerId = localStorage.getItem('user_id');
@@ -228,7 +311,6 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Check if a project with the same title already exists
     this.projectService.checkProjectByTitle(this.project.title, managerId).subscribe(
       (response: string) => {
         if (response === 'Project exists') {
@@ -246,14 +328,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
           this.projectService.createProject(managerId, projectPayload).subscribe(
             (response: Project) => {
-
               this.projectService.notifyProjectCreated(response);
-
               this.project = new Project();
               this.successMessage = 'The project was successfully created!';
               this.projects.push(response);
 
-              // Close modal (if applicable)
               const closeModalButton = document.querySelector('[data-bs-dismiss="modal"]');
               if (closeModalButton) {
                 (closeModalButton as HTMLElement).click();
@@ -263,15 +342,13 @@ export class AppComponent implements OnInit, OnDestroy {
               if (error.status === 500 && error.error === 'Project with this name already exists for the same manager\n') {
                 this.errorMessage = 'A project with this title already exists.';
               } else {
-                console.error('Error creating project:', error);
                 this.errorMessage = 'There was an error creating the project.';
               }
             }
           );
         }
       },
-      (error) => {
-        console.error('Error checking project title:', error);
+      () => {
         this.errorMessage = 'There was an error checking the project title.';
       }
     );

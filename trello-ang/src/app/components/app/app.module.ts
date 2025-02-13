@@ -21,6 +21,7 @@ import {RecaptchaValueAccessor} from "../../recaptcha/recaptcha-value-accessor.d
 import {NotificationComponent} from "../notification/notification.component";
 import {DragDropModule} from "@angular/cdk/drag-drop";
 import { AnalyticsComponent } from '../analytics/analytics.component';
+import {HistoryComponent} from "../history/history.component";
 
 @NgModule({
   declarations: [
@@ -34,6 +35,7 @@ import { AnalyticsComponent } from '../analytics/analytics.component';
     CapitalizePipe,
     RecaptchaValueAccessor,
     NotificationComponent,
+    HistoryComponent,
     AnalyticsComponent
   ],
   imports: [

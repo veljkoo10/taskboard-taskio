@@ -38,7 +38,8 @@ body {
 
 .table th, .table td {
   padding: 10px;
-  text-align: left; /* Align text to the left */
+  text-align: center; /* Centriranje teksta u ćelijama */
+  vertical-align: middle; /* Vertikalno centriranje */
 }
 
 .table-dark {

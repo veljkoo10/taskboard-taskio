@@ -16,19 +16,16 @@ export class UserProfileComponent implements OnInit {
   user: any;
   userId: string = '';
   accountDeleteMessage: string = 'Are you sure you want to delete your account?';
-
-
   project: Project = new Project();
   projects: Project[] = [];
-
   oldPassword: string = '';
   newPassword: string = '';
   confirmPassword: string = '';
-
   errorMessage: string = '';
   successMessage: string = '';
   passwordError: string = '';
   deleteAccountModalVisible: boolean = false;
+  accountDeleteSuccessVisible: boolean = false;
 
   constructor( private router: Router,private authService: AuthService, private userService: UserService, private projectService: ProjectService) {}
 
@@ -171,58 +168,57 @@ export class UserProfileComponent implements OnInit {
 
 
   deleteUserAccount(): void {
-    console.log(this.projects)
-    if(this.projects === null){
+    console.log(this.projects);
+
+    if (this.projects === null || this.projects.length === 0) {
       this.userService.deactivateUser(this.user.id).subscribe({
-        next: (response) => {
-          this.accountDeleteMessage = 'Your account has been deleted.';
-          this.authService.logout();
-          this.router.navigate(['/login']);
+        next: () => {
+          this.accountDeleteSuccessVisible = true; // Prikaz modalnog prozora
+          this.deleteAccountModalVisible = false; // Zatvara modal za potvrdu
         },
         error: (error) => {
           console.error('Error deleting user:', error);
           this.accountDeleteMessage = 'There was an error deleting your account.';
         }
       });
-
-      this.closeDeleteAccountModal();
-    }
-    const projectStatusChecks = this.projects.map(project => {
-      if (project.id) {
-        return this.projectService.isProjectActive(project.id);
-      } else {
-        return of(false);
-      }
-    });
-
-
-    forkJoin(projectStatusChecks).subscribe(
-      (results) => {
-        const anyProjectActive = results.some(isActive => isActive);
-        if (anyProjectActive) {
-          this.accountDeleteMessage = 'You cannot delete your account because some projects are still active.';
-          return;
+    } else {
+      const projectStatusChecks = this.projects.map(project => {
+        if (project.id) {
+          return this.projectService.isProjectActive(project.id);
+        } else {
+          return of(false);
         }
+      });
 
-        this.userService.deactivateUser(this.user.id).subscribe({
-          next: (response) => {
-            this.accountDeleteMessage = 'Your account has been deleted.';
-            this.authService.logout();
-            this.router.navigate(['/login']);
-          },
-          error: (error) => {
-            console.error('Error deleting user:', error);
-            this.accountDeleteMessage = 'There was an error deleting your account.';
+      forkJoin(projectStatusChecks).subscribe(
+        (results) => {
+          const anyProjectActive = results.some(isActive => isActive);
+          if (anyProjectActive) {
+            this.accountDeleteMessage = 'You cannot delete your account because some projects are still active.';
+            return;
           }
-        });
 
-        this.closeDeleteAccountModal();
-      },
-      (error) => {
-        console.error('Error checking project status:', error);
-        this.accountDeleteMessage = 'There was an error checking project status.';
-      }
-    );
+          this.userService.deactivateUser(this.user.id).subscribe({
+            next: () => {
+              this.accountDeleteSuccessVisible = true; // Prikaz modalnog prozora
+              this.deleteAccountModalVisible = false; // Zatvara modal za potvrdu
+            },
+            error: (error) => {
+              console.error('Error deleting user:', error);
+              this.accountDeleteMessage = 'There was an error deleting your account.';
+            }
+          });
+        },
+        (error) => {
+          console.error('Error checking project status:', error);
+          this.accountDeleteMessage = 'There was an error checking project status.';
+        }
+      );
+    }
+  }
+  redirectToLogin(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"project-service/models"
 	"project-service/service"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -107,7 +109,7 @@ func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -131,14 +133,40 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	project.ManagerID = managerID
 	project.Users = append(project.Users, managerID)
 
-	createdProject, err := service.CreateProject(project)
+	projectID, err := service.CreateProject(project)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Generisanje događaja za kreirani projekat
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Project Created",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"projectId": projectID, // Ispravno korišćenje generisanog ID-a
+			"managerId": managerID,
+			"title":     project.Title, // Ispravno polje
+		},
+		"projectId": projectID,
+	}
+
+	// Slanje događaja u bazu
+	if err := h.sendEventToDatabase(event); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Println("Project created and event sent:", projectID)
+
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdProject)
+	json.NewEncoder(w).Encode(map[string]string{
+		"projectId": projectID,
+		"message":   "Project successfully created",
+	})
 }
 
 func (p *ProjectHandler) AddUsersToProject(w http.ResponseWriter, r *http.Request) {
@@ -194,13 +222,66 @@ func (p *ProjectHandler) AddUsersToProject(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			log.Println("Error publishing message to NATS:", err)
 		}
+
+		currentTime := time.Now().Add(1 * time.Hour)
+		formattedTime := currentTime.Format(time.RFC3339)
+
+		event := map[string]interface{}{
+			"type": "Member Added to Project",
+			"time": formattedTime,
+			"event": map[string]interface{}{
+				"memberId":  uid,
+				"projectId": projectID,
+			},
+			"projectId": projectID,
+		}
+		if err := p.sendEventToDatabase(event); err != nil {
+			http.Error(w, "Error sending event to analytics service", http.StatusInternalServerError)
+			return
+		}
+
 	}
 	p.logger.Println("a message has been sent")
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Users successfully added to project"))
 }
+func (p *ProjectHandler) sendEventToDatabase(event interface{}) error {
+	analyticsServiceURL := fmt.Sprintf("http://event_sourcing:8080/event/append")
 
+	// Marshal the event into JSON
+	eventData, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("Error marshalling event: %v", err)
+		return err
+	}
+
+	// Create a new POST request with the event data
+	req, err := http.NewRequest("POST", analyticsServiceURL, bytes.NewBuffer(eventData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return err
+	}
+
+	// Set the appropriate content-type header for the request
+	req.Header.Set("Content-Type", "application/json")
+
+	// Use the default HTTP client (without TLS)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Error sending request to analytics service: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Failed to send event to analytics service: %s", resp.Status)
+		return fmt.Errorf("failed to send event to analytics service: %s", resp.Status)
+	}
+
+	return nil
+}
 func Conn() (*nats.Conn, error) {
 	connection := os.Getenv("NATS_URL")
 	conn, err := nats.Connect(connection)
@@ -264,6 +345,26 @@ func (p *ProjectHandler) RemoveUsersFromProject(w http.ResponseWriter, r *http.R
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		currentTime := time.Now().Add(1 * time.Hour)
+		formattedTime := currentTime.Format(time.RFC3339)
+
+		event := map[string]interface{}{
+			"type": "Member Removed from Project",
+			"time": formattedTime,
+			"event": map[string]interface{}{
+				"memberId":  uid,
+				"projectId": projectID,
+			},
+			"projectId": projectID,
+		}
+
+		// Send the event to the analytic service
+		if err := p.sendEventToDatabase(event); err != nil {
+			http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+			return
+		}
+
 	}
 	p.logger.Println("a message has been sent")
 

@@ -66,52 +66,94 @@ func (h *EventHandler) GetEventsHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Failed to encode events", http.StatusInternalServerError)
 	}
 }
+func (h *EventHandler) GetAllEventsHandler(w http.ResponseWriter, r *http.Request) {
+	events, err := h.repo.GetAllEvents()
+	if err != nil {
+		// Log error without sending a server error to the client
+		log.Printf("Error fetching events: %v", err)
+		// Return empty events without failure
+		events = []model.Event{}
+	}
+
+	// If no events were found, return a custom message
+	if len(events) == 0 {
+		// Send a message indicating no events were found
+		w.WriteHeader(http.StatusOK) // No error, just an empty state
+		w.Write([]byte("No events found"))
+		return
+	}
+
+	// If events were found, respond with the events
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(events); err != nil {
+		// Handle failure to encode the events
+		http.Error(w, "Failed to encode events", http.StatusInternalServerError)
+	}
+}
+
+// Optional: Filter events by ProjectID in memory.
+func FilterEventsByProjectID(events []model.Event, projectID string) []model.Event {
+	var filtered []model.Event
+	for _, event := range events {
+		if event.ProjectID == projectID {
+			filtered = append(filtered, event)
+		}
+	}
+	return filtered
+}
 
 func (h *EventHandler) processEvent(event model.Event) (string, error) {
 	var message string
 	switch event.Type {
 	case model.MemberAddedType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully added member to project"
 	case model.MemberRemovedType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully removed member from project"
 	case model.MemberAddedTaskType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully added member to task"
 	case model.MemberRemovedTaskType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully removed member from task"
 	case model.TaskCreatedType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully created task"
 	case model.TaskStatusChangedType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully changed task status"
 	case model.DocumentAddedType:
-		if err := h.repo.StoreEvent(event.ProjectID, event); err != nil {
+		if err := h.repo.StoreEvent(event); err != nil {
 			log.Printf("Failed to store event: %v", err)
 			return "", err
 		}
 		message = "Successfully added document"
+	case model.ProjectCreatedType:
+		if err := h.repo.StoreEvent(event); err != nil {
+			log.Printf("Failed to store event: %v", err)
+			return "", err
+		}
+		// The message will indicate that the project was created successfully
+		message = "Successfully created project"
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		return "", nil

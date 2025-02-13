@@ -49,7 +49,7 @@ func NewESDBClient(client *esdb.Client, group string) (*ESDBClient, error) {
 	return esdbClient, nil
 }
 
-func (e *ESDBClient) StoreEvent(stream string, event model.Event) error {
+func (e *ESDBClient) StoreEvent(event model.Event) error {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return err
@@ -59,8 +59,8 @@ func (e *ESDBClient) StoreEvent(stream string, event model.Event) error {
 		return err
 	}
 
-	// Log the stream name and event details
-	log.Printf("Storing event to stream: %s, event: %+v\n", stream, event)
+	// Log event storage with generic stream name
+	log.Printf("Storing event: %+v\n", event)
 
 	esEvent := esdb.EventData{
 		EventID:     id,
@@ -69,8 +69,51 @@ func (e *ESDBClient) StoreEvent(stream string, event model.Event) error {
 		ContentType: esdb.JsonContentType,
 	}
 	opts := esdb.AppendToStreamOptions{}
-	_, err = e.client.AppendToStream(context.Background(), stream, opts, esEvent)
+	_, err = e.client.AppendToStream(context.Background(), "all-events", opts, esEvent)
 	return err
+}
+
+func (repo *ESDBClient) GetAllEvents() ([]model.Event, error) {
+	var events []model.Event
+
+	// Set up options for reading from the stream
+	readOpts := esdb.ReadStreamOptions{
+		From: esdb.Start{}, // Start from the beginning of the stream
+	}
+	ctx := context.Background()
+
+	// Open the stream for reading
+	stream, err := repo.client.ReadStream(ctx, "all-events", readOpts, 100)
+	if err != nil {
+		// Log the error, but do not return it as an HTTP error
+		log.Printf("Error reading stream: %v", err)
+		// Return empty events, no internal server error
+		return events, nil
+	}
+	defer stream.Close()
+
+	// Iterate through the stream
+	for {
+		event, err := stream.Recv()
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			log.Printf("Error receiving event: %v", err)
+			// Return empty events on error without internal server error
+			return events, nil
+		}
+
+		var e model.Event
+		if err := json.Unmarshal(event.Event.Data, &e); err != nil {
+			log.Printf("Error unmarshalling event: %v", err)
+			continue
+		}
+		events = append(events, e)
+	}
+
+	// Return the empty slice if no events were found, no need for error handling
+	return events, nil
 }
 
 // ProcessEvents processes events using a provided function.
@@ -168,4 +211,13 @@ func (repo *ESDBClient) GetEventsByProjectID(projectID string) ([]model.Event, e
 	}
 
 	return events, nil
+}
+func (e *ESDBClient) DeleteAllEvents() error {
+	// Use the client to delete the "all-events" stream
+	_, err := e.client.DeleteStream(context.Background(), "all-events", esdb.DeleteStreamOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete events: %v", err)
+	}
+	log.Println("Successfully deleted all events from the 'all-events' stream")
+	return nil
 }

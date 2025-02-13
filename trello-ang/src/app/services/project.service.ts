@@ -14,6 +14,7 @@ import { lastValueFrom } from 'rxjs';
 export class ProjectService {
   private baseUrl = 'https://localhost/taskio/projects';
   private taskUrl = 'https://localhost/taskio/tasks';
+  private eventsUrl = 'https://localhost/taskio/events';
   private projectCreated = new Subject<Project>();
   private newProject = {}
 
@@ -126,4 +127,22 @@ export class ProjectService {
     return this.http.delete(url, { headers });
   }
 
+  getAllEvents(): Observable<Event[]> {
+    return this.http.get<Event[]>(this.eventsUrl).pipe(
+      catchError((error) => {
+        console.error('Error fetching events:', error);
+        throw error;
+      })
+    );
+  }
+
+  getProjectByID(projectId: string): Observable<Project> {
+    const url = `${this.baseUrl}/${projectId}`;
+    return this.http.get<Project>(url).pipe(
+      catchError((error) => {
+        console.error(`Error fetching project by ID: ${projectId}`, error);
+        return throwError(() => error);
+      })
+    );
+  }
 }

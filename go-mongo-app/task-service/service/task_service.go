@@ -633,7 +633,6 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 	fmt.Printf("Fetched User: %+v\n", user) // Debug log
 
 	// Parsiranje taskID-a u ObjectID
-
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return false, errors.New("invalid task ID format")
@@ -650,7 +649,12 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 		return false, err
 	}
 
-	// Provera da li userID postoji u listi users
+	// Ako lista korisnika ne postoji ili je prazna, vrati false
+	if task.Users == nil || len(task.Users) == 0 {
+		return false, nil
+	}
+
+	// Provera da li userID postoji u listi users ili je korisnik Manager
 	for _, id := range task.Users {
 		if id == userID || user.Role == "Manager" {
 			return true, nil
@@ -659,6 +663,33 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 
 	return false, nil
 }
+
+// FileExistsInHDFS proverava da li fajl sa datom putanjom postoji u HDFS-u
+func FileExistsInHDFS(hdfsFilePath string) (bool, error) {
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
+
+	// Provera da li fajl postoji
+	_, err = client.Stat(hdfsFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Fajl ne postoji
+			return false, nil
+		}
+		// Došlo je do druge greške
+		return false, fmt.Errorf("failed to check file existence: %v", err)
+	}
+
+	// Fajl postoji
+	return true, nil
+}
+
 func AddDependencyToTask(taskIDStr, dependencyIDStr string) error {
 	// Logovanje vrednosti ID-ova
 	fmt.Println("Task ID:", taskIDStr)

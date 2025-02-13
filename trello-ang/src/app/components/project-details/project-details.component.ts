@@ -17,7 +17,8 @@ import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/dr
 })
 export class ProjectDetailsComponent {
   @Input() project: Project | null = null;
-
+  isFileExistsModalVisible: boolean = false;
+  errorMessage: string = '';
   taskName: string = '';
   taskDescription: string = '';
   isCreateTaskFormVisible: boolean = false;
@@ -69,7 +70,6 @@ export class ProjectDetailsComponent {
     private cdRef: ChangeDetectorRef,
     private authService: AuthService,
     private el: ElementRef
-    
   ) {}
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
@@ -86,7 +86,6 @@ export class ProjectDetailsComponent {
       this.loadExistingTasks();
       this.loadFlows();
       this.renderGraph();
-
 
 
     }
@@ -458,6 +457,7 @@ export class ProjectDetailsComponent {
       (data) => {
         const filteredUsers = data.filter(user => !this.isUserInProject(user.id));
         this.users = this.sortUsersAlphabetically(filteredUsers);
+        console.log("BROJEVII",this.users)
       },
       (error) => {
         console.error('Error fetching active users:', error);
@@ -586,13 +586,24 @@ export class ProjectDetailsComponent {
 
 
   showAddTaskUserModal(task: any) {
-    this.selectedTask = task; // Ensure task is valid
-    this.isAddTaskUserVisible = true; // Toggle visibility
-    this.isTaskDetailsVisible = false;
-    this.loadUsersForProject()
-    //const C = A.filter(item => !B.i`ncludes(item));
-    this.taskAvUsers = this.projectUsers.filter(
-      item => !this.selectedTask.users.includes(item.id)
+    this.selectedTask = task; // Osiguranje da je task validan
+    this.isAddTaskUserVisible = true; // Pokaži modal
+    this.isTaskDetailsVisible = false; // Sakrij detalje zadatka
+
+    // Učitaj korisnike zadatka svaki put kad se modal otvori
+    this.taskService.getUsersForTask(task.id).subscribe(
+      (users) => {
+        this.taskUsers = this.sortUsersAlphabetically(users);
+        console.log('Loaded users for task:', users); // Ispis korisnika u konzolu
+
+        // Ažuriraj dostupne korisnike (taskAvUsers)
+        this.taskAvUsers = this.projectUsers.filter(
+          (item) => !users.some((user: any) => user.id === item.id)
+        );
+      },
+      (error) => {
+        console.error('Error loading users for task:', error);
+      }
     );
   }
 
@@ -617,7 +628,6 @@ export class ProjectDetailsComponent {
     if (this.selectedTask && this.selectedTaskUsers.length > 0) {
       const taskId = this.selectedTask.id;
       const userIds = this.selectedTaskUsers.map(user => user.id);
-      const username = this.selectedTaskUsers.map(user => user.username)
 
       userIds.forEach(userId => {
         // Proveri da li je korisnik već dodeljen ovom tasku
@@ -626,15 +636,21 @@ export class ProjectDetailsComponent {
         if (!isAlreadyAssigned) {
           this.taskService.addUserToTask(taskId, userId).subscribe(
             response => {
+              // Ažuriraj listu korisnika nakon uspešnog dodavanja
+              this.taskService.getUsersForTask(taskId).subscribe(
+                (updatedUsers) => {
+                  this.taskUsers = this.sortUsersAlphabetically(updatedUsers);
+                  console.log('Updated task users:', updatedUsers);
 
-              // Ažuriraj lokalni niz taskUsers
-              const addedUser = this.taskAvUsers.find(user => user.id === userId);
-              if (addedUser) {
-                // Dodaj korisnika u taskUsers
-                this.taskUsers.push(addedUser);
-                // Ukloni korisnika iz projectUsers
-                this.taskAvUsers = this.taskAvUsers.filter(user => user.id !== userId);
-              }
+                  // Ažuriraj dostupne korisnike (taskAvUsers)
+                  this.taskAvUsers = this.projectUsers.filter(
+                    (item) => !updatedUsers.some((user: any) => user.id === item.id)
+                  );
+                },
+                (error) => {
+                  console.error('Error refreshing users after adding:', error);
+                }
+              );
             },
             error => {
               console.error(`Error adding user ${userId} to task ${taskId}:`, error);
@@ -645,7 +661,6 @@ export class ProjectDetailsComponent {
           this.showUserAlreadyAddedModal();
         }
       });
-
     } else {
       this.showNoUsersSelectedModal();
     }
@@ -745,20 +760,26 @@ export class ProjectDetailsComponent {
 
       this.projectService.createTask(this.projectId, newTask).subscribe(
         (response) => {
-
           this.cancelCreateTask();
           this.taskFormError = '';
 
-          this.loadTasks()
+          this.loadTasks();
         },
         (error) => {
           console.error('Error creating task:', error);
+
+          if (error.status === 500) {
+            this.taskFormError = 'Task with this name already exists.';
+          } else {
+            this.taskFormError = 'An error occurred while creating the task.';
+          }
         }
       );
     } else {
       console.error('Project ID is missing');
     }
   }
+
 
   showMissingProjectIdModal() {
     const modal = document.querySelector('.exist-task-name');
@@ -804,15 +825,7 @@ export class ProjectDetailsComponent {
     this.cdRef.detectChanges();
     document.querySelector('#taskModal')?.setAttribute('style', 'display:block; opacity: 100%; margin-top:20px');
 
-    // Učitajte korisnike na tasku
-    this.taskService.getUsersForTask(task.id).subscribe(
-      (users) => {
-        this.taskUsers = this.sortUsersAlphabetically(users);
-      },
-      (error) => {
-        console.error('Error loading users for task:', error);
-      }
-    );
+
     this.loadTaskFiles(task.id);
   }
 
@@ -887,6 +900,8 @@ export class ProjectDetailsComponent {
     this.isTaskDetailsVisible = true;
   }
 
+
+
   uploadFiles(): void {
     if (!this.selectedFiles || this.selectedFiles.length === 0) {
       console.error('No files selected!');
@@ -921,7 +936,6 @@ export class ProjectDetailsComponent {
           this.taskService.uploadFile(formData).subscribe(
             (response) => {
               console.log('Fajlovi su uspešno upload-ovani!', response);
-              //this.message = 'Fajlovi su uspešno upload-ovani!';
               this.isSuccessMessage = true;
 
               // Resetovanje UI
@@ -934,15 +948,21 @@ export class ProjectDetailsComponent {
             (error) => {
               console.error('Error uploading files:', error);
 
-              // Prikazivanje greške za upload
-              //this.message = 'Greška prilikom upload-a fajlova. Pokušajte ponovo.';
-              this.isSuccessMessage = false;
+              // Provera da li je greška 409 (Conflict)
+              if (error.status === 409) {
+                this.errorMessage = 'This file already exists.'; // Postavi poruku o grešci
+                this.isFileExistsModalVisible = true; // Prikaži modal
+              } else {
+                // Prikazivanje generičke greške
+                this.message = 'Greška prilikom upload-a fajlova. Pokušajte ponovo.';
+                this.isSuccessMessage = false;
+              }
             }
           );
         } else {
           // Poruka ako korisnik nije član taska
           console.error('User is not a member of the task.');
-          //this.message = 'Niste član ovog taska i nemate dozvolu za upload fajlova.';
+          this.message = 'Niste član ovog taska i nemate dozvolu za upload fajlova.';
           this.isSuccessMessage = false;
         }
       },
@@ -952,6 +972,14 @@ export class ProjectDetailsComponent {
         this.isSuccessMessage = false;
       }
     );
+  }
+
+  closeFileExistsModal(): void {
+    this.errorMessage = '';
+    this.fileInput.nativeElement.value = '';
+    this.selectedFiles = [];
+    this.isFileExistsModalVisible = false;
+
   }
 
   removeUserFromTask(userId: string): void {
@@ -1314,7 +1342,7 @@ export class ProjectDetailsComponent {
             this.restoreTaskToOriginalPosition();     // Vrati zadatak u originalni spisak
             this.dependencyMessage = '';
             this.showUserNotOnTaskModal();
-  // Očisti poruku
+            // Očisti poruku
           }, 500);
 
           return; // Prekini dalje izvršavanje
@@ -1424,21 +1452,20 @@ export class ProjectDetailsComponent {
   }
 
   deleteProject(): void {
-   if (!this.project?.id) {
+    if (!this.project?.id) {
       console.error('Project ID is missing.');
       return;
     }
-      if (this.project) {
-        // Pozovi servis za brisanje projekta
-        this.projectService.deleteProject(this.project.id).subscribe(() => {
-          // Postavi flag da je projekat obrisan
-          this.isProjectDeleted = true;
-          console.log('Project successfully deleted!');
-        }, (error) => {
-          console.error('Error deleting project:', error);
-        });
-      }
+    if (this.project) {
+      // Pozovi servis za brisanje projekta
+      this.projectService.deleteProject(this.project.id).subscribe(() => {
+        // Postavi flag da je projekat obrisan
+        this.isProjectDeleted = true;
+        console.log('Project successfully deleted!');
+      }, (error) => {
+        console.error('Error deleting project:', error);
+      });
     }
-
+  }
 
 }

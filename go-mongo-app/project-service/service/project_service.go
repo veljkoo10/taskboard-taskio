@@ -228,12 +228,15 @@ func CreateProject(project models.Project) (string, error) {
 		"max_people":        project.MaxPeople,
 		"createdAt":         time.Now(),
 	}
-	_, err = collection.InsertOne(context.TODO(), safeProject)
+
+	result, err := collection.InsertOne(context.TODO(), safeProject)
 	if err != nil {
 		return "", err
 	}
 
-	return "Successfully saved to the database", nil
+	// Vraćanje generisanog ID-a
+	projectID := result.InsertedID.(primitive.ObjectID).Hex()
+	return projectID, nil
 }
 
 func validateProject(project models.Project, expectedEndDate time.Time) error {
