@@ -38,7 +38,7 @@ export const appRoutes: Routes = [
     path: 'notification',
     component: NotificationComponent,
     canActivate: [AuthGuard],
-    data: { roles: ['Manager','Member'] }
+    data: { roles: ['Member'] }
   },
   {
     path: 'history',
@@ -46,7 +46,7 @@ export const appRoutes: Routes = [
     canActivate: [AuthGuard],
     data: { roles: ['Manager'] }
   },
-  { path: 'analytics', component: AnalyticsComponent},
+  { path: 'analytics', component: AnalyticsComponent,data: { roles: ['Manager'] }},
   { path: 'magic-login', component: MagicLinkComponent },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },

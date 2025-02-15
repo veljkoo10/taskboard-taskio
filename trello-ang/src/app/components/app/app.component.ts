@@ -78,6 +78,7 @@ export class AppComponent implements OnInit, OnDestroy {
   goToNotifications(): void {
     this.isProfileMenuOpen = false;
     this.stopNotificationCheck();
+    this.hasNotifications = false;
     this.router.navigate(['/notification']);
   }
 

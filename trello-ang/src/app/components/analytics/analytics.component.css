@@ -1,14 +1,171 @@
+/* General Styles */
 .analytics-container {
-    padding: 20px;
-    color: green; /* Zelena boja za tekst */
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-  }
-  h2 {
-    margin-bottom: 10px;
-    color: green; /* Zelena boja za naslov */
-  }
-  p {
-    margin: 5px 0;
-  }
-  
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  background-color: #f9f9f9; /* Light background for the container */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+  max-width: 1200px;
+  margin: 40px auto; /* Add space at the top and bottom */
+}
+
+h1 {
+  color: #2c3e50; /* Dark blue for the main heading */
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h2 {
+  color: #27ae60; /* Green for section headings */
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #27ae60; /* Green underline for section headings */
+  padding-bottom: 5px;
+}
+
+h3 {
+  color: #34495e; /* Dark gray for subheadings */
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #555; /* Dark gray for text */
+  font-size: 1rem;
+  margin: 8px 0;
+}
+
+ul {
+  list-style-type: none; /* Remove default bullet points */
+  padding: 0;
+}
+
+li {
+  background-color: #ecf0f1; /* Light gray background for list items */
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: #333; /* Dark gray for list text */
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #ddd; /* Light gray for horizontal lines */
+  margin: 20px 0;
+}
+
+/* Loading placeholders */
+.ng-template p {
+  color: #888; /* Light gray for loading text */
+  font-style: italic;
+}
+
+/* Status colors */
+.completed {
+  color: #27ae60; /* Green for completed status */
+}
+
+.not-completed {
+  color: #e74c3c; /* Red for not completed status */
+}
+
+/* Card-like styling for sections */
+.section-card {
+  background-color: #fff; /* White background for sections */
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for sections */
+  margin-bottom: 20px;
+}
+/* Total Tasks Assigned Section */
+.total-tasks {
+  background-color: #fff;
+  color: #fff; /* White text for contrast */
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px; /* Space below the section */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.total-tasks p {
+  font-size: 1.2rem; /* Larger font size */
+  font-weight: 600; /* Semi-bold for better visibility */
+  margin: 0; /* Remove default margin */
+}
+/* Task Status Count Section */
+.task-status-count p {
+  font-weight: 600; /* Semi-bold for better visibility */
+  font-size: 1.1rem; /* Slightly larger font size */
+  color: #2c3e50; /* Dark blue for better contrast */
+  margin: 10px 0; /* Add more space between lines */
+}
+/* Task Analytics Section */
+.task-analytics-item {
+  margin-bottom: 20px; /* Add space between task items */
+  padding: 15px;
+  background-color: #fff; /* White background for each task */
+  border-radius: 8px;
+  border: 1px solid #e0e0e0; /* Light gray border */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Slightly stronger shadow */
+  transition: box-shadow 0.3s ease; /* Smooth hover effect */
+}
+
+.task-analytics-item:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+.task-analytics-item h3 {
+  margin-bottom: 10px; /* Space below the task name */
+  color: #2c3e50; /* Dark blue for task name */
+}
+
+.task-analytics-item ul {
+  margin-top: 10px; /* Space above the list */
+}
+
+.task-analytics-item li {
+  margin-bottom: 8px; /* Space between list items */
+  background-color: #f8f9fa; /* Slightly lighter gray for list items */
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0; /* Light gray border for list items */
+}
+
+/* Project Completion Status Section */
+.project-status-item {
+  margin-bottom: 20px; /* Add space between project status items */
+  padding: 15px;
+  background-color: #fff; /* White background for each project status */
+  border-radius: 8px;
+  border: 1px solid #e0e0e0; /* Light gray border */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Slightly stronger shadow */
+  transition: box-shadow 0.3s ease; /* Smooth hover effect */
+}
+
+.project-status-item:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+.project-status-item h3 {
+  margin-bottom: 10px; /* Space below the project name */
+  color: #2c3e50; /* Dark blue for project name */
+}
+
+.project-status-item p {
+  margin-bottom: 8px; /* Space between paragraphs */
+  color: #555; /* Dark gray for text */
+}
+
+.project-status-item .completed {
+  color: #27ae60; /* Green for completed status */
+  font-weight: bold; /* Make completed status more prominent */
+}
+
+.project-status-item .not-completed {
+  color: #e74c3c; /* Red for not completed status */
+  font-weight: bold; /* Make not completed status more prominent */
+}

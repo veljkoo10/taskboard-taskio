@@ -305,3 +305,27 @@ label {
     transform: scale(1);
   }
 }
+/* Crno dugme sa hover efektom */
+.btn-black {
+  background-color: black !important;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-black:hover {
+  background-color: #333; /* Tamno siva za hover efekat */
+}
+
+/* Crna poruka za grešku */
+.modal-body.error {
+  color: red; /* Crna boja za grešku */
+}
+
+/* Crni naslov u hederu za grešku */
+.modal-header.error .modal-title {
+  color: black; /* Crna boja za naslov kada je greška */
+}

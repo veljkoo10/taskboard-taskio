@@ -8,16 +8,13 @@
         style="background-color: red;"
         class="btn btn-danger"
         [disabled]="isProjectDeleted"
-        (click)="deleteProject()">
+        (click)="showDeleteProjectModal()"
+      >
         Delete project
       </button>
-
-      <p *ngIf="isProjectDeleted" class="success-message">
-        Project has been successfully deleted.
-      </p>
     </div>
 
-    <h2 class="project-title highlight">
+    <h2 class="project-title highlight" [ngClass]="{'max-width-1100': !hasButtons(), 'max-width-750': hasButtons()}">
       Project Name: <span class="project-name">{{ project.title | titlecase }}</span>
     </h2>
   </div>
@@ -336,6 +333,47 @@
     </div>
   </div>
 
+  <!-- Modal za potvrdu brisanja projekta -->
+  <div class="modal-background" *ngIf="isDeleteProjectModalVisible" (click)="closeDeleteProjectModal()"></div>
+
+  <div id="deleteProjectModal" class="modal" *ngIf="isDeleteProjectModalVisible">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <!-- Dodajte novu klasu za header -->
+        <div class="modal-header centered-header">
+          <h4 class="modal-title">Project deletion confirmation</h4>
+        </div>
+        <!-- Dodajte novu klasu za body -->
+        <div class="modal-body centered-body">
+          <p>Are you sure you want to delete the project "{{ project.title | titlecase }}"?</p>
+        </div>
+        <!-- Footer ostaje nepromenjen -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeDeleteProjectModal()">Cancel</button>
+          <button type="button" class="btn btn-danger" (click)="confirmDeleteProject()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za uspešno brisanje projekta -->
+  <div class="modal-background" *ngIf="isDeleteSuccessModalVisible" (click)="closeDeleteSuccessModal()"></div>
+
+  <div id="deleteSuccessModal" class="modal" *ngIf="isDeleteSuccessModalVisible">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header centered-header">
+          <h4 class="modal-title">Success</h4>
+        </div>
+        <div class="modal-body centered-body">
+          <p>The project has been successfully deleted.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" (click)="closeDeleteSuccessModal()">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="all-tasks-done-modal" (click)="closeTasksDoneModal()">
     <div class="modal-content">
@@ -386,7 +424,7 @@
     </div>
   </div>
 
-  <div class="no-users-selected-modal" (click)="closeNoUsersSelectedModal()">
+  <div id="no-user-to-task" class="no-users-selected-modal" (click)="closeNoUsersSelectedModal()">
     <div class="modal-content">
       <p>No users selected. Please select at least one user to add to the task.</p>
       <button (click)="closeNoUsersSelectedModal()">OK</button>

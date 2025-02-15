@@ -9,6 +9,7 @@ import {catchError, EMPTY, forkJoin, Observable, switchMap, tap, throwError} fro
 import * as d3 from 'd3';
 import {ConsoleLogger} from "@angular/compiler-cli";
 import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import {Router} from "@angular/router";
 
 @Component({
   selector: 'app-project-details',
@@ -62,15 +63,20 @@ export class ProjectDetailsComponent {
   selectedSessionTasks: number[] = [];
   allTasks: any[] = [];
   isProjectDeleted: boolean = false;
-
+  isDeleteProjectModalVisible: boolean = false;
+  isDeleteSuccessModalVisible: boolean = false;
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
     private userService: UserService,
     private cdRef: ChangeDetectorRef,
     private authService: AuthService,
-    private el: ElementRef
+    private el: ElementRef,
+    private router: Router
   ) {}
+
+
+
   ngOnChanges(changes: SimpleChanges) {
     if (changes['project'] && changes['project'].currentValue) {
       const newProject = changes['project'].currentValue;
@@ -89,6 +95,10 @@ export class ProjectDetailsComponent {
 
 
     }
+  }
+
+  hasButtons(): boolean {
+    return this.isManager();
   }
 
   getAvailableSpots(): number {
@@ -148,7 +158,6 @@ export class ProjectDetailsComponent {
 
   loadExistingTasks(): void {
     if (!this.selectedTask || !this.selectedTask.id) {
-      console.log('Nema selektovanog taska ili ID nije validan.');
       return;
     }
 
@@ -330,7 +339,6 @@ export class ProjectDetailsComponent {
         this.renderGraph();
 
         if (!this.workflows || this.workflows.length === 0) {
-          console.log('No workflows found!');
           return;
         }
 
@@ -457,7 +465,6 @@ export class ProjectDetailsComponent {
       (data) => {
         const filteredUsers = data.filter(user => !this.isUserInProject(user.id));
         this.users = this.sortUsersAlphabetically(filteredUsers);
-        console.log("BROJEVII",this.users)
       },
       (error) => {
         console.error('Error fetching active users:', error);
@@ -594,7 +601,6 @@ export class ProjectDetailsComponent {
     this.taskService.getUsersForTask(task.id).subscribe(
       (users) => {
         this.taskUsers = this.sortUsersAlphabetically(users);
-        console.log('Loaded users for task:', users); // Ispis korisnika u konzolu
 
         // Ažuriraj dostupne korisnike (taskAvUsers)
         this.taskAvUsers = this.projectUsers.filter(
@@ -834,12 +840,10 @@ export class ProjectDetailsComponent {
     this.cdRef.detectChanges();
     this.taskService.getTaskFiles(taskId).subscribe(
       (files) => {
-        console.log('Files loaded for task:', files);
         if (files && Array.isArray(files) && files.length > 0) {
           this.taskFiles = files;
         } else {
           this.taskFiles = [];
-          console.log('No files available for this task');
         }
         this.cdRef.detectChanges();
       },
@@ -1451,6 +1455,24 @@ export class ProjectDetailsComponent {
     }
   }
 
+
+  // Dodajte ovu metodu za prikaz modala
+  showDeleteProjectModal(): void {
+    this.isDeleteProjectModalVisible = true;
+  }
+
+  // Dodajte ovu metodu za zatvaranje modala
+  closeDeleteProjectModal(): void {
+    this.isDeleteProjectModalVisible = false;
+  }
+
+  // Dodajte ovu metodu za potvrdu brisanja projekta
+  confirmDeleteProject(): void {
+    this.deleteProject();
+    this.closeDeleteProjectModal();
+  }
+
+  // Ažurirajte postojeću metodu za brisanje projekta
   deleteProject(): void {
     if (!this.project?.id) {
       console.error('Project ID is missing.');
@@ -1458,14 +1480,36 @@ export class ProjectDetailsComponent {
     }
     if (this.project) {
       // Pozovi servis za brisanje projekta
-      this.projectService.deleteProject(this.project.id).subscribe(() => {
-        // Postavi flag da je projekat obrisan
-        this.isProjectDeleted = true;
-        console.log('Project successfully deleted!');
-      }, (error) => {
-        console.error('Error deleting project:', error);
-      });
+      this.projectService.deleteProject(this.project.id).subscribe(
+        () => {
+          // Postavi flag da je projekat obrisan
+          this.isProjectDeleted = true;
+          console.log('Project successfully deleted!');
+
+          // Prikaži modal sa porukom o uspešnom brisanju
+
+
+          this.showDeleteSuccessModal();
+        },
+        (error) => {
+          console.error('Error deleting project:', error);
+        }
+      );
     }
+  }
+
+  // Metoda za prikaz modala sa porukom o uspešnom brisanju
+  showDeleteSuccessModal(): void {
+    this.isDeleteSuccessModalVisible = true;
+  }
+
+  // Metoda za zatvaranje modala sa porukom o uspešnom brisanju
+  closeDeleteSuccessModal(): void {
+    this.isDeleteSuccessModalVisible = false;
+    // Ponovo učita trenutnu rutu da bi se osvežila komponenta
+    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
+      this.router.navigate(['/dashboard']);
+    });
   }
 
 }
