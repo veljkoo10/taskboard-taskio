@@ -666,9 +666,15 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 
 // FileExistsInHDFS proverava da li fajl sa datom putanjom postoji u HDFS-u
 func FileExistsInHDFS(hdfsFilePath string) (bool, error) {
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return false, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+	}
+
 	// Konektovanje na HDFS namenode
 	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to connect to HDFS: %v", err)
@@ -802,9 +808,15 @@ func GetDependenciesFromWorkflowService(taskID string) (*models.Workflow, error)
 }
 
 func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string) error {
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+	}
+
 	// Konektovanje na HDFS namenode
 	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to HDFS: %v", err)
@@ -867,9 +879,15 @@ func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string) error {
 }
 
 func ReadFileFromHDFS(hdfsPath string) ([]byte, error) {
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return nil, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+	}
+
 	// Konektovanje na HDFS namenode
 	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
@@ -892,9 +910,15 @@ func ReadFileFromHDFS(hdfsPath string) ([]byte, error) {
 	return fileContent, nil
 }
 func ReadFilesFromHDFSDirectory(dirPath string) ([]string, error) {
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return nil, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+	}
+
 	// Konektovanje na HDFS namenode
 	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{"namenode:8020"}, // Adresa namenode servera
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)

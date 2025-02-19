@@ -6,11 +6,10 @@ require (
 	github.com/colinmarc/hdfs v1.1.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/mux v1.8.1
+	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.37.0
 	github.com/rs/cors v1.11.1
 	go.mongodb.org/mongo-driver v1.17.1
-	github.com/google/uuid v1.3.0
-
 
 )
 

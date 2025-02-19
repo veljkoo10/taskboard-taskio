@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -14,11 +15,30 @@ type StorageHandler struct {
 	logger *log.Logger
 	// NoSQL: injecting file hdfs
 	store *storage.FileStorage
+	// Environment variables
+	defaultFilePath    string
+	defaultFileContent string
 }
 
 // Injecting the logger makes this code much more testable.
 func NewStorageHandler(l *log.Logger, s *storage.FileStorage) *StorageHandler {
-	return &StorageHandler{l, s}
+	// Učitavamo vrednosti iz okruženja (ako ne postoje, koristićemo default vrednosti)
+	defaultFilePath := os.Getenv("DEFAULT_FILE_PATH")
+	if defaultFilePath == "" {
+		defaultFilePath = "/tmp" // default
+	}
+
+	defaultFileContent := os.Getenv("DEFAULT_FILE_CONTENT")
+	if defaultFileContent == "" {
+		defaultFileContent = "Hola Mundo!" // default
+	}
+
+	return &StorageHandler{
+		logger:             l,
+		store:              s,
+		defaultFilePath:    defaultFilePath,
+		defaultFileContent: defaultFileContent,
+	}
 }
 
 func (s *StorageHandler) CopyFileToStorage(rw http.ResponseWriter, h *http.Request) {
@@ -36,8 +56,8 @@ func (s *StorageHandler) CopyFileToStorage(rw http.ResponseWriter, h *http.Reque
 func (s *StorageHandler) WriteFileToStorage(rw http.ResponseWriter, h *http.Request) {
 	fileName := h.FormValue("fileName")
 
-	// NoSQL TODO: expand method so that it accepts file from request
-	fileContent := "Hola Mundo!"
+	// Koristi podrazumevani sadržaj iz environment varijable
+	fileContent := s.defaultFileContent
 
 	err := s.store.WriteFile(fileContent, fileName)
 

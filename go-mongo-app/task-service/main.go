@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
+	"github.com/rs/cors"
 	"log"
 	"net/http"
 	"os"
@@ -10,13 +13,26 @@ import (
 	"task-service/db"
 	"task-service/handlers"
 	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 )
 
 func main() {
-	err := db.ConnectToMongo()
+	// Učitaj .env fajl
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, using default values")
+	}
+
+	// Čitanje vrednosti iz environment varijabli
+	hdfsNameNodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNameNodeAddress == "" {
+		hdfsNameNodeAddress = "hdfs://localhost:9000"
+	}
+
+	// Logovanje HDFS NameNode adrese
+	log.Println("HDFS NameNode Address: ", hdfsNameNodeAddress)
+
+	// Veza sa MongoDB
+	err = db.ConnectToMongo()
 	if err != nil {
 		fmt.Println("Error connecting to MongoDB:", err)
 		os.Exit(1)
@@ -26,6 +42,7 @@ func main() {
 	bootstrap.ClearTasks()
 	bootstrap.InsertInitialTasks()
 
+	// Veza sa NATS
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
 		natsURL = "nats://nats:4222"
@@ -35,11 +52,14 @@ func main() {
 		log.Fatalf("Error connecting to NATS: %v", err)
 	}
 	defer nc.Close()
+
+	// Postavke loggera
 	logger := log.New(os.Stdout, "[product-api] ", log.LstdFlags)
 	taskRepo := db.NewTaskRepo(db.Client)
 
 	tasksHandler := handlers.NewTasksHandler(logger, taskRepo, nc)
 
+	// Postavke routera
 	router := mux.NewRouter()
 	router.HandleFunc("/tasks", tasksHandler.GetTasks).Methods("GET")
 	router.HandleFunc("/tasks/{taskId}", tasksHandler.GetTaskByID).Methods("GET", "OPTIONS")

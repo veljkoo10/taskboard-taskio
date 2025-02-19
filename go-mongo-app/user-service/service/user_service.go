@@ -92,10 +92,10 @@ func sanitizeEmail(email string) string {
 }
 
 var emailConfig = notification.EmailConfig{
-	From:     "taskio2024@gmail.com",
-	Password: "znnbgxgvshvythfq",
-	SMTPHost: "smtp.gmail.com",
-	SMTPPort: "587",
+	From:     os.Getenv("EMAIL_FROM"),
+	Password: os.Getenv("EMAIL_PASSWORD"),
+	SMTPHost: os.Getenv("SMTP_HOST"),
+	SMTPPort: os.Getenv("SMTP_PORT"),
 }
 
 func GetActiveUsers() ([]models.User, error) {
