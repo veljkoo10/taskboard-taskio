@@ -53,17 +53,13 @@ export class VerifyMagicLinkComponent implements OnInit {
         console.log('Dobijeni user_id:', response.user_id);
 
         if (response.user_id) {
-          const encryptedUserId = CryptoJS.AES.encrypt(response.user_id, this.SECRET_KEY).toString();
-          localStorage.setItem('user_id', encryptedUserId);
+          localStorage.setItem('user_id', response.user_id);
         } else {
           console.error('User ID nije dostavljen od servera!');
         }
 
-        const encryptedRole = CryptoJS.AES.encrypt(response.role, this.SECRET_KEY).toString();
-        //this.authService.saveToken(response.access_token);
-        localStorage.setItem('role', encryptedRole);
-        const encryptedToken = CryptoJS.AES.encrypt(response.access_token, this.SECRET_KEY).toString();
-        localStorage.setItem('access_token', encryptedToken);
+        localStorage.setItem('role', response.role);
+        localStorage.setItem('access_token', response.access_token);
 
         console.log('Proveravam localStorage:');
         console.log('access_token:', localStorage.getItem('access_token'));
@@ -79,6 +75,7 @@ export class VerifyMagicLinkComponent implements OnInit {
         console.error('Greška prilikom prijave:', error);
       }
     );
-  }
+}
+
 
 }

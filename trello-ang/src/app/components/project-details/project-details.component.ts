@@ -65,6 +65,7 @@ export class ProjectDetailsComponent {
   isProjectDeleted: boolean = false;
   isDeleteProjectModalVisible: boolean = false;
   isDeleteSuccessModalVisible: boolean = false;
+  managerError: boolean = false;
   constructor(
     private taskService: TaskService,
     private projectService: ProjectService,
@@ -1324,34 +1325,43 @@ export class ProjectDetailsComponent {
   allowDrop(event: DragEvent) {
     event.preventDefault();
   }
-
+  showManagerErrorModal() {
+    this.managerError = true;
+  }
+  
   onDrop(event: DragEvent, targetList: string) {
     event.preventDefault();
-
+  
     if (!this.draggedTask || this.sourceList === targetList) {
       return;
     }
-
+  
+    // Ako je korisnik menadžer, prikaži modal i prekini izvršavanje
+    if (this.user.role === 'Manager') {
+      this.showManagerErrorModal();
+      return;
+    }
+  
     const userId = this.user.id;
-
+  
     this.taskService.isUserOnTask(this.draggedTask.id, userId).subscribe(
       (isMember) => {
-        this.moveTaskToTargetList(targetList); // Premesti zadatak odmah u ciljni spisak
-
+        this.moveTaskToTargetList(targetList);
+  
         if (!isMember) {
-          this.dependencyMessage = 'You are not a member of this task and cannot keep it in the new list. Returning task in 2 seconds.';
-
+          this.dependencyMessage =
+            'You are not a member of this task and cannot keep it in the new list. Returning task in 2 seconds.';
+  
           setTimeout(() => {
-            this.removeTaskFromTargetList(targetList); // Ukloni zadatak iz ciljnog spiska
-            this.restoreTaskToOriginalPosition();     // Vrati zadatak u originalni spisak
+            this.removeTaskFromTargetList(targetList);
+            this.restoreTaskToOriginalPosition();
             this.dependencyMessage = '';
             this.showUserNotOnTaskModal();
-            // Očisti poruku
           }, 500);
-
-          return; // Prekini dalje izvršavanje
+  
+          return;
         }
-
+  
         const updateObservable = this.updateTaskStatus(targetList);
         if (updateObservable) {
           updateObservable.subscribe(
@@ -1363,15 +1373,12 @@ export class ProjectDetailsComponent {
             (error) => {
               console.error('Error updating task status:', error);
               this.dependencyMessage = 'An error occurred while updating task status. Reverting changes.';
-
-
-              // Zadrži zadatak 2 sekunde u ciljnjoj listi pre vraćanja
+  
               setTimeout(() => {
                 this.removeTaskFromTargetList(targetList);
                 this.restoreTaskToOriginalPosition();
-                this.dependencyMessage = ''; // Očisti poruku
+                this.dependencyMessage = '';
                 this.showErrorModal();
-
               }, 500);
             }
           );
@@ -1384,9 +1391,8 @@ export class ProjectDetailsComponent {
       }
     );
   }
-
-
-
+  
+  
 
 // Funkcija koja premesti zadatak u ciljnu listu odmah
   moveTaskToTargetList(targetList: string) {
