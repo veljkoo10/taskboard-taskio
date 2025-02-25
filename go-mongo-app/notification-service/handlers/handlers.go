@@ -322,6 +322,43 @@ func (n *NotificationHandler) NotificationListener() {
 		log.Println("Error subscribing to NATS subject:", err)
 	}
 
+	subject2Removed := "project.removed2"
+	_, err = nc.Subscribe(subject2Removed, func(msg *nats.Msg) {
+		fmt.Printf("User received removal notification: %s\n", string(msg.Data))
+
+		var data struct {
+			UserID      string `json:"userId"`
+			ProjectName string `json:"projectName"`
+		}
+
+		err := json.Unmarshal(msg.Data, &data)
+		if err != nil {
+			log.Println("Error unmarshalling message:", err)
+			return
+		}
+
+		fmt.Printf("User ID: %s, Project Name: %s\n", data.UserID, data.ProjectName)
+
+		message := fmt.Sprintf("The project '%s' has been deleted, and you have been removed from it.", strings.Title(data.ProjectName))
+
+		notification := models.Notification{
+			UserID:    data.UserID,
+			Message:   message,
+			CreatedAt: time.Now(),
+			Status:    models.Unread,
+		}
+
+		err = n.repo.Create(&notification)
+		if err != nil {
+			n.logger.Print("Error inserting notification:", err)
+			return
+		}
+	})
+
+	if err != nil {
+		log.Println("Error subscribing to NATS subject:", err)
+	}
+
 	taskRemoved := "task.removed"
 	_, err = nc.Subscribe(taskRemoved, func(msg *nats.Msg) {
 		fmt.Printf("User received removal notification: %s\n", string(msg.Data))

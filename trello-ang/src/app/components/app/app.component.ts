@@ -41,6 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.startTimer();
     }
 
+    // Provera notifikacija se ne pokreće za menadžera
     if (!this.isManager() && this.router.url !== '/notification') {
       this.startNotificationCheck();
     }
@@ -52,10 +53,11 @@ export class AppComponent implements OnInit, OnDestroy {
         // Logovanje trenutnog URL-a nakon navigacije
         console.log(`Navigated to URL: ${currentPath}`);
 
+        // Provera notifikacija se ne pokreće za menadžera
         if (!this.isManager()) {
           if (currentPath === '/notification') {
             this.stopNotificationCheck();
-            this.hasNotifications = false;
+            this.hasNotifications = false; // Postavite hasNotifications na false kada ste na /notification
           } else {
             this.startNotificationCheck();
           }
@@ -78,7 +80,7 @@ export class AppComponent implements OnInit, OnDestroy {
   goToNotifications(): void {
     this.isProfileMenuOpen = false;
     this.stopNotificationCheck();
-    this.hasNotifications = false;
+    this.hasNotifications = false; // Postavite hasNotifications na false
     this.router.navigate(['/notification']);
   }
 
@@ -242,6 +244,12 @@ export class AppComponent implements OnInit, OnDestroy {
   checkForNotifications() {
     const userID = localStorage.getItem('user_id');
 
+    // Ako je korisnik menadžer, preskoči proveru notifikacija
+    if (this.isManager()) {
+      this.hasNotifications = false;
+      return;
+    }
+
     if (userID) {
       this.notificationService.getNotificationsByUserID(userID).subscribe(
         (notifications) => {
@@ -261,6 +269,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   handleNotifications(notifications: any[]) {
+    // Ako je korisnik na /notification ruti, nemoj prikazivati tačku za notifikacije
+    if (this.router.url === '/notification') {
+      this.hasNotifications = false;
+      return;
+    }
+
+    // Ako je korisnik menadžer, nemoj prikazivati tačku za notifikacije
+    if (this.isManager()) {
+      this.hasNotifications = false;
+      return;
+    }
+
     if (notifications && Array.isArray(notifications)) {
       const unreadNotifications = notifications.filter(notification => notification.status === 'unread');
       this.hasNotifications = unreadNotifications.length > 0;

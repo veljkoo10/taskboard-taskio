@@ -581,8 +581,39 @@ func (uh *ProjectHandler) DeleteProjectByIDHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Fetch the project details before deleting it
+	project, err := service.GetProjectByID(projectID)
+	if err != nil {
+		http.Error(w, "Failed to fetch project details: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch the list of users associated with the project
+	userIDs, err := service.GetUsersForProject(projectID)
+	if err != nil {
+		http.Error(w, "Failed to fetch users for project: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send notifications to all users that they have been removed from the project
+	for _, userID := range userIDs {
+		subject := "project.removed2"
+		message := struct {
+			UserID      string `json:"userId"`
+			ProjectName string `json:"projectName"`
+		}{
+			UserID:      userID,
+			ProjectName: project.Title,
+		}
+
+		if err := uh.sendNotification(subject, message); err != nil {
+			http.Error(w, "Failed to send notification to user: "+userID, http.StatusInternalServerError)
+			return
+		}
+	}
+
 	// Pozovi repository za brisanje project po taskID-u
-	err := service.DeleteProjectByID(projectID)
+	err = service.DeleteProjectByID(projectID)
 	if err != nil {
 		http.Error(w, "Failed to delete project: "+err.Error(), http.StatusInternalServerError)
 		return

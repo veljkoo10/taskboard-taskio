@@ -161,7 +161,7 @@ body {
 .project-list li::after {
   content: '';
   position: absolute;
-  bottom: 5px;
+  bottom: 10px;
   left: 50%; /* Početak u sredini */
   width: 0%;
   height: 3px;

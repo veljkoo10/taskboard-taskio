@@ -349,8 +349,8 @@
         </div>
         <!-- Footer ostaje nepromenjen -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeDeleteProjectModal()">Cancel</button>
           <button type="button" class="btn btn-danger" (click)="confirmDeleteProject()">Delete</button>
+          <button type="button" class="btn btn-secondary" (click)="closeDeleteProjectModal()">Cancel</button>
         </div>
       </div>
     </div>
@@ -438,14 +438,16 @@
     </div>
   </div>
 
- <!-- Modal za menadžere -->
-<div class="manager-error-modal" *ngIf="managerError">
-  <div class="update-error-modal-content">
-    <h2>Managers cannot change task status</h2>
-    <p>Only team members can update tasks.</p>
-    <button class="close-modal-button" (click)="managerError = false">Close</button>
+  <div class="user-not-on-task-modal">
+    <div class="update-error-modal-content">
+      <h2>You are not a member of this task</h2>
+      <p *ngIf="!isManager()">Contact the project owner to be added to the task.</p>
+      <p></p>
+      <button class="close-modal-button" (click)="closeUserNotOnTaskModal()">Close</button>
+    </div>
   </div>
-</div>
+
+
 
 
   <div class="update-error-modal" style="display: none; opacity: 0;">

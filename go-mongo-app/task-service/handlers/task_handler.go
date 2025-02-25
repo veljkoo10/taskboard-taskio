@@ -105,6 +105,27 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Provera za vraćanje iz "Done" u "Pending" ili "Work in Progress"
+	if previousStatus == "done" && (requestBody.Status == "pending" || requestBody.Status == "work in progress") {
+		// Dozvoli promenu bez dodatnih provera
+	} else if previousStatus != "done" && (requestBody.Status == "pending" || requestBody.Status == "work in progress") {
+		// Primena postojećih provera za zavisnosti
+		for _, dependencyID := range task.DependsOn {
+			dependencyIDStr := dependencyID.Hex() // Konvertuj ObjectID u string
+			dependency, err := service.GetTaskByID(dependencyIDStr)
+			if err != nil {
+				http.Error(w, "Dependency not found", http.StatusInternalServerError)
+				return
+			}
+
+			if dependency.Status != "work in progress" {
+				msg := fmt.Sprintf("Cannot mark task as 'Work in Progress'. Dependency '%s' is not in 'work in progress' state.", dependency.Name)
+				http.Error(w, msg, http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
 	// Ako zadatak nema zavisnosti ili je uslov za status ispunjen, nastavi sa ažuriranjem statusa
 	updatedTask, err := service.UpdateTaskStatus(taskID, requestBody.Status)
 	if err != nil {

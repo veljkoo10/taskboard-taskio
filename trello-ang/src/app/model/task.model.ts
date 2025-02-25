@@ -1,11 +1,11 @@
 export class Task {
-  
+
   name: string;
   description: string;
   status: string;
   users: any[];
   project_id: string;
-  dependsOn: string[]; 
+  dependsOn: string[];
   taskFiles: { fileName: string, content: string }[];  // Niz ID-eva zadataka na koje trenutni zadatak zavisi
 
   constructor(name: string, description: string, status: string = 'pending', projectId: string = '', dependsOn: string[] = [], taskFiles: { fileName: string, content: string }[] = []  ) {

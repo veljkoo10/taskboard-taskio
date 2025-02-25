@@ -96,19 +96,19 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 			return nil, fmt.Errorf("error fetching dependency task: %w", err)
 		}
 
-		// Ako je neki zavisni zadatak "pending", ne možeš promeniti status
-		if dependentTask.Status == "pending" {
+		// Ako je neki zavisni zadatak "pending", ne možeš promeniti status osim ako ne vraćaš u "pending"
+		if dependentTask.Status == "pending" && status != "pending" {
 			return nil, fmt.Errorf("cannot change status: dependency task %s is pending", dependentTask.ID.Hex())
 		}
 
-		// Ako je neki zavisni zadatak u "work in progress", možeš preći samo u "work in progress"
+		// Ako je neki zavisni zadatak u "work in progress", možeš preći samo u "work in progress" ili "pending"
 		if dependentTask.Status == "work in progress" {
-			if status != "work in progress" {
+			if status != "work in progress" && status != "pending" {
 				return nil, fmt.Errorf("cannot change status: dependency task %s is in progress", dependentTask.ID.Hex())
 			}
 		}
 
-		// Ako su svi zavisni zadaci u "done", možeš preći u "done"
+		// Ako su svi zavisni zadaci u "done", možeš preći u bilo koji status
 		if status == "done" && dependentTask.Status != "done" {
 			return nil, fmt.Errorf("cannot change status to 'done': dependency task %s is not done", dependentTask.ID.Hex())
 		}

@@ -149,7 +149,7 @@
   transition: background-color 0.3s, transform 0.2s, color 0.3s; /* Added color transition */
   cursor: pointer;
   text-align: center;
-  margin-left: auto;
+  margin-left: 10px !important;
   margin-right: auto;
   display: inline-block;
   position: relative; /* Important for the line positioning */
@@ -158,10 +158,10 @@
 .add-project-link::before {
   content: ''; /* Creating an empty element */
   position: absolute;
-  bottom: 0; /* Position the line at the bottom of the link */
+  bottom: 5px; /* Pomerite liniju bliže tekstu (smanjite vrednost) */
   left: 50%; /* Start from the center */
   width: 0%; /* Start with 0% width */
-  height: 3px; /* Line thickness */
+  height: 2px; /* Line thickness */
   background-color: white; /* Black line initially */
   transition: width 0.3s ease, left 0.3s ease; /* Added background-color transition */
 }
@@ -171,6 +171,7 @@
   left: 8%; /* Move it to start from 10% to center it */
   background-color: white; /* Change line color to white on hover */
 }
+
 .add-project-link:hover {
   transform: scale(1.1); /* Blago povećanje na hover */
   color: white; /* Kontrastni tekst na hover */
