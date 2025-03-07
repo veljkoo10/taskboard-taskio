@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"Hdfs/storage"
+	"context"
+	"fmt"
+	"github.com/golang-jwt/jwt"
 	"io"
 	"log"
 	"net/http"
@@ -10,7 +13,9 @@ import (
 )
 
 type KeyProduct struct{}
+type KeyAccount struct{}
 
+type KeyRole struct{}
 type StorageHandler struct {
 	logger *log.Logger
 	// NoSQL: injecting file hdfs
@@ -102,4 +107,108 @@ func (s *StorageHandler) MiddlewareContentTypeSet(next http.Handler) http.Handle
 
 		next.ServeHTTP(rw, h)
 	})
+}
+func (uh *StorageHandler) MiddlewareExtractUserFromHeader(next func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, h *http.Request) {
+		// Retrieve the token from the Authorization header
+		authHeader := h.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(rw, "No Authorization header found", http.StatusUnauthorized)
+			uh.logger.Println("No Authorization header:", authHeader)
+			return
+		}
+
+		// Expect the format "Bearer <token>"
+		tokenString := ""
+		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+			tokenString = authHeader[7:]
+		} else {
+			http.Error(rw, "Invalid Authorization header format", http.StatusUnauthorized)
+			uh.logger.Println("Invalid Authorization header format:", authHeader)
+			return
+		}
+
+		// Extract userID and role from the token directly
+		userID, role, err := uh.extractUserAndRoleFromToken(tokenString)
+		if err != nil {
+			uh.logger.Println("Token extraction failed:", err)
+			http.Error(rw, `{"message": "Invalid token"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// Log the userID and role
+		uh.logger.Println("User ID is:", userID, "Role is:", role)
+
+		// Add userID and role to the request context
+		ctx := context.WithValue(h.Context(), KeyAccount{}, userID)
+		ctx = context.WithValue(ctx, KeyRole{}, role)
+
+		// Update the request with the new context
+		h = h.WithContext(ctx)
+
+		// Pass the request along the middleware chain
+		next(rw, h)
+	}
+}
+
+// Helper method to extract userID and role from JWT token
+func (h *StorageHandler) extractUserAndRoleFromToken(tokenString string) (userID string, role string, err error) {
+	// Parse the token
+	// Replace with your actual secret key
+	secretKey := []byte(os.Getenv("TOKEN_SECRET"))
+
+	// Parse and validate the token
+	parsedToken, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		// Validate the algorithm (ensure it's signed with HMAC)
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return secretKey, nil
+	})
+
+	if err != nil || !parsedToken.Valid {
+		return "", "", fmt.Errorf("invalid token: %v", err)
+	}
+
+	// Extract claims from the token
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", fmt.Errorf("invalid token claims")
+	}
+
+	// Extract userID and role from the claims
+	userID, ok = claims["id"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("userID not found in token")
+	}
+
+	role, ok = claims["role"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("role not found in token")
+	}
+
+	return userID, role, nil
+}
+
+func (h *StorageHandler) RoleRequired(next http.HandlerFunc, roles ...string) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) { // changed 'r' to 'req'
+		// Extract the role from the request context
+		role, ok := req.Context().Value(KeyRole{}).(string) // 'req' instead of 'r'
+		if !ok {
+			http.Error(rw, "Role not found in context", http.StatusForbidden)
+			return
+		}
+
+		// Check if the user's role is in the list of required roles
+		for _, r := range roles {
+			if role == r {
+				// If the role matches, pass the request to the next handler in the chain
+				next(rw, req) // 'req' instead of 'r'
+				return
+			}
+		}
+
+		// If the role doesn't match any of the required roles, return a forbidden error
+		http.Error(rw, "Forbidden", http.StatusForbidden)
+	}
 }

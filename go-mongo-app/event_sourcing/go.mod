@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/EventStore/EventStore-Client-Go v1.0.2
 	github.com/gofrs/uuid v3.3.0+incompatible
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/rs/cors v1.11.1
 )

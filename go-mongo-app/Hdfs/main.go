@@ -56,16 +56,16 @@ func main() {
 	router.Use(storageHandler.MiddlewareContentTypeSet)
 
 	copyLocalFile := router.Methods(http.MethodPost).Subrouter()
-	copyLocalFile.HandleFunc("/copy", storageHandler.CopyFileToStorage)
+	copyLocalFile.HandleFunc("/copy", storageHandler.MiddlewareExtractUserFromHeader(storageHandler.RoleRequired(storageHandler.CopyFileToStorage, "Member", "Manager")))
 
 	writeFile := router.Methods(http.MethodPost).Subrouter()
-	writeFile.HandleFunc("/write", storageHandler.WriteFileToStorage)
+	writeFile.HandleFunc("/write", storageHandler.MiddlewareExtractUserFromHeader(storageHandler.RoleRequired(storageHandler.WriteFileToStorage, "Member")))
 
 	readFile := router.Methods(http.MethodGet).Subrouter()
-	readFile.HandleFunc("/read", storageHandler.ReadFileFromStorage)
+	readFile.HandleFunc("/read", storageHandler.MiddlewareExtractUserFromHeader(storageHandler.RoleRequired(storageHandler.ReadFileFromStorage, "Member", "Manager")))
 
 	walkRootContent := router.Methods(http.MethodGet).Subrouter()
-	walkRootContent.HandleFunc("/walk", storageHandler.WalkRoot)
+	walkRootContent.HandleFunc("/walk", storageHandler.MiddlewareExtractUserFromHeader(storageHandler.RoleRequired(storageHandler.WalkRoot, "Member", "Manager")))
 
 	cors := gorillaHandlers.CORS(gorillaHandlers.AllowedOrigins([]string{"*"}))
 

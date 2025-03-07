@@ -5,7 +5,6 @@ import (
 	"analytics-service/models"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -28,12 +27,24 @@ func NewAnalyticsService(client *mongo.Client) *AnalyticsService {
 }
 
 // CountUserTasks - Funkcija za brojanje taskova na kojima je korisnik
-func CountUserTasks(userID string) (int, error) {
+func CountUserTasks(userID string, token string) (int, error) {
 	// Pozivamo task-service da preuzmemo sve taskove
 	taskServiceEndpoint := fmt.Sprintf("http://task-service:8080/tasks")
-	resp, err := http.Get(taskServiceEndpoint)
+
+	// Kreiranje HTTP GET zahteva
+	req, err := http.NewRequest("GET", taskServiceEndpoint, nil)
 	if err != nil {
-		return 0, errors.New("failed to fetch tasks from task-service")
+		return 0, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Slanje HTTP GET zahteva
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch tasks from task-service: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -44,13 +55,13 @@ func CountUserTasks(userID string) (int, error) {
 	// Čitamo telo odgovora
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return 0, errors.New("failed to read response from task-service")
+		return 0, fmt.Errorf("failed to read response from task-service: %v", err)
 	}
 
 	// Parsiramo JSON u listu taskova
 	var tasks []models.Task
 	if err := json.Unmarshal(body, &tasks); err != nil {
-		return 0, errors.New("failed to parse tasks data")
+		return 0, fmt.Errorf("failed to parse tasks data: %v", err)
 	}
 
 	// Brojanje taskova na kojima je userID dodat
@@ -68,12 +79,24 @@ func CountUserTasks(userID string) (int, error) {
 }
 
 // CountUserTasksByStatus - Funkcija za brojanje taskova po statusima za korisnika
-func CountUserTasksByStatus(userID string) (map[string]int, error) {
+func CountUserTasksByStatus(userID string, token string) (map[string]int, error) {
 	// Pozivamo task-service da preuzmemo sve taskove
 	taskServiceEndpoint := fmt.Sprintf("http://task-service:8080/tasks")
-	resp, err := http.Get(taskServiceEndpoint)
+
+	// Kreiranje HTTP GET zahteva
+	req, err := http.NewRequest("GET", taskServiceEndpoint, nil)
 	if err != nil {
-		return nil, errors.New("failed to fetch tasks from task-service")
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Slanje HTTP GET zahteva
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tasks from task-service: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -84,13 +107,13 @@ func CountUserTasksByStatus(userID string) (map[string]int, error) {
 	// Čitamo telo odgovora
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.New("failed to read response from task-service")
+		return nil, fmt.Errorf("failed to read response from task-service: %v", err)
 	}
 
 	// Parsiramo JSON u listu taskova
 	var tasks []models.Task
 	if err := json.Unmarshal(body, &tasks); err != nil {
-		return nil, errors.New("failed to parse tasks data")
+		return nil, fmt.Errorf("failed to parse tasks data: %v", err)
 	}
 
 	// Inicijalizujemo mapu za brojanje taskova po statusu
@@ -122,11 +145,23 @@ func CountUserTasksByStatus(userID string) (map[string]int, error) {
 }
 
 // CheckProjectStatus - Proverava da li je projekat završen
-func CheckProjectStatus(projectID string) (bool, error) {
+func CheckProjectStatus(projectID string, token string) (bool, error) {
 	endpoint := fmt.Sprintf("http://project-service:8080/projects/isActive/%s", projectID)
-	resp, err := http.Get(endpoint)
+
+	// Kreiranje HTTP GET zahteva
+	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return false, errors.New("failed to fetch project status")
+		return false, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Slanje HTTP GET zahteva
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to fetch project status: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -137,7 +172,7 @@ func CheckProjectStatus(projectID string) (bool, error) {
 	// Provera JSON odgovora
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, errors.New("failed to read project status response")
+		return false, fmt.Errorf("failed to read project status response: %v", err)
 	}
 
 	fmt.Printf("Response body: %s\n", string(body))
@@ -154,11 +189,23 @@ func CheckProjectStatus(projectID string) (bool, error) {
 }
 
 // GetUserProjects - Dohvata sve projekte korisnika
-func GetUserProjects(userID string) ([]models.Project, error) {
+func GetUserProjects(userID string, token string) ([]models.Project, error) {
 	endpoint := fmt.Sprintf("http://project-service:8080/projects/user/%s", userID)
-	resp, err := http.Get(endpoint)
+
+	// Kreiranje HTTP GET zahteva
+	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return nil, errors.New("failed to fetch projects")
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Slanje HTTP GET zahteva
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch projects: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -168,36 +215,48 @@ func GetUserProjects(userID string) ([]models.Project, error) {
 
 	var projects []models.Project
 	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
-		return nil, errors.New("failed to decode projects")
+		return nil, fmt.Errorf("failed to decode projects: %v", err)
 	}
 
 	return projects, nil
 }
 
 // GetUserTasksAndProject - Funkcija koja vraća taskove korisnika i ime projekta
-func GetUserTasksAndProject(userID string) (map[string]interface{}, error) {
+func GetUserTasksAndProject(userID string, token string) (map[string]interface{}, error) {
 	// Pozivamo task-service da preuzmemo sve taskove
 	taskServiceEndpoint := fmt.Sprintf("http://task-service:8080/tasks")
-	resp, err := http.Get(taskServiceEndpoint)
-	if err != nil {
-		return nil, errors.New("failed to fetch tasks from task-service")
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("task-service returned status: %d", resp.StatusCode)
+	// Kreiranje HTTP GET zahteva za taskove
+	taskReq, err := http.NewRequest("GET", taskServiceEndpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for tasks: %v", err)
 	}
 
-	// Čitamo telo odgovora
-	body, err := ioutil.ReadAll(resp.Body)
+	// Postavi Authorization header sa Bearer tokenom
+	taskReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Slanje HTTP GET zahteva za taskove
+	client := &http.Client{}
+	taskResp, err := client.Do(taskReq)
 	if err != nil {
-		return nil, errors.New("failed to read response from task-service")
+		return nil, fmt.Errorf("failed to fetch tasks from task-service: %v", err)
+	}
+	defer taskResp.Body.Close()
+
+	if taskResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("task-service returned status: %d", taskResp.StatusCode)
+	}
+
+	// Čitamo telo odgovora za taskove
+	taskBody, err := ioutil.ReadAll(taskResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response from task-service: %v", err)
 	}
 
 	// Parsiramo JSON u listu taskova
 	var tasks []models.Task
-	if err := json.Unmarshal(body, &tasks); err != nil {
-		return nil, errors.New("failed to parse tasks data")
+	if err := json.Unmarshal(taskBody, &tasks); err != nil {
+		return nil, fmt.Errorf("failed to parse tasks data: %v", err)
 	}
 
 	// Inicijalizujemo mapu za rezultat
@@ -227,9 +286,20 @@ func GetUserTasksAndProject(userID string) (map[string]interface{}, error) {
 		var projectTitles []map[string]interface{}
 		for projectID, taskNames := range projectMap {
 			projectServiceEndpoint := fmt.Sprintf("http://project-service:8080/projects/%s", projectID)
-			projectResp, err := http.Get(projectServiceEndpoint)
+
+			// Kreiranje HTTP GET zahteva za projekat
+			projectReq, err := http.NewRequest("GET", projectServiceEndpoint, nil)
 			if err != nil {
-				return nil, errors.New("failed to fetch project data from project-service")
+				return nil, fmt.Errorf("failed to create request for project: %v", err)
+			}
+
+			// Postavi Authorization header sa Bearer tokenom
+			projectReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+			// Slanje HTTP GET zahteva za projekat
+			projectResp, err := client.Do(projectReq)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch project data from project-service: %v", err)
 			}
 			defer projectResp.Body.Close()
 
@@ -240,7 +310,7 @@ func GetUserTasksAndProject(userID string) (map[string]interface{}, error) {
 			// Čitamo telo odgovora za projekat
 			projectBody, err := ioutil.ReadAll(projectResp.Body)
 			if err != nil {
-				return nil, errors.New("failed to read response from project-service")
+				return nil, fmt.Errorf("failed to read response from project-service: %v", err)
 			}
 
 			// Parsiramo JSON u strukturu projekta
@@ -248,7 +318,7 @@ func GetUserTasksAndProject(userID string) (map[string]interface{}, error) {
 				Title string `json:"title"`
 			}
 			if err := json.Unmarshal(projectBody, &project); err != nil {
-				return nil, errors.New("failed to parse project data")
+				return nil, fmt.Errorf("failed to parse project data: %v", err)
 			}
 
 			// Dodajemo projekat i njegove taskove u rezultat
@@ -333,13 +403,26 @@ func mongoOptionsForUpsert() *options.UpdateOptions { // Ispravljeno sa "mongo.U
 	return &options.UpdateOptions{Upsert: &upsert}
 }
 
-func GetUserTaskAnalytics(userID string) ([]models.TaskAnalytics, error) {
+func GetUserTaskAnalytics(userID string, token string) ([]models.TaskAnalytics, error) {
 	collection := db.Client.Database("testdb").Collection("analytics")
+
 	// Pozivamo task-service da preuzmemo sve taskove
 	taskServiceEndpoint := "http://task-service:8080/tasks"
-	resp, err := http.Get(taskServiceEndpoint)
+
+	// Kreiranje HTTP GET zahteva za taskove
+	req, err := http.NewRequest("GET", taskServiceEndpoint, nil)
 	if err != nil {
-		return nil, errors.New("failed to fetch tasks from task-service")
+		return nil, fmt.Errorf("failed to create request for tasks: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Slanje HTTP GET zahteva za taskove
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tasks from task-service: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -347,16 +430,16 @@ func GetUserTaskAnalytics(userID string) ([]models.TaskAnalytics, error) {
 		return nil, fmt.Errorf("task-service returned status: %d", resp.StatusCode)
 	}
 
-	// Čitamo telo odgovora
+	// Čitamo telo odgovora za taskove
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.New("failed to read response from task-service")
+		return nil, fmt.Errorf("failed to read response from task-service: %v", err)
 	}
 
 	// Parsiramo JSON u listu taskova
 	var tasks []models.Task
 	if err := json.Unmarshal(body, &tasks); err != nil {
-		return nil, errors.New("failed to parse tasks data")
+		return nil, fmt.Errorf("failed to parse tasks data: %v", err)
 	}
 
 	// Filtriramo taskove gde je userID u listi Users

@@ -71,12 +71,12 @@ func main() {
 	router.HandleFunc("/tasks/{taskId}/member-of/{userId}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.CheckUserInTaskHandler, "Manager", "Member"))).Methods("GET")
 	router.HandleFunc("/tasks/{task_id}/dependencies/{dependency_id}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.AddDependencyHandler, "Manager"))).Methods("PUT")
 	router.HandleFunc("/tasks/projects/{project_id}/tasks", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTasksForProjectHandler, "Manager"))).Methods("GET")
-	router.HandleFunc("/tasks/{task_id}/dependenciesWork", tasksHandler.GetDependenciesForTaskHandler).Methods("GET", "OPTIONS")
-	router.HandleFunc("/tasks/upload", tasksHandler.UploadFileHandler).Methods("POST")
-	router.HandleFunc("/tasks/{taskID}/download/{fileName:.+}", tasksHandler.DownloadFileHandler).Methods("GET")
-	router.HandleFunc("/tasks/files/{taskID}", tasksHandler.GetTaskFilesHandler).Methods("GET", "OPTIONS")
-	router.HandleFunc("/tasks/exists", tasksHandler.TaskExistsHandler).Methods("POST")
-	router.HandleFunc("/tasks/delete/{taskID}", tasksHandler.DeleteTaskByIDHandler).Methods("DELETE")
+	router.HandleFunc("/tasks/{task_id}/dependenciesWork", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetDependenciesForTaskHandler, "Member", "Manager"))).Methods("GET", "OPTIONS")
+	router.HandleFunc("/tasks/upload", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.UploadFileHandler, "Member"))).Methods("POST")
+	router.HandleFunc("/tasks/{taskID}/download/{fileName:.+}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.DownloadFileHandler, "Member", "Manager"))).Methods("GET")
+	router.HandleFunc("/tasks/files/{taskID}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.GetTaskFilesHandler, "Member", "Manager"))).Methods("GET", "OPTIONS")
+	router.HandleFunc("/tasks/exists", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.TaskExistsHandler, "Manager"))).Methods("POST")
+	router.HandleFunc("/tasks/delete/{taskID}", tasksHandler.MiddlewareExtractUserFromHeader(tasksHandler.RoleRequired(tasksHandler.DeleteTaskByIDHandler, "Manager"))).Methods("DELETE")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

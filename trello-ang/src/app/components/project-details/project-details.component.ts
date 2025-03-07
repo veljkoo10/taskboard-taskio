@@ -545,52 +545,52 @@ export class ProjectDetailsComponent {
     return user.id; // Unikatan identifikator za svakog korisnika
   }
 
-  onStatusChange(): void {
-    const status = this.selectedTask.status;
-    this.updateTaskStatus(status)?.subscribe({
-      next: () => {
-        console.log('Status successfully updated to', status);
-      },
-      error: (err: any) => {
-        console.error('Error updating status:', err);
-      }
-    });
-  }
+  // onStatusChange(): void {
+  //   const status = this.selectedTask.status;
+  //   this.updateTaskStatus(status)?.subscribe({
+  //     next: () => {
+  //       console.log('Status successfully updated to', status);
+  //     },
+  //     error: (err: any) => {
+  //       console.error('Error updating status:', err);
+  //     }
+  //   });
+  // }
 
-  updateTaskStatus(status: string): Observable<any> {
-    const task = this.selectedTask || this.draggedTask;
-    if (task) {
-      const taskId = task.id;
-      const userId = this.user.id;
-
-      if (this.user.role === 'Manager') {
-        this.dependencyMessage = 'Managers are not allowed to update task status.';
-        return EMPTY; // Uvek vraćamo Observable
-      }
-
-      return this.taskService.isUserOnTask(taskId, userId).pipe(
-        switchMap((isMember) => {
-          if (isMember) {
-            return this.taskService.updateTaskStatus(taskId, status).pipe(
-              tap(() => {
-                this.loadTasks();
-                this.dependencyMessage = null;
-              })
-            );
-          } else {
-            this.dependencyMessage = 'You are not a member of this task and cannot update its status.';
-            return EMPTY; // Uvek vraćamo Observable
-          }
-        }),
-        catchError((error) => {
-          this.dependencyMessage = 'You cannot update the status of a task unless the tasks it depends on have been updated.';
-          return throwError(() => error); // Prosljeđuje Observable greške
-        })
-      );
-    }
-
-    return EMPTY; // Uvek vraćamo Observable
-  }
+  // updateTaskStatus(status: string): Observable<any> {
+  //   const task = this.selectedTask || this.draggedTask;
+  //   if (task) {
+  //     const taskId = task.id;
+  //     const userId = this.user.id;
+  //
+  //     if (this.user.role === 'Manager') {
+  //       this.dependencyMessage = 'Managers are not allowed to update task status.';
+  //       return EMPTY; // Uvek vraćamo Observable
+  //     }
+  //
+  //     return this.taskService.isUserOnTask(taskId, userId).pipe(
+  //       switchMap((isMember) => {
+  //         if (isMember) {
+  //           return this.taskService.updateTaskStatus(taskId, status).pipe(
+  //             tap(() => {
+  //               this.loadTasks();
+  //               this.dependencyMessage = null;
+  //             })
+  //           );
+  //         } else {
+  //           this.dependencyMessage = 'You are not a member of this task and cannot update its status.';
+  //           return EMPTY; // Uvek vraćamo Observable
+  //         }
+  //       }),
+  //       catchError((error) => {
+  //         this.dependencyMessage = 'You cannot update the status of a task unless the tasks it depends on have been updated.';
+  //         return throwError(() => error); // Prosljeđuje Observable greške
+  //       })
+  //     );
+  //   }
+  //
+  //   return EMPTY; // Uvek vraćamo Observable
+  // }
 
 
 
@@ -1329,61 +1329,45 @@ export class ProjectDetailsComponent {
   }
 
 
-  onDrop(event: DragEvent, targetList: string) {
-    event.preventDefault();
+  onDrop(event: CdkDragDrop<any[]>, targetList: string) {
+    if (event.previousContainer === event.container) {
+      // If the task is dropped in the same list, just reorder it
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      // If the task is dropped in a different list, transfer it
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex
+      );
 
-    if (!this.draggedTask || this.sourceList === targetList) {
-      return;
-    }
-
-
-    const userId = this.user.id;
-
-    this.taskService.isUserOnTask(this.draggedTask.id, userId).subscribe(
-      (isMember) => {
-        this.moveTaskToTargetList(targetList);
-
-        if (!isMember) {
-          this.dependencyMessage =
-            'You are not a member of this task and cannot keep it in the new list. Returning task in 2 seconds.';
-
-          setTimeout(() => {
-            this.removeTaskFromTargetList(targetList);
-            this.restoreTaskToOriginalPosition();
-            this.dependencyMessage = '';
-            this.showUserNotOnTaskModal();
-          }, 500);
-
-          return;
-        }
-
-        const updateObservable = this.updateTaskStatus(targetList);
-        if (updateObservable) {
-          updateObservable.subscribe(
-            () => {
-              console.log(`Task ID: ${this.draggedTask.id}, successfully updated to: ${targetList}`);
-              this.draggedTask = null;
-              this.sourceList = '';
-            },
-            (error) => {
-              console.error('Error updating task status:', error);
-              this.dependencyMessage = 'An error occurred while updating task status. Reverting changes.';
-
-              setTimeout(() => {
-                this.removeTaskFromTargetList(targetList);
-                this.restoreTaskToOriginalPosition();
-                this.dependencyMessage = '';
-                this.showErrorModal();
-              }, 500);
-            }
+      // Update the task status based on the target list
+      const task = event.container.data[event.currentIndex];
+      this.updateTaskStatus(task, targetList).subscribe({
+        next: () => {
+          console.log(`Task ${task.id} status updated to ${targetList}`);
+        },
+        error: (err) => {
+          console.error('Error updating task status:', err);
+          // Revert the task to its original list if the update fails
+          transferArrayItem(
+            event.container.data,
+            event.previousContainer.data,
+            event.currentIndex,
+            event.previousIndex
           );
         }
-      },
-      (error) => {
-        console.error('Error checking task membership:', error);
-        this.dependencyMessage = 'An error occurred while checking task membership.';
-        this.showErrorModal();
-      }
+      });
+    }
+  }
+
+  updateTaskStatus(task: any, status: string): Observable<any> {
+    return this.taskService.updateTaskStatus(task.id, status).pipe(
+      tap(() => {
+        // Update the task status locally
+        task.status = status;
+      })
     );
   }
 

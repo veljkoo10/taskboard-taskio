@@ -27,27 +27,43 @@ type ProjectService struct {
 func NewProjectService(user *db.Mongo, logger *log.Logger) *ProjectService {
 	return &ProjectService{user, logger}
 }
-func GetUserDetails(userIDs []string) ([]models.User, error) {
+func GetUserDetails(userIDs []string, token string) ([]models.User, error) {
 	var users []models.User
+
+	client := &http.Client{} // HTTP client for making requests
 
 	for _, userID := range userIDs {
 		url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
-		resp, err := http.Get(url)
+
+		// Create a new HTTP GET request
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for user %s: %v", userID, err)
+		}
+
+		// Set the Authorization header with the Bearer token
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		// Execute the request
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch user details for %s: %v", userID, err)
 		}
 		defer resp.Body.Close()
 
+		// Check the response status code
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("received non-OK response for user %s: %s", userID, resp.Status)
 		}
 
+		// Decode the response body into a User struct
 		var user models.User
 		err = json.NewDecoder(resp.Body).Decode(&user)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode user data for %s: %v", userID, err)
 		}
 
+		// Add the user to the result slice
 		users = append(users, user)
 	}
 
@@ -113,11 +129,21 @@ func GetProjectsByUserID(userID string) ([]models.Project, error) {
 	return projects, nil
 }
 
-func userExists(userID string) (bool, error) {
+func userExists(userID string, token string) (bool, error) {
 	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", userID)
 	fmt.Println("Requesting URL:", url) // Debug log
 
-	resp, err := http.Get(url)
+	// Create a new GET request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set the Authorization header with the Bearer token
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Send the request
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %v", err)
 	}
@@ -276,9 +302,10 @@ func projectExists(title, managerID string) (bool, error) {
 	return true, nil
 }
 
-func AddUsersToProject(projectID string, userIDs []string) error {
+func AddUsersToProject(projectID string, userIDs []string, token string) error {
+
 	for _, userID := range userIDs {
-		userExists, err := userExists(userID)
+		userExists, err := userExists(userID, token)
 		if err != nil {
 			return err
 		}
@@ -449,7 +476,7 @@ func AddTaskToProject(projectID string, taskID string) error {
 	return nil
 }
 
-func IsActiveProject(projectID string) (bool, error) {
+func IsActiveProject(projectID string, token string) (bool, error) {
 	// Lista za skladištenje statusa
 	var taskStatuses []string
 	var pendingTasks []string
@@ -480,7 +507,7 @@ func IsActiveProject(projectID string) (bool, error) {
 
 	// Iteriraj kroz sve taskove i dohvati status
 	for _, taskID := range project.Tasks {
-		taskStatus, err := getTaskStatus(taskID)
+		taskStatus, err := getTaskStatus(taskID, token)
 		if err != nil {
 			fmt.Printf("Failed to fetch status for task %s: %v\n", taskID, err)
 			return false, fmt.Errorf("failed to fetch status for task %s: %v", taskID, err)
@@ -508,22 +535,31 @@ func IsActiveProject(projectID string) (bool, error) {
 }
 
 // getTaskStatus - dobija status zadatka sa task-servisa
-func getTaskStatus(taskID string) (string, error) {
+func getTaskStatus(taskID string, token string) (string, error) {
 	url := fmt.Sprintf("http://task-service:8080/tasks/%s", taskID)
 
-	// Šaljemo GET zahtev na task-servis
-	resp, err := http.Get(url)
+	// Create a new GET request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set the Authorization header with the Bearer token
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Send the request using the default HTTP client
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request to task service: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Proveri statusni kod odgovora
+	// Check the status code of the response
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("error response from task service: status code %d", resp.StatusCode)
 	}
 
-	// Parsiranje odgovora
+	// Parse the response
 	var responseBody struct {
 		Status string `json:"status"`
 	}
@@ -554,7 +590,7 @@ func isValidTitle(title string) bool {
 }
 
 // DeleteProjectByID briše projekat iz MongoDB-a i briše sve povezane taskove.
-func DeleteProjectByID(projectID string) error {
+func DeleteProjectByID(projectID string, token string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -579,8 +615,8 @@ func DeleteProjectByID(projectID string) error {
 
 	// 2. Pozovi brisanje svih taskova vezanih za projekat
 	for _, taskID := range project.Tasks {
-		// Napravi DELETE zahtev za svaki task
-		err := deleteTask(taskID)
+		// Napravi DELETE zahtev za svaki task, prosleđujući token
+		err := deleteTask(taskID, token)
 		if err != nil {
 			return fmt.Errorf("failed to delete task with ID %s: %v", taskID, err)
 		}
@@ -604,7 +640,7 @@ func DeleteProjectByID(projectID string) error {
 }
 
 // deleteTask šalje HTTP DELETE zahtev za brisanje taska na task-service
-func deleteTask(taskID string) error {
+func deleteTask(taskID string, token string) error {
 	// URL za DELETE zahtev
 	url := fmt.Sprintf("http://task-service:8080/tasks/delete/%s", taskID)
 
@@ -613,6 +649,9 @@ func deleteTask(taskID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
+
+	// Postavimo Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	// Setuj HTTP klijent sa timeout-om
 	client := &http.Client{Timeout: 10 * time.Second}

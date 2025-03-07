@@ -3,6 +3,7 @@ module analytics-service
 go 1.20
 
 require (
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/nats-io/nats.go v1.37.0
 	github.com/rs/cors v1.11.1

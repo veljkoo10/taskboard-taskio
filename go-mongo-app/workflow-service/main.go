@@ -34,8 +34,10 @@ func main() {
 	}
 	defer driver.Close()
 
+	logger := log.New(os.Stdout, "[user-api] ", log.LstdFlags)
+
 	repo := repoWorkflow.NewWorkflowRepository(driver)
-	workflowHandler := handler.NewWorkflowHandler(repo)
+	workflowHandler := handler.NewWorkflowHandler(repo, logger)
 
 	log.Println("Clearing database...")
 	if err := repo.ClearDatabase(context.Background()); err != nil {
@@ -45,14 +47,14 @@ func main() {
 	r := mux.NewRouter()
 
 	// Dodavanje ruta
-	r.HandleFunc("/workflow/createWorkflow", workflowHandler.CreateWorkflow).Methods("POST")
-	r.HandleFunc("/workflow/getWorkflows", workflowHandler.GetWorkflowHandler).Methods("GET")
-	r.HandleFunc("/workflow/getTaskById/{id}", workflowHandler.GetTaskByIDHandler).Methods("GET")
-	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.CheckDependencyHandler).Methods("GET")
-	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.GetTaskDependenciesHandler).Methods("GET")
-	r.HandleFunc("/workflow/project/{project_id}", workflowHandler.GetFlowByProjectIDHandler).Methods("GET")
-	r.HandleFunc("/workflow/delete/{task_id}", workflowHandler.DeleteWorkflowByTaskIDHandler).Methods("DELETE")
-	r.HandleFunc("/workflow/check/{task_id}", workflowHandler.GetWorkflowByTaskIDHandler).Methods("GET")
+	r.HandleFunc("/workflow/createWorkflow", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.CreateWorkflow, "Manager"))).Methods("POST")
+	r.HandleFunc("/workflow/getWorkflows", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetWorkflowHandler, "Manager", "Member"))).Methods("GET")
+	r.HandleFunc("/workflow/getTaskById/{id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetTaskByIDHandler, "Manager", "Member"))).Methods("GET")
+	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.CheckDependencyHandler, "Manager"))).Methods("GET")
+	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetTaskDependenciesHandler, "Manager"))).Methods("GET")
+	r.HandleFunc("/workflow/project/{project_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetFlowByProjectIDHandler, "Manager", "Member"))).Methods("GET")
+	r.HandleFunc("/workflow/delete/{task_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.DeleteWorkflowByTaskIDHandler, "Manager"))).Methods("DELETE")
+	r.HandleFunc("/workflow/check/{task_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetWorkflowByTaskIDHandler, "Manager", "Member"))).Methods("GET")
 
 	// Konfiguracija CORS-a
 	c := cors.New(cors.Options{

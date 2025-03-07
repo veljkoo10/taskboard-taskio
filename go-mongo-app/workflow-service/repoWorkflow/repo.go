@@ -23,9 +23,9 @@ func NewWorkflowRepository(driver neo4j.Driver) *WorkflowRepository {
 	return &WorkflowRepository{driver: driver}
 }
 
-func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models.Workflow) error {
+func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models.Workflow, token string) error {
 	// Proveravamo da li osnovni task postoji
-	exists, err := taskExists(workflow.TaskID)
+	exists, err := taskExists(workflow.TaskID, token)
 	if err != nil {
 		return fmt.Errorf("error checking if task exists: %v", err)
 	}
@@ -35,7 +35,7 @@ func (r *WorkflowRepository) CreateWorkflow(ctx context.Context, workflow models
 
 	// Proveravamo da li neki od dependency_task postoji
 	for _, dep := range workflow.DependencyTask {
-		exists, err := taskExists(dep)
+		exists, err := taskExists(dep, token)
 		if err != nil {
 			return fmt.Errorf("error checking if dependency task exists: %v", err)
 		}
@@ -288,12 +288,22 @@ func (r *WorkflowRepository) ClearDatabase(ctx context.Context) error {
 	return nil
 }
 
-func GetTaskFromTaskService(taskID string) (*models.Task, error) {
+func GetTaskFromTaskService(taskID string, token string) (*models.Task, error) {
 	// Definiši URL endpoint-a task-service koji sada koristi port 8080
 	url := fmt.Sprintf("http://task-service:8080/tasks/%s", taskID)
 
-	// Pošaljite GET zahtev prema task-service-u
-	resp, err := http.Get(url)
+	// Napravi novi GET zahtev
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Pošalji zahtev koristeći HTTP klijent
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request to task-service: %v", err)
 	}
@@ -526,7 +536,7 @@ func (r *WorkflowRepository) GetAllWorkflowsByProjectID(ctx context.Context, pro
 
 	return workflows, nil
 }
-func taskExists(taskID string) (bool, error) {
+func taskExists(taskID string, token string) (bool, error) {
 	// URL do task_service
 	url := "http://task-service:8080/tasks/exists" // Pretpostavka da koristiš HTTP POST za provjeru
 
@@ -537,8 +547,19 @@ func taskExists(taskID string) (bool, error) {
 		return false, fmt.Errorf("failed to create request body: %v", err)
 	}
 
+	// Kreiranje HTTP POST zahteva
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return false, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Content-Type", "application/json")
+
 	// Slanje HTTP POST zahteva task_service-u
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("failed to send request to task_service: %v", err)
 	}

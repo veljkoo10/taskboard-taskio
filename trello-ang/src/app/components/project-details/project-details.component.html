@@ -23,39 +23,30 @@
 
   <!-- Task status section -->
   <div class="task-status">
-    <div class="status-item to-do" (drop)="onDrop($event, 'pending')" (dragover)="allowDrop($event)">
+    <div class="status-item to-do" cdkDropList (cdkDropListDropped)="onDrop($event, 'pending')">
       <p>Pending</p>
-      <ul>
-        <li *ngFor="let task of pendingTasks"
-            draggable="true"
-            (dragstart)="onDragStart($event, task, 'pending')"
-            (click)="showTaskDetails(task)">
+      <ul cdkDropList>
+        <li *ngFor="let task of pendingTasks" cdkDrag (click)="showTaskDetails(task)">
           <span class="task-icon">⏳</span>
           {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
 
-    <div class="status-item in-progress" (drop)="onDrop($event, 'work in progress')" (dragover)="allowDrop($event)">
+    <div class="status-item in-progress" cdkDropList (cdkDropListDropped)="onDrop($event, 'work in progress')">
       <p>Work in Progress</p>
-      <ul>
-        <li *ngFor="let task of inProgressTasks"
-            draggable="true"
-            (dragstart)="onDragStart($event, task, 'work in progress')"
-            (click)="showTaskDetails(task)">
+      <ul cdkDropList>
+        <li *ngFor="let task of inProgressTasks" cdkDrag (click)="showTaskDetails(task)">
           <span class="task-icon">🔄</span>
           {{ task.name | titlecase }}
         </li>
       </ul>
     </div>
 
-    <div class="status-item done" (drop)="onDrop($event, 'done')" (dragover)="allowDrop($event)">
+    <div class="status-item done" cdkDropList (cdkDropListDropped)="onDrop($event, 'done')">
       <p>Done</p>
-      <ul>
-        <li *ngFor="let task of doneTasks"
-            draggable="true"
-            (dragstart)="onDragStart($event, task, 'done')"
-            (click)="showTaskDetails(task)">
+      <ul cdkDropList>
+        <li *ngFor="let task of doneTasks" cdkDrag (click)="showTaskDetails(task)">
           <span class="task-icon">✔️</span>
           {{ task.name | titlecase }}
         </li>
@@ -189,16 +180,16 @@
             <label>Status:</label>
             <div class="radio-group">
               <label class="radio-label">
-                <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />
+<!--                <input type="radio" id="pending" name="status" value="pending" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />-->
                 Pending
               </label>
               <label class="radio-label">
-                <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />
+<!--                <input type="radio" id="wip" name="status" value="work in progress" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />-->
                 Work in Progress
               </label>
               <label class="radio-label">
-                <input
-                  type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />
+<!--                <input-->
+<!--                  type="radio" id="done" name="status" value="done" [(ngModel)]="selectedTask.status" (change)="onStatusChange()" />-->
                 Done
               </label>
             </div>

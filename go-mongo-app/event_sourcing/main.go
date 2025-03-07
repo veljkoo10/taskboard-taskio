@@ -18,8 +18,8 @@ import (
 
 func main() {
 	// Konfigurisanje logger-a
-	logger := log.New(os.Stdout, "ANALYTICS-SERVICE: ", log.LstdFlags)
-	logger.Println("Starting analytics service...")
+	logger := log.New(os.Stdout, "EVENT-SOURCING: ", log.LstdFlags)
+	logger.Println("Starting event sourcing service...")
 
 	// Učitavanje konfiguracije
 	config := loadConfig()
@@ -53,10 +53,10 @@ func main() {
 	// Delete all events before starting the server
 
 	// Konfigurisanje HTTP ruta
-	eventHandler := handlers.NewEventHandler(esdbClient)
+	eventHandler := handlers.NewEventHandler(esdbClient, logger)
 	r := mux.NewRouter()
-	r.HandleFunc("/event/append", eventHandler.ProcessEventHandler).Methods("POST")
-	r.HandleFunc("/events", eventHandler.GetAllEventsHandler).Methods("GET") // Sada je kraće
+	r.HandleFunc("/event/append", eventHandler.MiddlewareExtractUserFromHeader(eventHandler.RoleRequired(eventHandler.ProcessEventHandler, "Manager", "Member"))).Methods("POST")
+	r.HandleFunc("/events", eventHandler.MiddlewareExtractUserFromHeader(eventHandler.RoleRequired(eventHandler.GetAllEventsHandler, "Manager", "Member"))).Methods("GET") // Sada je kraće
 	logger.Println("Routes configured successfully.")
 
 	// CORS konfiguracija

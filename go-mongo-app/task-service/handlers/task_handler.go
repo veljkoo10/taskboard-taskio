@@ -126,8 +126,26 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		t.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		t.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Ako zadatak nema zavisnosti ili je uslov za status ispunjen, nastavi sa ažuriranjem statusa
-	updatedTask, err := service.UpdateTaskStatus(taskID, requestBody.Status)
+	updatedTask, err := service.UpdateTaskStatus(taskID, requestBody.Status, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -168,7 +186,7 @@ func (t *TasksHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		"projectId": task.Project_ID,
 	}
 
-	if err := t.sendEventToDatabase(event); err != nil {
+	if err := t.sendEventToDatabase(event, token); err != nil {
 		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
 		return
 	}
@@ -214,6 +232,22 @@ func (uh *TasksHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request
 		http.Error(w, "Project ID is required in URL", http.StatusBadRequest)
 		return
 	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
 
 	// Parse the request body to get name, description, and dependsOn
 	var taskInput struct {
@@ -247,28 +281,9 @@ func (uh *TasksHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Create the task using the service, passing projectID, name, description, and dependsOn
-	task, err := service.CreateTask(projectID, taskInput.Name, taskInput.Description, taskInput.DependsOn)
+	task, err := service.CreateTask(projectID, taskInput.Name, taskInput.Description, taskInput.DependsOn, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	currentTime := time.Now().Add(1 * time.Hour)
-	formattedTime := currentTime.Format(time.RFC3339)
-
-	event := map[string]interface{}{
-		"type": "Task Created",
-		"time": formattedTime,
-		"event": map[string]interface{}{
-			"taskId":    task.ID,
-			"projectId": task.Project_ID,
-		},
-		"projectId": task.Project_ID,
-	}
-
-	// Send the event to the analytic service
-	if err := uh.sendEventToDatabase(event); err != nil {
-		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
 		return
 	}
 
@@ -280,7 +295,7 @@ func (uh *TasksHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (uh *TasksHandler) sendEventToDatabase(event interface{}) error {
+func (uh *TasksHandler) sendEventToDatabase(event interface{}, token string) error {
 	analyticsServiceURL := fmt.Sprintf("http://event_sourcing:8080/event/append")
 
 	// Marshal the event into JSON
@@ -297,8 +312,9 @@ func (uh *TasksHandler) sendEventToDatabase(event interface{}) error {
 		return err
 	}
 
-	// Set the appropriate content-type header for the request
+	// Set the appropriate headers for the request
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token)) // Dodaj token u Authorization header
 
 	// Use the default HTTP client (without TLS)
 	resp, err := http.DefaultClient.Do(req)
@@ -323,7 +339,24 @@ func (t *TasksHandler) AddUserToTaskHandler(w http.ResponseWriter, r *http.Reque
 	taskID := vars["taskId"]
 	userID := vars["userId"]
 
-	err := service.AddUserToTask(taskID, userID)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		t.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		t.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	err := service.AddUserToTask(taskID, userID, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -350,24 +383,6 @@ func (t *TasksHandler) AddUserToTaskHandler(w http.ResponseWriter, r *http.Reque
 	}{
 		UserID:   userID,
 		TaskName: task.Name,
-	}
-
-	currentTime := time.Now().Add(1 * time.Hour)
-	formattedTime := currentTime.Format(time.RFC3339)
-
-	event := map[string]interface{}{
-		"type": "Member Added to Task",
-		"time": formattedTime,
-		"event": map[string]interface{}{
-			"memberId": userID,
-			"taskId":   task.ID,
-		},
-		"projectId": task.Project_ID,
-	}
-
-	if err := t.sendEventToDatabase(event); err != nil {
-		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
-		return
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -402,7 +417,24 @@ func (t *TasksHandler) RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.
 	taskID := vars["taskId"]
 	userID := vars["userId"]
 
-	err := service.RemoveUserFromTask(taskID, userID)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		t.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		t.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	err := service.RemoveUserFromTask(taskID, userID, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -431,24 +463,6 @@ func (t *TasksHandler) RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.
 		TaskName: task.Name,
 	}
 
-	currentTime := time.Now().Add(1 * time.Hour)
-	formattedTime := currentTime.Format(time.RFC3339)
-
-	event := map[string]interface{}{
-		"type": "Member Removed from Task",
-		"time": formattedTime,
-		"event": map[string]interface{}{
-			"memberId": userID,
-			"taskId":   task.ID,
-		},
-		"projectId": task.Project_ID,
-	}
-
-	if err := t.sendEventToDatabase(event); err != nil {
-		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
-		return
-	}
-
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Error marshalling message:", err)
@@ -469,7 +483,24 @@ func (uh *TasksHandler) GetUsersForTaskHandler(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	taskID := vars["taskID"]
 
-	users, err := service.GetUsersForTask(taskID)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	users, err := service.GetUsersForTask(taskID, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -508,13 +539,29 @@ func (uh *TasksHandler) CheckUserInTaskHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Pozivanje servisne funkcije
-	isMember, err := service.IsUserInTask(taskID, userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
 		return
 	}
 
+	// Expect the format "Bearer <token>"
+	token := ""
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	isMember, err := service.IsUserInTask(taskID, userID, token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		uh.logger.Println("Error in IsUserInTask:", err) // Log the actual error
+		return
+	}
 	// Slanje odgovora kao JSON
 	response := map[string]bool{"isMember": isMember}
 	w.Header().Set("Content-Type", "application/json")
@@ -523,6 +570,7 @@ func (uh *TasksHandler) CheckUserInTaskHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 }
+
 func (uh *TasksHandler) AddDependencyHandler(w http.ResponseWriter, r *http.Request) {
 	// Parsiranje URL parametara
 	vars := mux.Vars(r)
@@ -552,13 +600,31 @@ func (uh *TasksHandler) AddDependencyHandler(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
 func (uh *TasksHandler) GetTasksForProjectHandler(w http.ResponseWriter, r *http.Request) {
 	// Parsiranje URL parametra (projectID)
 	vars := mux.Vars(r)
 	projectID := vars["project_id"]
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Pozivanje funkcije koja vraća ID-eve taskova za projekat
-	taskIDs, err := service.GetTaskIDsForProject(projectID)
+	taskIDs, err := service.GetTaskIDsForProject(projectID, token)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching task IDs: %v", err), http.StatusInternalServerError)
 		return
@@ -569,6 +635,7 @@ func (uh *TasksHandler) GetTasksForProjectHandler(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(taskIDs)
 }
+
 func (uh *TasksHandler) MiddlewareExtractUserFromHeader(next func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(rw http.ResponseWriter, h *http.Request) {
 		// Retrieve the token from the Authorization header
@@ -682,8 +749,26 @@ func (uh *TasksHandler) GetDependenciesForTaskHandler(w http.ResponseWriter, r *
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Poziv funkcije za dobavljanje zavisnosti iz workflow-service
-	dependencies, err := service.GetDependenciesFromWorkflowService(taskID)
+	dependencies, err := service.GetDependenciesFromWorkflowService(taskID, token)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching dependencies: %v", err), http.StatusInternalServerError)
 		return
@@ -714,8 +799,26 @@ func (uh *TasksHandler) UpdateTaskStatusHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Ažuriranje statusa zadatka
-	updatedTask, err := service.UpdateTaskStatus(taskID, payload.Status)
+	updatedTask, err := service.UpdateTaskStatus(taskID, payload.Status, token)
 	if err != nil {
 		if strings.Contains(err.Error(), "dependency task") {
 			http.Error(w, err.Error(), http.StatusConflict) // Konflikt zbog zavisnosti
@@ -813,7 +916,25 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		err = service.UploadFileToHDFS(localFilePath, hdfsDirPath, fileHeader.Filename)
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+			uh.logger.Println("No Authorization header:", authHeader)
+			return
+		}
+
+		// Expect the format "Bearer <token>"
+		token := ""
+
+		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+			token = authHeader[7:]
+		} else {
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			uh.logger.Println("Invalid Authorization header format:", authHeader)
+			return
+		}
+
+		err = service.UploadFileToHDFS(localFilePath, hdfsDirPath, fileHeader.Filename, token)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to upload file to HDFS: %v", err), http.StatusInternalServerError)
 			return
@@ -859,8 +980,25 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 		},
 		"projectId": task.Project_ID,
 	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
 
-	if err := uh.sendEventToDatabase(event); err != nil {
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	if err := uh.sendEventToDatabase(event, token); err != nil {
 		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
 		return
 	}
@@ -935,8 +1073,26 @@ func (uh *TasksHandler) DownloadFileHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Čitaj sadržaj fajla sa HDFS-a
-	fileContent, err := service.ReadFileFromHDFS(filePath)
+	fileContent, err := service.ReadFileFromHDFS(filePath, token)
 	if err != nil {
 		http.Error(w, "Failed to read file", http.StatusInternalServerError)
 		return
@@ -960,10 +1116,28 @@ func (uh *TasksHandler) GetTaskFilesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Putanja direktorijuma na HDFS-u za dati task
 	dirPath := fmt.Sprintf("/user/hdfs/tasks/%s", taskID)
 
-	files, err := service.ReadFilesFromHDFSDirectory(dirPath)
+	files, err := service.ReadFilesFromHDFSDirectory(dirPath, token)
 	if err != nil {
 		if err.Error() == "failed to read directory: readdir /user/hdfs/tasks/"+taskID+": file does not exist" {
 			files = []string{}
@@ -1022,8 +1196,26 @@ func (uh *TasksHandler) DeleteTaskByIDHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Pozovi repository za brisanje taska po taskID-u
-	err := service.DeleteTaskByID(taskID)
+	err := service.DeleteTaskByID(taskID, token)
 	if err != nil {
 		http.Error(w, "Failed to delete task: "+err.Error(), http.StatusInternalServerError)
 		return

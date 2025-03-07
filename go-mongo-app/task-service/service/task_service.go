@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -44,7 +43,7 @@ func EscapeHTML(input string) string {
 }
 
 // UpdateTaskStatus ažurira status zadatka u bazi podataka
-func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
+func UpdateTaskStatus(taskID, status string, token string) (*models.Task, error) {
 	// Validacija i konverzija taskID-a u ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
@@ -75,7 +74,7 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 	}
 
 	// Provera zavisnosti
-	dependencies, err := GetDependenciesFromWorkflowService(taskID)
+	dependencies, err := GetDependenciesFromWorkflowService(taskID, token)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching dependencies: %w", err)
 	}
@@ -126,7 +125,7 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 		"previous_status": task.Status,
 		"new_status":      status,
 		"timestamp":       time.Now().UTC().Format(time.RFC3339),
-	})
+	}, token)
 
 	if err != nil {
 		return nil, fmt.Errorf("error updating task status: %w", err)
@@ -145,130 +144,67 @@ func UpdateTaskStatus(taskID, status string) (*models.Task, error) {
 }
 
 // userExists proverava da li korisnik sa datim userID postoji
-func userExists(userID string) (bool, error) {
-	// Sanitizacija korisničkog ID-a da bismo sprečili XSS napade
+func userExists(userID string, token string) (bool, error) {
+	// Sanitize user ID to prevent XSS attacks
 	userID = SanitizeInput(userID)
 
-	// Validacija userID-a da ne sadrži neprihvatljive karaktere
+	// Validate userID to ensure it has acceptable characters
 	if !isValidUserID(userID) {
 		return false, errors.New("invalid user ID format")
 	}
 
-	// Korišćenje URL encoding-a za sigurnost
+	// Use URL encoding for security
 	encodedUserID := url.QueryEscape(userID)
 
-	// Kreiranje URL-a za poziv user-service
+	// Create the URL for the user-service request
 	url := fmt.Sprintf("http://user-service:8080/users/%s/exists", encodedUserID)
 
-	// Logovanje za debugging
+	// Log for debugging
 	fmt.Println("Requesting URL:", url)
 
-	// Slanje HTTP GET zahteva
-	resp, err := http.Get(url)
+	// Create a new HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+
+	// Add the Authorization header with the Bearer token
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Send the HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Provera statusnog koda odgovora
+	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return false, fmt.Errorf("received non-OK response: %s", body)
 	}
 
-	// Čitanje tela odgovora
+	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	// Parsiranje odgovora u mapu
+	// Parse the response body into a map
 	var result map[string]bool
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse response body: %v", err)
 	}
 
-	// Provera da li postoji "exists" polje u odgovoru
+	// Check if the "exists" field is present in the response
 	exists, ok := result["exists"]
 	if !ok {
 		return false, fmt.Errorf("response missing 'exists' field")
 	}
 
-	// Povratak rezultata
 	return exists, nil
-}
-
-func IsUserInProject(projectID string, userID string) (bool, error) {
-	// Prvo pozivamo user-service da bismo dobili podatke o korisniku
-	url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
-	fmt.Println("Requesting URL:", url) // Debug log
-
-	// Napraviti GET zahtev prema user-service da bismo dobili korisničke podatke
-	resp, err := http.Get(url)
-	if err != nil {
-		return false, fmt.Errorf("failed to get user data: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Pročitaj telo odgovora
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return false, fmt.Errorf("failed to read response body: %v", err)
-	}
-
-	// Ako status nije OK, vraćamo grešku
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("received non-OK response: %s", body)
-	}
-
-	// Parsiraj telo odgovora u strukturu User
-	var user models.User
-	err = json.Unmarshal(body, &user)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse user data: %v", err)
-	}
-
-	// Ispis korisničkih podataka za debugging
-	fmt.Println("User data:", user)
-
-	// Sada pozivamo project-service da proverimo da li je ovaj korisnik u projektu
-	// Pretpostavljamo da project-service vraća listu korisničkih ID-jeva za određeni projekat
-	projectURL := fmt.Sprintf("http://project-service:8080/projects/%s", projectID)
-	resp, err = http.Get(projectURL)
-	if err != nil {
-		return false, fmt.Errorf("failed to get project data: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Pročitaj telo odgovora iz project-service
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return false, fmt.Errorf("failed to read project response body: %v", err)
-	}
-
-	// Ako status nije OK, vraćamo grešku
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("received non-OK response from project service: %s", body)
-	}
-
-	// Parsiraj telo odgovora kao listu korisničkih ID-jeva koji su članovi projekta
-	var projectData struct {
-		Users []string `json:"users"` // Pretpostavljamo da projekat sadrži listu korisničkih ID-jeva
-	}
-	err = json.Unmarshal(body, &projectData)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse project response: %v", err)
-	}
-
-	// Proveri da li je userID u listi korisnika u projektu
-	for _, pID := range projectData.Users {
-		if pID == userID {
-			return true, nil // Korisnik je član projekta
-		}
-	}
-
-	return false, nil // Korisnik nije član projekta
 }
 
 // GetTasks vraća sve zadatke iz baze podataka.
@@ -328,28 +264,28 @@ func SanitizeInput(input string) string {
 	return input
 }
 
-func CreateTask(projectID, name, description string, dependsOn []string) (*models.Task, error) {
-	// Sanitizacija unosa
+func CreateTask(projectID, name, description string, dependsOn []string, token string) (*models.Task, error) {
+	// Sanitize inputs
 	projectID = SanitizeInput(projectID)
 	name = SanitizeInput(name)
 	description = SanitizeInput(description)
 
-	// Sanitizacija svakog ID-a u dependsOn listi
+	// Sanitize each ID in the dependsOn list
 	var sanitizedDependsOn []string
 	for _, dep := range dependsOn {
 		sanitizedDependsOn = append(sanitizedDependsOn, SanitizeInput(dep))
 	}
 
-	// Validacija formata projectID-a
+	// Validate projectID format
 	projectObjectID, err := primitive.ObjectIDFromHex(projectID)
 	if err != nil {
 		return nil, errors.New("invalid project ID format")
 	}
 
-	// Povezivanje sa MongoDB kolekcijom
+	// Connect to MongoDB collection
 	collection := db.Client.Database("testdb").Collection("tasks")
 
-	// Provera da li zadatak sa istim imenom već postoji u projektu
+	// Check if a task with the same name already exists in the project
 	var existingTask models.Task
 	err = collection.FindOne(context.TODO(), bson.M{
 		"name":       strings.ToLower(name),
@@ -363,7 +299,7 @@ func CreateTask(projectID, name, description string, dependsOn []string) (*model
 		return nil, errors.New("a task with the same name already exists in this project")
 	}
 
-	// Kreiranje ObjectID liste za zavisnosti
+	// Create ObjectID list for dependencies
 	var dependsOnObjectIDs []primitive.ObjectID
 	for _, dep := range sanitizedDependsOn {
 		depID, err := primitive.ObjectIDFromHex(dep)
@@ -373,25 +309,24 @@ func CreateTask(projectID, name, description string, dependsOn []string) (*model
 		dependsOnObjectIDs = append(dependsOnObjectIDs, depID)
 	}
 
-	// Kreiranje novog zadatka
+	// Create the new task
 	task := models.Task{
 		ID:          primitive.NewObjectID(),
 		Name:        strings.ToLower(name),
 		Description: description,
 		Status:      "pending",
-		Users:       []string{}, // Prazna lista korisnika
+		Users:       []string{}, // Empty user list
 		Project_ID:  projectObjectID.Hex(),
 		DependsOn:   dependsOnObjectIDs,
-		FilePaths:   []string{},
 	}
 
-	// Ubacivanje novog zadatka u bazu podataka
+	// Insert the new task into the database
 	_, err = collection.InsertOne(context.TODO(), task)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %v", err)
 	}
 
-	// Obavestiti project-service o novom zadatku
+	// Notify project-service about the new task
 	payload := map[string]interface{}{
 		"task_id":     task.ID.Hex(),
 		"project_id":  projectObjectID.Hex(),
@@ -400,24 +335,19 @@ func CreateTask(projectID, name, description string, dependsOn []string) (*model
 		"depends_on":  dependsOn,
 	}
 
-	sendToAnalyticsService(map[string]interface{}{
-		"task_id":    task.ID.Hex(),
-		"new_status": "pending",
-		"timestamp":  time.Now().UTC().Format(time.RFC3339),
-	})
-
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize task payload: %v", err)
 	}
 
-	// URL za pozivanje project-service-a
+	// URL for calling the project-service
 	projectServiceURL := fmt.Sprintf("http://project-service:8080/projects/%s/tasks/%s", projectObjectID.Hex(), task.ID.Hex())
 	req, err := http.NewRequest("PUT", projectServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request to project-service: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token)) // Add the Bearer token
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -427,20 +357,21 @@ func CreateTask(projectID, name, description string, dependsOn []string) (*model
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("project-service failed to update with new task details")
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("project-service failed to update with new task details: %s", string(body))
 	}
 
-	// Vraćanje kreiranog zadatka
+	// Return the created task
 	return &task, nil
 }
 
-func AddUserToTask(taskID string, userID string) error {
+func AddUserToTask(taskID string, userID string, token string) error {
 	// Sanitizacija unosa kako bi se sprečili XSS napadi
 	taskID = SanitizeInput(taskID)
 	userID = SanitizeInput(userID)
 
 	// Provera da li korisnik postoji
-	userExists, err := userExists(userID)
+	userExists, err := userExists(userID, token)
 	if err != nil {
 		return err
 	}
@@ -469,7 +400,7 @@ func AddUserToTask(taskID string, userID string) error {
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
-		bson.M{"$addToSet": bson.M{"users": userID}},
+		bson.M{"$addToSet": bson.M{"Users": userID}},
 	)
 	if err != nil {
 		return err
@@ -478,11 +409,11 @@ func AddUserToTask(taskID string, userID string) error {
 	return nil
 }
 
-func RemoveUserFromTask(taskID string, userID string) error {
+func RemoveUserFromTask(taskID string, userID string, token string) error {
 	taskID = SanitizeInput(taskID)
 	userID = SanitizeInput(userID)
 
-	userExists, err := userExists(userID)
+	userExists, err := userExists(userID, token)
 	if err != nil {
 		return err
 	}
@@ -523,7 +454,7 @@ func RemoveUserFromTask(taskID string, userID string) error {
 	_, err = collection.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": taskObjectID},
-		bson.M{"$pull": bson.M{"users": userID}},
+		bson.M{"$pull": bson.M{"Users": userID}},
 	)
 	if err != nil {
 		return err
@@ -532,17 +463,17 @@ func RemoveUserFromTask(taskID string, userID string) error {
 	return nil
 }
 
-func GetUsersForTask(taskID string) ([]models.User, error) {
-	// Sanitizacija unosa
+func GetUsersForTask(taskID string, token string) ([]models.User, error) {
+	// Sanitize input
 	taskID = SanitizeInput(taskID)
 
-	// Konvertuj task ID u ObjectID
+	// Convert task ID to ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return nil, errors.New("invalid task ID format")
 	}
 
-	// Pronađi zadatak u kolekciji
+	// Find the task in the collection
 	collection := db.Client.Database("testdb").Collection("tasks")
 	var task models.Task
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
@@ -552,34 +483,46 @@ func GetUsersForTask(taskID string) ([]models.User, error) {
 		return nil, fmt.Errorf("failed to fetch task: %v", err)
 	}
 
-	// Ako zadatak nema korisnika, vrati praznu listu
+	// If the task has no users, return an empty list
 	if len(task.Users) == 0 {
 		return []models.User{}, nil
 	}
 
-	// Pozovi user-service za svakog korisnika u listi
+	// Fetch user details from user-service
 	var users []models.User
+	client := &http.Client{}
 	for _, userID := range task.Users {
 		url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
-		resp, err := http.Get(url)
+
+		// Create a new HTTP request
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for user %s: %v", userID, err)
+		}
+
+		// Set the Authorization header with the Bearer token
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		// Send the request
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch user %s: %v", userID, err)
 		}
 		defer resp.Body.Close()
 
-		// Proveri statusni kod
+		// Check the status code
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("failed to fetch user %s, status: %d", userID, resp.StatusCode)
 		}
 
-		// Parsiraj odgovor u strukturu User
+		// Parse the response into the User struct
 		var user models.User
 		err = json.NewDecoder(resp.Body).Decode(&user)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse user %s: %v", userID, err)
 		}
 
-		// Dodaj korisnika u rezultat
+		// Add the user to the result list
 		users = append(users, user)
 	}
 
@@ -609,22 +552,38 @@ func GetTaskByID(taskID string) (*models.Task, error) {
 }
 
 // IsUserInTask proverava da li je korisnik dodeljen zadatku
-func IsUserInTask(taskID string, userID string) (bool, error) {
-	// Sanitizacija unosa
+func IsUserInTask(taskID string, userID string, token string) (bool, error) {
+	// Sanitize input
 	taskID = SanitizeInput(taskID)
 	userID = SanitizeInput(userID)
-
+	fmt.Sprintf(userID)
+	// Construct the URL for the user-service
 	url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
 	fmt.Println("Requesting URL:", url) // Debug log
 
-	// Pozivamo user-service
-	resp, err := http.Get(url)
+	// Create a new HTTP request
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to get user info: %v", err)
+		return false, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set the Authorization header with the Bearer token
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Send the HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to fetch user info: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Dekodiramo odgovor u objekat user
+	// Check if the response status code is OK
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("failed to fetch user info, status: %d", resp.StatusCode)
+	}
+
+	// Decode the response into a User object
 	var user models.User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		return false, fmt.Errorf("failed to decode user info: %v", err)
@@ -632,13 +591,13 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 
 	fmt.Printf("Fetched User: %+v\n", user) // Debug log
 
-	// Parsiranje taskID-a u ObjectID
+	// Parse taskID into an ObjectID
 	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return false, errors.New("invalid task ID format")
 	}
 
-	// Pretraga task-a u bazi
+	// Search for the task in the database
 	collection := db.Client.Database("testdb").Collection("tasks")
 	var task models.Task
 	err = collection.FindOne(context.TODO(), bson.M{"_id": taskObjectID}).Decode(&task)
@@ -649,13 +608,10 @@ func IsUserInTask(taskID string, userID string) (bool, error) {
 		return false, err
 	}
 
-	// Ako lista korisnika ne postoji ili je prazna, vrati false
-	if task.Users == nil || len(task.Users) == 0 {
-		return false, nil
-	}
-
-	// Provera da li userID postoji u listi users ili je korisnik Manager
+	// Check if the userID exists in the task's user list
 	for _, id := range task.Users {
+		fmt.Printf("Checking userID: %s, user role: %s\n", userID, user.Role) // Log the userID and the role
+
 		if id == userID || user.Role == "Manager" {
 			return true, nil
 		}
@@ -749,28 +705,38 @@ func AddDependencyToTask(taskIDStr, dependencyIDStr string) error {
 
 	return nil
 }
-func GetTaskIDsForProject(projectID string) ([]string, error) {
-	// URL za pozivanje project-service-a
+func GetTaskIDsForProject(projectID string, token string) ([]string, error) {
+	// URL for the project-service endpoint
 	url := fmt.Sprintf("http://project-service:8080/projects/%s", projectID)
 
-	// HTTP GET zahtev za project-service
-	resp, err := http.Get(url)
+	// Create a new HTTP GET request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set the Authorization header with the Bearer token
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Create an HTTP client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch project from project-service: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Proveri statusni kod
+	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch project, status: %d", resp.StatusCode)
 	}
 
-	// Definiši strukturu za odgovor
+	// Define a struct to parse the response
 	var project struct {
 		Tasks []string `json:"tasks"`
 	}
 
-	// Parsiraj odgovor
+	// Parse the response JSON into the struct
 	err = json.NewDecoder(resp.Body).Decode(&project)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse task IDs: %v", err)
@@ -778,14 +744,26 @@ func GetTaskIDsForProject(projectID string) ([]string, error) {
 
 	return project.Tasks, nil
 }
-func GetDependenciesFromWorkflowService(taskID string) (*models.Workflow, error) {
+
+func GetDependenciesFromWorkflowService(taskID string, token string) (*models.Workflow, error) {
 	url := fmt.Sprintf("http://workflow-service:8080/workflow/%s/dependencies", taskID)
 
 	fmt.Println(url)
 	var workflow models.Workflow
 
-	for i := 0; i < 3; i++ { // Pokušaj 3 puta
-		resp, err := http.Get(url)
+	for i := 0; i < 3; i++ { // Try 3 times
+		// Create a new HTTP GET request
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %v", err)
+		}
+
+		// Set the Authorization header with the Bearer token
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		// Create an HTTP client and send the request
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("error making request to workflow-service: %v", err)
 		}
@@ -801,59 +779,21 @@ func GetDependenciesFromWorkflowService(taskID string) (*models.Workflow, error)
 			return nil, fmt.Errorf("error decoding response: %v", err)
 		}
 
-		return &workflow, nil // Ako je uspešno, odmah vrati rezultat
+		return &workflow, nil // Return successfully if request is successful
 	}
 
 	return nil, fmt.Errorf("failed to fetch dependencies after 3 attempts")
 }
 
-func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string) error {
-	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
-	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
-	if hdfsNamenodeAddress == "" {
-		return fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
-	}
-
-	// Konektovanje na HDFS namenode
-	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
-	})
-	if err != nil {
-		return fmt.Errorf("failed to connect to HDFS: %v", err)
-	}
-	defer client.Close()
-
-	// Proveriti da li direktorijum postoji, ako ne, kreirati ga
-	_, err = client.Stat(hdfsDirPath)
-	if err != nil && os.IsNotExist(err) {
-		err := client.MkdirAll(hdfsDirPath, os.ModePerm) // Kreira direktorijum ako ne postoji
-		if err != nil {
-			return fmt.Errorf("failed to create directory on HDFS: %v", err)
-		}
-	} else if err != nil {
-		return fmt.Errorf("failed to check if directory exists: %v", err)
-	}
-
-	// Kreirati direktorijum putem MkdirAll za celu putanju
-	err = client.MkdirAll(hdfsDirPath, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("failed to create directories on HDFS: %v", err)
+func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string, token string) error {
+	// Učitaj HDFS_HTTP_API_ADDRESS iz .env fajla
+	hdfsHTTPAPIAddress := os.Getenv("HDFS_HTTP_API_ADDRESS")
+	if hdfsHTTPAPIAddress == "" {
+		return fmt.Errorf("HDFS_HTTP_API_ADDRESS is not set in .env file")
 	}
 
 	// Formiranje pune putanje za fajl (direktorijum + ime fajla)
 	hdfsFilePath := path.Join(hdfsDirPath, fileName)
-
-	// Proveriti da li fajl već postoji
-	_, err = client.Stat(hdfsFilePath)
-	if err == nil {
-		// Ako fajl postoji, obriši ga pre nego što ga ponovo postaviš
-		err = client.Remove(hdfsFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to remove existing file on HDFS: %v", err)
-		}
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("failed to check if file exists: %v", err)
-	}
 
 	// Otvoriti lokalni fajl koji treba da bude uploadovan
 	localFile, err := os.Open(localFilePath)
@@ -862,104 +802,166 @@ func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string) error {
 	}
 	defer localFile.Close()
 
-	// Kreirati fajl u HDFS-u
-	hdfsFile, err := client.Create(hdfsFilePath)
+	// Pročitaj sadržaj lokalnog fajla
+	fileData, err := io.ReadAll(localFile)
 	if err != nil {
-		return fmt.Errorf("failed to create file on HDFS: %v", err)
-	}
-	defer hdfsFile.Close()
-
-	// Kopirati sadržaj sa lokalnog fajla na HDFS
-	_, err = io.Copy(hdfsFile, localFile)
-	if err != nil {
-		return fmt.Errorf("failed to copy data to HDFS: %v", err)
+		return fmt.Errorf("failed to read local file: %v", err)
 	}
 
-	return nil
+	// URL za upload fajla na HDFS
+	url := fmt.Sprintf("%s/%s", hdfsHTTPAPIAddress, hdfsFilePath)
+
+	for i := 0; i < 3; i++ { // Pokušaj 3 puta
+		// Kreiraj HTTP PUT zahtev
+		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(fileData))
+		if err != nil {
+			return fmt.Errorf("failed to create request: %v", err)
+		}
+
+		// Postavi Authorization header sa Bearer tokenom
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		req.Header.Set("Content-Type", "application/octet-stream")
+
+		// Kreiraj HTTP klijent i pošalji zahtev
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("error making request to HDFS HTTP API: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			return nil // Uspešno uploadovan fajl
+		} else if resp.StatusCode == http.StatusConflict {
+			// Ako fajl već postoji, obriši ga i pokušaj ponovo
+			deleteReq, err := http.NewRequest("DELETE", url, nil)
+			if err != nil {
+				return fmt.Errorf("failed to create delete request: %v", err)
+			}
+			deleteReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+			deleteResp, err := client.Do(deleteReq)
+			if err != nil {
+				return fmt.Errorf("error making delete request to HDFS HTTP API: %v", err)
+			}
+			defer deleteResp.Body.Close()
+
+			if deleteResp.StatusCode != http.StatusOK {
+				return fmt.Errorf("failed to delete existing file on HDFS: received status %v", deleteResp.StatusCode)
+			}
+		} else {
+			return fmt.Errorf("error uploading file to HDFS: received status %v", resp.StatusCode)
+		}
+	}
+
+	return fmt.Errorf("failed to upload file to HDFS after 3 attempts")
 }
 
-func ReadFileFromHDFS(hdfsPath string) ([]byte, error) {
-	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
-	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
-	if hdfsNamenodeAddress == "" {
-		return nil, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+func ReadFileFromHDFS(hdfsPath string, token string) ([]byte, error) {
+	// Učitaj HDFS_HTTP_API_ADDRESS iz .env fajla
+	hdfsHTTPAPIAddress := os.Getenv("HDFS_HTTP_API_ADDRESS")
+	if hdfsHTTPAPIAddress == "" {
+		return nil, fmt.Errorf("HDFS_HTTP_API_ADDRESS is not set in .env file")
 	}
 
-	// Konektovanje na HDFS namenode
-	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
-	}
-	defer client.Close()
+	// URL za čitanje fajla sa HDFS-a
+	url := fmt.Sprintf("%s/%s", hdfsHTTPAPIAddress, hdfsPath)
 
-	// Otvoriti fajl sa HDFS-a
-	hdfsFile, err := client.Open(hdfsPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file on HDFS: %v", err)
-	}
-	defer hdfsFile.Close()
+	for i := 0; i < 3; i++ { // Pokušaj 3 puta
+		// Kreiraj HTTP GET zahtev
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %v", err)
+		}
 
-	// Čitanje sadržaja fajla u memoriju
-	fileContent, err := ioutil.ReadAll(hdfsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file from HDFS: %v", err)
+		// Postavi Authorization header sa Bearer tokenom
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		// Kreiraj HTTP klijent i pošalji zahtev
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("error making request to HDFS HTTP API: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			// Pročitaj sadržaj fajla iz HTTP odgovora
+			fileContent, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read response body: %v", err)
+			}
+			return fileContent, nil // Uspešno pročitan fajl
+		} else if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("file not found on HDFS: %s (status 404)", hdfsPath)
+		} else {
+			return nil, fmt.Errorf("error reading file from HDFS: received status %v", resp.StatusCode)
+		}
 	}
 
-	return fileContent, nil
+	return nil, fmt.Errorf("failed to read file from HDFS after 3 attempts")
 }
-func ReadFilesFromHDFSDirectory(dirPath string) ([]string, error) {
-	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
-	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
-	if hdfsNamenodeAddress == "" {
-		return nil, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+func ReadFilesFromHDFSDirectory(dirPath string, token string) ([]string, error) {
+	// Učitaj HDFS_HTTP_API_ADDRESS iz .env fajla
+	hdfsHTTPAPIAddress := os.Getenv("HDFS_HTTP_API_ADDRESS")
+	if hdfsHTTPAPIAddress == "" {
+		return nil, fmt.Errorf("HDFS_HTTP_API_ADDRESS is not set in .env file")
 	}
 
-	// Konektovanje na HDFS namenode
-	client, err := hdfs.NewClient(hdfs.ClientOptions{
-		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
+	// URL za čitanje direktorijuma sa HDFS-a
+	url := fmt.Sprintf("%s/%s", hdfsHTTPAPIAddress, dirPath)
+
+	for i := 0; i < 3; i++ { // Pokušaj 3 puta
+		// Kreiraj HTTP GET zahtev
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %v", err)
+		}
+
+		// Postavi Authorization header sa Bearer tokenom
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		// Kreiraj HTTP klijent i pošalji zahtev
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("error making request to HDFS HTTP API: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			// Pročitaj sadržaj direktorijuma iz HTTP odgovora
+			var fileList []string
+			if err := json.NewDecoder(resp.Body).Decode(&fileList); err != nil {
+				return nil, fmt.Errorf("failed to decode response body: %v", err)
+			}
+
+			// Sortiraj fajlove prema numeričkim ID-ovima u imenu
+			sort.Slice(fileList, func(i, j int) bool {
+				iID := extractNumericID(fileList[i])
+				jID := extractNumericID(fileList[j])
+				return iID < jID
+			})
+
+			return fileList, nil // Uspešno pročitana lista fajlova
+		} else if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("directory not found on HDFS: %s (status 404)", dirPath)
+		} else {
+			return nil, fmt.Errorf("error reading directory from HDFS: received status %v", resp.StatusCode)
+		}
 	}
-	defer client.Close()
 
-	// Učitaj listu fajlova iz direktorijuma
-	files, err := client.ReadDir(dirPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read directory: %v", err)
-	}
-
-	var fileNames []string
-	for _, file := range files {
-		fileNames = append(fileNames, file.Name())
-	}
-
-	// Sortiraj fajlove prema numeričkim ID-ovima u imenu
-	sort.Slice(fileNames, func(i, j int) bool {
-		iID := extractNumericID(fileNames[i])
-		jID := extractNumericID(fileNames[j])
-		return iID < jID
-	})
-
-	return fileNames, nil
+	return nil, fmt.Errorf("failed to read directory from HDFS after 3 attempts")
 }
 
-// extractNumericID funkcija koja iz imena fajla ekstrahuje numerički ID
+// Pomocna funkcija za ekstrakciju numeričkog ID-a iz imena fajla
 func extractNumericID(fileName string) int {
-	// Pretpostavljamo da ime fajla sadrži broj (npr. "file_123.txt")
 	re := regexp.MustCompile(`\d+`)
 	match := re.FindString(fileName)
 	if match == "" {
-		return 0 // Ako nema broja, vratiti 0 kao podrazumevanu vrednost
+		return 0
 	}
-
-	id, err := strconv.Atoi(match)
-	if err != nil {
-		return 0 // Ako dođe do greške u konverziji, vratiti 0
-	}
-
+	id, _ := strconv.Atoi(match)
 	return id
 }
 
@@ -992,17 +994,43 @@ func TaskExists(taskID string) (bool, error) {
 	return true, nil
 }
 
-func sendToAnalyticsService(payload map[string]interface{}) {
+func sendToAnalyticsService(payload map[string]interface{}, token string) {
 	url := "http://analytics-service:8080/analytics/status-change"
-	jsonPayload, _ := json.Marshal(payload)
 
-	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+	// Konvertuj podatke u JSON
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal analytics payload: %v", err)
+		return
+	}
+
+	// Kreiraj HTTP POST zahtev
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		log.Printf("Failed to create analytics request: %v", err)
+		return
+	}
+
+	// Postavi Authorization header sa Bearer tokenom
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Kreiraj HTTP klijent i pošalji zahtev
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to send analytics data: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Proveri statusni kod odgovora
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Analytics service returned non-OK status: %v", resp.StatusCode)
 	}
 }
 
-func DeleteTaskByID(taskID string) error {
+func DeleteTaskByID(taskID string, token string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -1026,7 +1054,7 @@ func DeleteTaskByID(taskID string) error {
 	}
 
 	// 1. Pozovi brisanje workflow-a vezanog za ovaj task
-	err = deleteWorkflow(taskID)
+	err = deleteWorkflow(taskID, token)
 	if err != nil {
 		return fmt.Errorf("failed to delete workflow for task with ID %s: %v", taskID, err)
 	}
@@ -1049,7 +1077,7 @@ func DeleteTaskByID(taskID string) error {
 }
 
 // deleteWorkflow šalje HTTP DELETE zahtev za brisanje workflow-a na workflow-service
-func deleteWorkflow(taskID string) error {
+func deleteWorkflow(taskID string, token string) error {
 	// URL za GET zahtev da proverimo da li workflow postoji za ovaj task
 	url := fmt.Sprintf("http://workflow-service:8080/check/%s", taskID)
 
@@ -1058,6 +1086,9 @@ func deleteWorkflow(taskID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
+
+	// Dodaj token u Authorization header
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	// Setuj HTTP klijent sa timeout-om
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -1082,6 +1113,9 @@ func deleteWorkflow(taskID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create delete request: %v", err)
 	}
+
+	// Dodaj token u Authorization header za DELETE zahtev
+	reqDelete.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	// Pošaljemo DELETE zahtev za brisanje workflow-a
 	respDelete, err := client.Do(reqDelete)

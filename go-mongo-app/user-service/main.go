@@ -53,7 +53,7 @@ func main() {
 	router.HandleFunc("/confirm", userHandler.ConfirmUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/check-username", userHandler.CheckUsername).Methods("GET", "OPTIONS")
 	router.HandleFunc("/api/check-user-active", userHandler.CheckUserActive).Methods("GET", "OPTIONS")
-	router.HandleFunc("/users/{id}/exists", userHandler.CheckUserExists).Methods("GET", "OPTIONS") //check this
+	router.HandleFunc("/users/{id}/exists", userHandler.CheckUserExists).Methods("GET", "OPTIONS")
 	router.HandleFunc("/send-magic-link", userHandler.SendMagicLinkHandler).Methods("POST", "OPTIONS")
 	router.HandleFunc("/verify-magic-link", userHandler.VerifyMagicLinkHandler).Methods("GET", "OPTIONS")
 

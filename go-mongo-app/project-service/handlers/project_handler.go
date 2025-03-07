@@ -46,7 +46,25 @@ func (h *ProjectHandler) GetUsersForProjectHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	users, err := service.GetUserDetails(usersIDs)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		h.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		h.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	users, err := service.GetUserDetails(usersIDs, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -154,8 +172,26 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		"projectId": projectID,
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		h.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		h.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Slanje događaja u bazu
-	if err := h.sendEventToDatabase(event); err != nil {
+	if err := h.sendEventToDatabase(event, token); err != nil {
 		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
 		return
 	}
@@ -182,7 +218,25 @@ func (p *ProjectHandler) AddUsersToProject(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := service.AddUsersToProject(projectID, requestBody.UserIDs); err != nil {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		p.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		p.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	if err := service.AddUsersToProject(projectID, requestBody.UserIDs, token); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -235,7 +289,26 @@ func (p *ProjectHandler) AddUsersToProject(w http.ResponseWriter, r *http.Reques
 			},
 			"projectId": projectID,
 		}
-		if err := p.sendEventToDatabase(event); err != nil {
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+			p.logger.Println("No Authorization header:", authHeader)
+			return
+		}
+
+		// Expect the format "Bearer <token>"
+		token := ""
+
+		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+			token = authHeader[7:]
+		} else {
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			p.logger.Println("Invalid Authorization header format:", authHeader)
+			return
+		}
+
+		if err := p.sendEventToDatabase(event, token); err != nil {
 			http.Error(w, "Error sending event to analytics service", http.StatusInternalServerError)
 			return
 		}
@@ -246,7 +319,7 @@ func (p *ProjectHandler) AddUsersToProject(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Users successfully added to project"))
 }
-func (p *ProjectHandler) sendEventToDatabase(event interface{}) error {
+func (p *ProjectHandler) sendEventToDatabase(event interface{}, token string) error {
 	analyticsServiceURL := fmt.Sprintf("http://event_sourcing:8080/event/append")
 
 	// Marshal the event into JSON
@@ -263,8 +336,9 @@ func (p *ProjectHandler) sendEventToDatabase(event interface{}) error {
 		return err
 	}
 
-	// Set the appropriate content-type header for the request
+	// Set the appropriate headers for the request
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token)) // Dodaj token u Authorization header
 
 	// Use the default HTTP client (without TLS)
 	resp, err := http.DefaultClient.Do(req)
@@ -282,6 +356,7 @@ func (p *ProjectHandler) sendEventToDatabase(event interface{}) error {
 
 	return nil
 }
+
 func Conn() (*nats.Conn, error) {
 	connection := os.Getenv("NATS_URL")
 	conn, err := nats.Connect(connection)
@@ -359,8 +434,26 @@ func (p *ProjectHandler) RemoveUsersFromProject(w http.ResponseWriter, r *http.R
 			"projectId": projectID,
 		}
 
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+			p.logger.Println("No Authorization header:", authHeader)
+			return
+		}
+
+		// Expect the format "Bearer <token>"
+		token := ""
+
+		if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+			token = authHeader[7:]
+		} else {
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			p.logger.Println("Invalid Authorization header format:", authHeader)
+			return
+		}
+
 		// Send the event to the analytic service
-		if err := p.sendEventToDatabase(event); err != nil {
+		if err := p.sendEventToDatabase(event, token); err != nil {
 			http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
 			return
 		}
@@ -456,8 +549,26 @@ func (h *ProjectHandler) IsActiveProject(w http.ResponseWriter, r *http.Request)
 	vars := mux.Vars(r)
 	projectID := vars["projectId"]
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		h.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		h.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Pozovi servis za dobijanje statusa svih taskova u projektu
-	status, err := service.IsActiveProject(projectID)
+	status, err := service.IsActiveProject(projectID, token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -612,8 +723,26 @@ func (uh *ProjectHandler) DeleteProjectByIDHandler(w http.ResponseWriter, r *htt
 		}
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
 	// Pozovi repository za brisanje project po taskID-u
-	err = service.DeleteProjectByID(projectID)
+	err = service.DeleteProjectByID(projectID, token)
 	if err != nil {
 		http.Error(w, "Failed to delete project: "+err.Error(), http.StatusInternalServerError)
 		return
