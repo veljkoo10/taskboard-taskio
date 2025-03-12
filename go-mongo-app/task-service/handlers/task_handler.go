@@ -287,6 +287,25 @@ func (uh *TasksHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Task Created",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"taskId":    task.ID,
+			"projectId": task.Project_ID,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	// Send the event to the analytic service
+	if err := uh.sendEventToDatabase(event, token); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
+	}
+
 	// Send the created task as JSON response
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(task); err != nil {
@@ -385,6 +404,24 @@ func (t *TasksHandler) AddUserToTaskHandler(w http.ResponseWriter, r *http.Reque
 		TaskName: task.Name,
 	}
 
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Member Added to Task",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"memberId": userID,
+			"taskId":   task.ID,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	if err := t.sendEventToDatabase(event, token); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
+	}
+
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Error marshalling message:", err)
@@ -461,6 +498,24 @@ func (t *TasksHandler) RemoveUserFromTaskHandler(w http.ResponseWriter, r *http.
 	}{
 		UserID:   userID,
 		TaskName: task.Name,
+	}
+
+	currentTime := time.Now().Add(1 * time.Hour)
+	formattedTime := currentTime.Format(time.RFC3339)
+
+	event := map[string]interface{}{
+		"type": "Member Removed from Task",
+		"time": formattedTime,
+		"event": map[string]interface{}{
+			"memberId": userID,
+			"taskId":   task.ID,
+		},
+		"projectId": task.Project_ID,
+	}
+
+	if err := t.sendEventToDatabase(event, token); err != nil {
+		http.Error(w, "Failed to send event to analytics service", http.StatusInternalServerError)
+		return
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -936,7 +991,7 @@ func (uh *TasksHandler) UploadFileHandler(w http.ResponseWriter, r *http.Request
 
 		err = service.UploadFileToHDFS(localFilePath, hdfsDirPath, fileHeader.Filename, token)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to upload file to HDFS: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("BACK Failed to upload file to HDFS: %v", err), http.StatusInternalServerError)
 			return
 		}
 
@@ -1224,4 +1279,53 @@ func (uh *TasksHandler) DeleteTaskByIDHandler(w http.ResponseWriter, r *http.Req
 	// Uspešan odgovor
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message":"Task deleted successfully"}`))
+}
+func (uh *TasksHandler) UpdateTaskPosition(w http.ResponseWriter, r *http.Request) {
+	// Extract taskID from URL
+	vars := mux.Vars(r)
+	taskID := vars["taskID"]
+
+	// Validate taskID format
+	if _, err := primitive.ObjectIDFromHex(taskID); err != nil {
+		http.Error(w, "Invalid task ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Parse position from request body
+	var payload struct {
+		Position int `json:"position"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	// Call the service layer to update the task position
+	err := service.UpdateTaskPosition(taskID, payload.Position, token)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to update task position: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Return a successful response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Task position updated successfully"})
 }

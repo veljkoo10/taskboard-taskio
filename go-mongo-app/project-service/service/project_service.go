@@ -1,10 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt"
 	"io"
 	"log"
 	"net/http"
@@ -670,5 +672,147 @@ func deleteTask(taskID string, token string) error {
 
 	// Task uspešno obrisan
 	fmt.Printf("Task %s deleted successfully\n", taskID)
+	return nil
+}
+func UpdateTaskOrder(projectID string, taskIDs []string, token string) error {
+	// Provera validnosti tokena
+	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte("your-secret-key"), nil
+	})
+	if err != nil {
+		return fmt.Errorf("invalid token: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	collection := db.Client.Database("testdb").Collection("projects")
+
+	objID, err := primitive.ObjectIDFromHex(projectID)
+	if err != nil {
+		return fmt.Errorf("invalid projectID format: %v", err)
+	}
+
+	fmt.Println("Attempting to update task order for project with ObjectID:", objID)
+	fmt.Println("Received task IDs to swap:", taskIDs)
+
+	// Učitaj trenutni projekat
+	var project models.Project
+	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&project)
+	if err != nil {
+		return fmt.Errorf("could not find project with ID %v: %v", projectID, err)
+	}
+	fmt.Println("Current task order in database before update:", project.Tasks)
+
+	// Proveri da li su poslata tačno dva taska za zamenu
+	if len(taskIDs) != 2 {
+		return fmt.Errorf("exactly two task IDs must be provided for swapping, got %d", len(taskIDs))
+	}
+
+	// Pronađi pozicije dva taska u trenutnom redosledu
+	task1Index := -1
+	task3Index := -1
+	for i, id := range project.Tasks {
+		if id == taskIDs[0] {
+			task1Index = i
+		} else if id == taskIDs[1] {
+			task3Index = i
+		}
+	}
+
+	if task1Index == -1 || task3Index == -1 {
+		return fmt.Errorf("one or both task IDs (%s, %s) not found in project tasks", taskIDs[0], taskIDs[1])
+	}
+
+	// Kopiraj trenutni redosled i zameni pozicije
+	newTaskOrder := make([]string, len(project.Tasks))
+	copy(newTaskOrder, project.Tasks)
+	newTaskOrder[task1Index] = taskIDs[1] // task3 na mesto task1
+	newTaskOrder[task3Index] = taskIDs[0] // task1 na mesto task3
+
+	// Ažuriraj redosled taskova u projektu
+	filter := bson.M{"_id": objID}
+	update := bson.M{
+		"$set": bson.M{
+			"tasks": newTaskOrder,
+		},
+	}
+
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to update task order for project %v: %v", projectID, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("no project found with projectID: %s", projectID)
+	}
+
+	// Ažuriraj position za svaki zadatak u task-service-u
+	for i, taskID := range newTaskOrder {
+		err := updateTaskPosition(taskID, i+1, token) // Position počinje od 1
+		if err != nil {
+			return fmt.Errorf("failed to update task position for task %s: %v", taskID, err)
+		}
+	}
+
+	var updatedProject models.Project
+	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&updatedProject)
+	if err != nil {
+		fmt.Println("Failed to fetch updated project:", err)
+	} else {
+		fmt.Println("Task order in database after update:", updatedProject.Tasks)
+	}
+
+	fmt.Println("Task order updated successfully for project:", projectID)
+	return nil
+}
+
+func updateTaskPosition(taskID string, position int, token string) error {
+	// Provera validnosti tokena
+	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte("your-secret-key"), nil
+	})
+	if err != nil {
+		return fmt.Errorf("invalid token: %v", err)
+	}
+
+	// URL za task-service
+	url := fmt.Sprintf("http://task-service:8080/tasks/%s/position", taskID)
+
+	// Podaci za slanje
+	payload := map[string]interface{}{
+		"position": position,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
+	// HTTP PUT zahtev
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token) // Dodaj token u header
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Provera statusnog koda
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received non-OK response: %s", resp.Status)
+	}
+
 	return nil
 }

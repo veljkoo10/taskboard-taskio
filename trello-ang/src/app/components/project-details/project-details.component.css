@@ -583,7 +583,7 @@ body {
 }
 .modal-body label {
   font-weight: bold;
-  font-size: 1.4rem; /* Optionally increase font size */
+  font-size: 1.3rem; /* Optionally increase font size */
   color: #333;
 }
 
@@ -1506,14 +1506,31 @@ button:focus {
   font-weight: bold;
   margin: 0;
 }
-.cdk-drag-preview {
+.task-item {
+  padding: 10px;
+  margin: 5px 0;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: grab;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.task-item:active {
+  cursor: grabbing;
+}
+
+.task-item.dragging {
   opacity: 0.5;
+  transform: scale(0.95);
 }
 
-.cdk-drag-placeholder {
-  opacity: 0;
+.status-item {
+  padding: 10px;
+  border: 2px dashed transparent;
+  transition: border-color 0.3s ease;
 }
 
-.cdk-drop-list-dragging .cdk-drag {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+.status-item.drag-over {
+  border-color: #007bff;
 }

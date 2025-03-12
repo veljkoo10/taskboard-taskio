@@ -52,8 +52,9 @@ func main() {
 	router.HandleFunc("/projects/{projectId}/remove-users", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.RemoveUsersFromProject, "Manager"))).Methods("PUT")
 	router.HandleFunc("/projects/title/{managerId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.HandleCheckProjectByTitle, "Manager"))).Methods("POST")
 	router.HandleFunc("/projects/{projectID}/tasks/{taskID}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.AddTaskToProjectHandler, "Manager"))).Methods("PUT", "OPTIONS")
-	router.HandleFunc("/projects/isActive/{projectId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.IsActiveProject, "Manager"))).Methods("GET")
+	router.HandleFunc("/projects/isActive/{projectId}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.IsActiveProject, "Manager", "Member"))).Methods("GET")
 	router.HandleFunc("/projects/delete/{projectID}", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.DeleteProjectByIDHandler, "Manager"))).Methods("DELETE")
+	router.HandleFunc("/projects/{projectID}/task-order", projectsHandler.MiddlewareExtractUserFromHeader(projectsHandler.RoleRequired(projectsHandler.UpdateTaskOrder, "Member", "Manager"))).Methods("PUT")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:4200"},

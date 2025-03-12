@@ -51,7 +51,7 @@ func main() {
 	r.HandleFunc("/workflow/getWorkflows", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetWorkflowHandler, "Manager", "Member"))).Methods("GET")
 	r.HandleFunc("/workflow/getTaskById/{id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetTaskByIDHandler, "Manager", "Member"))).Methods("GET")
 	r.HandleFunc("/workflow/check-dependency/{task_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.CheckDependencyHandler, "Manager"))).Methods("GET")
-	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetTaskDependenciesHandler, "Manager"))).Methods("GET")
+	r.HandleFunc("/workflow/{task_id}/dependencies", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetTaskDependenciesHandler, "Manager", "Member"))).Methods("GET")
 	r.HandleFunc("/workflow/project/{project_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetFlowByProjectIDHandler, "Manager", "Member"))).Methods("GET")
 	r.HandleFunc("/workflow/delete/{task_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.DeleteWorkflowByTaskIDHandler, "Manager"))).Methods("DELETE")
 	r.HandleFunc("/workflow/check/{task_id}", workflowHandler.MiddlewareExtractUserFromHeader(workflowHandler.RoleRequired(workflowHandler.GetWorkflowByTaskIDHandler, "Manager", "Member"))).Methods("GET")

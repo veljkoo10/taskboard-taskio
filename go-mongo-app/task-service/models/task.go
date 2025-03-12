@@ -11,6 +11,7 @@ type Task struct {
 	Status      string               `bson:"status" json:"status"`
 	Users       []string             `bson:"users" json:"users"`
 	Project_ID  string               `json:"project_id" bson:"project_id"`
-	DependsOn   []primitive.ObjectID `json:"DependsOn"   bson:"dependsOn"`
+	DependsOn   []primitive.ObjectID `json:"dependsOn" bson:"dependsOn"`
 	FilePaths   []string             `bson:"filePaths" json:"filePaths"`
+	Position    int                  `bson:"position" json:"position"`
 }

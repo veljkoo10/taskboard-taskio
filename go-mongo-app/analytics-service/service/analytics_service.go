@@ -5,6 +5,7 @@ import (
 	"analytics-service/models"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -148,20 +149,20 @@ func CountUserTasksByStatus(userID string, token string) (map[string]int, error)
 func CheckProjectStatus(projectID string, token string) (bool, error) {
 	endpoint := fmt.Sprintf("http://project-service:8080/projects/isActive/%s", projectID)
 
-	// Kreiranje HTTP GET zahteva
+	// Kreiranje novog HTTP zahteva
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to create request: %v", err)
+		return false, errors.New("failed to create request")
 	}
 
-	// Postavi Authorization header sa Bearer tokenom
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Dodavanje tokena u zaglavlje zahteva
+	req.Header.Set("Authorization", "Bearer "+token)
 
-	// Slanje HTTP GET zahteva
+	// Slanje zahteva
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return false, fmt.Errorf("failed to fetch project status: %v", err)
+		return false, errors.New("failed to fetch project status")
 	}
 	defer resp.Body.Close()
 
@@ -172,7 +173,7 @@ func CheckProjectStatus(projectID string, token string) (bool, error) {
 	// Provera JSON odgovora
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, fmt.Errorf("failed to read project status response: %v", err)
+		return false, errors.New("failed to read project status response")
 	}
 
 	fmt.Printf("Response body: %s\n", string(body))

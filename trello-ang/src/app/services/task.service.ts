@@ -10,10 +10,8 @@ import {Observable, Subject, throwError} from 'rxjs';
   providedIn: 'root'
 })
 export class TaskService {
-  private taskUrl = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
-  private taskUrl2 = 'https://localhost/taskio/tasks'; // Base URL for task endpoints
+  private taskUrl = 'https://localhost/taskio/tasks';
   private workflow = 'https://localhost/taskio/workflow'
-  private taskUrl3 = 'http://localhost:8082/tasks';
 
   constructor(private http: HttpClient) {}
 
@@ -83,7 +81,7 @@ export class TaskService {
   }
 
   getTasksByProjectId(projectId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.taskUrl2}/projects/${projectId}/tasks`);
+    return this.http.get<any[]>(`${this.taskUrl}/projects/${projectId}/tasks`);
   }
 
   isUserOnTask(taskId: string, userId: string): Observable<boolean> {
@@ -105,7 +103,7 @@ export class TaskService {
   }
   downloadFile(taskId: string, fileNamee: string): Observable<Blob> {
     const fileName = encodeURIComponent(fileNamee); // Enkodiranje imena fajla
-    const url = `${this.taskUrl3}/${taskId}/download/${fileName}`;  // Prilagodi URL
+    const url = `${this.taskUrl}/${taskId}/download/${fileName}`;  // Prilagodi URL
     return this.http.get(url, { responseType: 'blob' });
   }
   // Create a workflow by assigning dependencies to a task
@@ -147,6 +145,18 @@ export class TaskService {
           return dependencies.map((taskId: any) => String(taskId));  // Konvertuje svaki ID u string
         })
       );
+  }
+
+  updateTaskPosition(taskID: string, position: number): Observable<any> {
+    const url = `${this.taskUrl}/${taskID}/position`;
+    const payload = { position };
+
+    return this.http.put(url, payload).pipe(
+      catchError((error) => {
+        console.error('Error updating task position:', error);
+        throw error;
+      })
+    );
   }
 
 }

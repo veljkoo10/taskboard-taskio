@@ -752,3 +752,64 @@ func (uh *ProjectHandler) DeleteProjectByIDHandler(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message":"project deleted successfully"}`))
 }
+func (uh *ProjectHandler) UpdateTaskOrder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Uzmi projectID iz URL-a
+	vars := mux.Vars(r)
+	projectID := vars["projectID"]
+
+	// Uzmi taskIDs iz tela zahteva
+	var payload struct {
+		TaskIDs []string `json:"task_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Proveri da li su taskIDs prosleđeni
+	if len(payload.TaskIDs) == 0 {
+		http.Error(w, "task_ids is required", http.StatusBadRequest)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "No Authorization header found", http.StatusUnauthorized)
+		uh.logger.Println("No Authorization header:", authHeader)
+		return
+	}
+
+	// Expect the format "Bearer <token>"
+	token := ""
+
+	if len(authHeader) > 7 && strings.ToLower(authHeader[:7]) == "bearer " {
+		token = authHeader[7:]
+	} else {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		uh.logger.Println("Invalid Authorization header format:", authHeader)
+		return
+	}
+
+	// Pozovi servisnu funkciju
+	err := service.UpdateTaskOrder(projectID, payload.TaskIDs, token)
+	if err != nil {
+		switch err.Error() {
+		case "invalid projectID format: invalid hex string":
+			http.Error(w, "Invalid project ID format", http.StatusBadRequest)
+		default:
+			if err.Error()[:27] == "could not find project with" || err.Error()[:27] == "no project found with proje" {
+				http.Error(w, "Project not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "Failed to update task order", http.StatusInternalServerError)
+			}
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Task order updated successfully"})
+}

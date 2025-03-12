@@ -51,7 +51,12 @@ func main() {
 	logger.Println("ESDBClient initialized successfully.")
 
 	// Delete all events before starting the server
-
+	err = esdbClient.DeleteAllEvents()
+	if err != nil {
+		logger.Fatalf("Error deleting events: %v", err)
+	} else {
+		logger.Println("All events have been deleted successfully.")
+	}
 	// Konfigurisanje HTTP ruta
 	eventHandler := handlers.NewEventHandler(esdbClient, logger)
 	r := mux.NewRouter()

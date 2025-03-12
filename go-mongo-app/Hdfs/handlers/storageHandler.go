@@ -3,6 +3,7 @@ package handlers
 import (
 	"Hdfs/storage"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"io"
@@ -59,36 +60,54 @@ func (s *StorageHandler) CopyFileToStorage(rw http.ResponseWriter, h *http.Reque
 }
 
 func (s *StorageHandler) WriteFileToStorage(rw http.ResponseWriter, h *http.Request) {
+	// Ekstraktujte fileName iz zahteva
 	fileName := h.FormValue("fileName")
+	if fileName == "" {
+		http.Error(rw, "fileName is required", http.StatusBadRequest)
+		return
+	}
 
 	// Koristi podrazumevani sadržaj iz environment varijable
 	fileContent := s.defaultFileContent
 
+	// Zapišite fajl u skladište
 	err := s.store.WriteFile(fileContent, fileName)
-
 	if err != nil {
-		http.Error(rw, "File hdfs exception", http.StatusInternalServerError)
+		http.Error(rw, "File hdfs exception BACK", http.StatusInternalServerError)
 		s.logger.Println("File hdfs exception: ", err)
+		return
 	}
+
+	// Vratite uspešan odgovor
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(map[string]string{"message": "File written successfully"})
 }
 
 func (s *StorageHandler) ReadFileFromStorage(rw http.ResponseWriter, h *http.Request) {
+	// Ekstraktujte fileName iz zahteva
 	fileName := h.FormValue("fileName")
+	if fileName == "" {
+		http.Error(rw, "fileName is required", http.StatusBadRequest)
+		return
+	}
+
+	// Proverite da li je fajl kopiran (opciono)
 	copied := h.FormValue("isCopied")
 	isCopied := false
 	if copied != "" {
 		isCopied = true
 	}
 
+	// Pročitajte fajl iz skladišta
 	fileContent, err := s.store.ReadFile(fileName, isCopied)
-
 	if err != nil {
 		http.Error(rw, "File hdfs exception", http.StatusInternalServerError)
 		s.logger.Println("File hdfs exception: ", err)
 		return
 	}
 
-	// Write content to response
+	// Vratite sadržaj fajla kao odgovor
+	rw.Header().Set("Content-Type", "text/plain")
 	io.WriteString(rw, fileContent)
 	s.logger.Printf("Content of file %s: %s\n", fileName, fileContent)
 }

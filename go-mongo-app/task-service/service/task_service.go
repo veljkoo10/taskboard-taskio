@@ -10,7 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -244,7 +246,8 @@ func GetTasksByProjectID(projectID string) ([]models.Task, error) {
 	defer cancel()
 
 	// Upit za zadatke koji odgovaraju projectID-u
-	cursor, err := collection.Find(ctx, bson.M{"project_id": projectObjectID})
+	options := options.Find().SetSort(bson.M{"position": 1})
+	cursor, err := collection.Find(ctx, bson.M{"project_id": projectObjectID}, options)
 	if err != nil {
 		return nil, err
 	}
@@ -299,6 +302,18 @@ func CreateTask(projectID, name, description string, dependsOn []string, token s
 		return nil, errors.New("a task with the same name already exists in this project")
 	}
 
+	var lastTask models.Task
+	err = collection.FindOne(context.TODO(), bson.M{"project_id": projectObjectID.Hex()}, options.FindOne().SetSort(bson.M{"position": -1})).Decode(&lastTask)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return nil, fmt.Errorf("error finding last task: %v", err)
+	}
+
+	// Dodeli position vrednost
+	position := 1
+	if err != mongo.ErrNoDocuments {
+		position = lastTask.Position + 1
+	}
+
 	// Create ObjectID list for dependencies
 	var dependsOnObjectIDs []primitive.ObjectID
 	for _, dep := range sanitizedDependsOn {
@@ -315,9 +330,11 @@ func CreateTask(projectID, name, description string, dependsOn []string, token s
 		Name:        strings.ToLower(name),
 		Description: description,
 		Status:      "pending",
-		Users:       []string{}, // Empty user list
+		Users:       []string{}, // Prazna lista korisnika
 		Project_ID:  projectObjectID.Hex(),
 		DependsOn:   dependsOnObjectIDs,
+		FilePaths:   []string{},
+		Position:    position, // Dodato position polje
 	}
 
 	// Insert the new task into the database
@@ -551,12 +568,12 @@ func GetTaskByID(taskID string) (*models.Task, error) {
 	return &task, nil
 }
 
-// IsUserInTask proverava da li je korisnik dodeljen zadatku
 func IsUserInTask(taskID string, userID string, token string) (bool, error) {
 	// Sanitize input
 	taskID = SanitizeInput(taskID)
 	userID = SanitizeInput(userID)
 	fmt.Sprintf(userID)
+
 	// Construct the URL for the user-service
 	url := fmt.Sprintf("http://user-service:8080/users/%s", userID)
 	fmt.Println("Requesting URL:", url) // Debug log
@@ -608,8 +625,11 @@ func IsUserInTask(taskID string, userID string, token string) (bool, error) {
 		return false, err
 	}
 
-	// Check if the userID exists in the task's user list
-	for _, id := range task.Users {
+	// Check if the userID exists in the task's user list, skipping the first user
+	for i, id := range task.Users {
+		if i == 0 {
+			continue // Skip the first user
+		}
 		fmt.Printf("Checking userID: %s, user role: %s\n", userID, user.Role) // Log the userID and the role
 
 		if id == userID || user.Role == "Manager" {
@@ -772,7 +792,7 @@ func GetDependenciesFromWorkflowService(taskID string, token string) (*models.Wo
 		if resp.StatusCode == http.StatusNotFound {
 			return nil, fmt.Errorf("no dependencies found for task_id %s (status 404)", taskID)
 		} else if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("error fetching dependencies: received status %v", resp.StatusCode)
+			return nil, fmt.Errorf("error fetching dependenciesssss: received status %v", resp.StatusCode)
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(&workflow); err != nil {
@@ -785,15 +805,47 @@ func GetDependenciesFromWorkflowService(taskID string, token string) (*models.Wo
 	return nil, fmt.Errorf("failed to fetch dependencies after 3 attempts")
 }
 
-func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string, token string) error {
-	// Učitaj HDFS_HTTP_API_ADDRESS iz .env fajla
-	hdfsHTTPAPIAddress := os.Getenv("HDFS_HTTP_API_ADDRESS")
-	if hdfsHTTPAPIAddress == "" {
-		return fmt.Errorf("HDFS_HTTP_API_ADDRESS is not set in .env file")
+func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName, token string) error {
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
+	}
+
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
+
+	// Proveriti da li direktorijum postoji, ako ne, kreirati ga
+	_, err = client.Stat(hdfsDirPath)
+	if err != nil && os.IsNotExist(err) {
+		err := client.MkdirAll(hdfsDirPath, os.ModePerm) // Kreira direktorijum ako ne postoji
+		if err != nil {
+			return fmt.Errorf("failed to create directory on HDFS: %v", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("failed to check if directory exists: %v", err)
 	}
 
 	// Formiranje pune putanje za fajl (direktorijum + ime fajla)
 	hdfsFilePath := path.Join(hdfsDirPath, fileName)
+
+	// Proveriti da li fajl već postoji
+	_, err = client.Stat(hdfsFilePath)
+	if err == nil {
+		// Ako fajl postoji, obriši ga pre nego što ga ponovo postaviš
+		err = client.Remove(hdfsFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to remove existing file on HDFS: %v", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to check if file exists: %v", err)
+	}
 
 	// Otvoriti lokalni fajl koji treba da bude uploadovan
 	localFile, err := os.Open(localFilePath)
@@ -802,156 +854,88 @@ func UploadFileToHDFS(localFilePath, hdfsDirPath, fileName string, token string)
 	}
 	defer localFile.Close()
 
-	// Pročitaj sadržaj lokalnog fajla
-	fileData, err := io.ReadAll(localFile)
+	// Kreirati fajl u HDFS-u
+	hdfsFile, err := client.Create(hdfsFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to read local file: %v", err)
+		return fmt.Errorf("failed to create file on HDFS: %v", err)
+	}
+	defer hdfsFile.Close()
+
+	// Kopirati sadržaj sa lokalnog fajla na HDFS
+	_, err = io.Copy(hdfsFile, localFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy data to HDFS: %v", err)
 	}
 
-	// URL za upload fajla na HDFS
-	url := fmt.Sprintf("%s/%s", hdfsHTTPAPIAddress, hdfsFilePath)
-
-	for i := 0; i < 3; i++ { // Pokušaj 3 puta
-		// Kreiraj HTTP PUT zahtev
-		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(fileData))
-		if err != nil {
-			return fmt.Errorf("failed to create request: %v", err)
-		}
-
-		// Postavi Authorization header sa Bearer tokenom
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-		req.Header.Set("Content-Type", "application/octet-stream")
-
-		// Kreiraj HTTP klijent i pošalji zahtev
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return fmt.Errorf("error making request to HDFS HTTP API: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusOK {
-			return nil // Uspešno uploadovan fajl
-		} else if resp.StatusCode == http.StatusConflict {
-			// Ako fajl već postoji, obriši ga i pokušaj ponovo
-			deleteReq, err := http.NewRequest("DELETE", url, nil)
-			if err != nil {
-				return fmt.Errorf("failed to create delete request: %v", err)
-			}
-			deleteReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-
-			deleteResp, err := client.Do(deleteReq)
-			if err != nil {
-				return fmt.Errorf("error making delete request to HDFS HTTP API: %v", err)
-			}
-			defer deleteResp.Body.Close()
-
-			if deleteResp.StatusCode != http.StatusOK {
-				return fmt.Errorf("failed to delete existing file on HDFS: received status %v", deleteResp.StatusCode)
-			}
-		} else {
-			return fmt.Errorf("error uploading file to HDFS: received status %v", resp.StatusCode)
-		}
-	}
-
-	return fmt.Errorf("failed to upload file to HDFS after 3 attempts")
+	return nil
 }
 
 func ReadFileFromHDFS(hdfsPath string, token string) ([]byte, error) {
-	// Učitaj HDFS_HTTP_API_ADDRESS iz .env fajla
-	hdfsHTTPAPIAddress := os.Getenv("HDFS_HTTP_API_ADDRESS")
-	if hdfsHTTPAPIAddress == "" {
-		return nil, fmt.Errorf("HDFS_HTTP_API_ADDRESS is not set in .env file")
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return nil, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
 	}
 
-	// URL za čitanje fajla sa HDFS-a
-	url := fmt.Sprintf("%s/%s", hdfsHTTPAPIAddress, hdfsPath)
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
 
-	for i := 0; i < 3; i++ { // Pokušaj 3 puta
-		// Kreiraj HTTP GET zahtev
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %v", err)
-		}
+	// Otvoriti fajl sa HDFS-a
+	hdfsFile, err := client.Open(hdfsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file on HDFS: %v", err)
+	}
+	defer hdfsFile.Close()
 
-		// Postavi Authorization header sa Bearer tokenom
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-
-		// Kreiraj HTTP klijent i pošalji zahtev
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("error making request to HDFS HTTP API: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusOK {
-			// Pročitaj sadržaj fajla iz HTTP odgovora
-			fileContent, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read response body: %v", err)
-			}
-			return fileContent, nil // Uspešno pročitan fajl
-		} else if resp.StatusCode == http.StatusNotFound {
-			return nil, fmt.Errorf("file not found on HDFS: %s (status 404)", hdfsPath)
-		} else {
-			return nil, fmt.Errorf("error reading file from HDFS: received status %v", resp.StatusCode)
-		}
+	// Čitanje sadržaja fajla u memoriju
+	fileContent, err := ioutil.ReadAll(hdfsFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file from HDFS: %v", err)
 	}
 
-	return nil, fmt.Errorf("failed to read file from HDFS after 3 attempts")
+	return fileContent, nil
 }
 func ReadFilesFromHDFSDirectory(dirPath string, token string) ([]string, error) {
-	// Učitaj HDFS_HTTP_API_ADDRESS iz .env fajla
-	hdfsHTTPAPIAddress := os.Getenv("HDFS_HTTP_API_ADDRESS")
-	if hdfsHTTPAPIAddress == "" {
-		return nil, fmt.Errorf("HDFS_HTTP_API_ADDRESS is not set in .env file")
+	// Učitaj HDFS_NAMENODE_ADDRESS iz .env fajla
+	hdfsNamenodeAddress := os.Getenv("HDFS_NAMENODE_ADDRESS")
+	if hdfsNamenodeAddress == "" {
+		return nil, fmt.Errorf("HDFS_NAMENODE_ADDRESS is not set in .env file")
 	}
 
-	// URL za čitanje direktorijuma sa HDFS-a
-	url := fmt.Sprintf("%s/%s", hdfsHTTPAPIAddress, dirPath)
+	// Konektovanje na HDFS namenode
+	client, err := hdfs.NewClient(hdfs.ClientOptions{
+		Addresses: []string{hdfsNamenodeAddress}, // Koristi promenljivu iz .env fajla
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to HDFS: %v", err)
+	}
+	defer client.Close()
 
-	for i := 0; i < 3; i++ { // Pokušaj 3 puta
-		// Kreiraj HTTP GET zahtev
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %v", err)
-		}
-
-		// Postavi Authorization header sa Bearer tokenom
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-
-		// Kreiraj HTTP klijent i pošalji zahtev
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("error making request to HDFS HTTP API: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusOK {
-			// Pročitaj sadržaj direktorijuma iz HTTP odgovora
-			var fileList []string
-			if err := json.NewDecoder(resp.Body).Decode(&fileList); err != nil {
-				return nil, fmt.Errorf("failed to decode response body: %v", err)
-			}
-
-			// Sortiraj fajlove prema numeričkim ID-ovima u imenu
-			sort.Slice(fileList, func(i, j int) bool {
-				iID := extractNumericID(fileList[i])
-				jID := extractNumericID(fileList[j])
-				return iID < jID
-			})
-
-			return fileList, nil // Uspešno pročitana lista fajlova
-		} else if resp.StatusCode == http.StatusNotFound {
-			return nil, fmt.Errorf("directory not found on HDFS: %s (status 404)", dirPath)
-		} else {
-			return nil, fmt.Errorf("error reading directory from HDFS: received status %v", resp.StatusCode)
-		}
+	// Učitaj listu fajlova iz direktorijuma
+	files, err := client.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %v", err)
 	}
 
-	return nil, fmt.Errorf("failed to read directory from HDFS after 3 attempts")
+	var fileNames []string
+	for _, file := range files {
+		fileNames = append(fileNames, file.Name())
+	}
+
+	// Sortiraj fajlove prema numeričkim ID-ovima u imenu
+	sort.Slice(fileNames, func(i, j int) bool {
+		iID := extractNumericID(fileNames[i])
+		jID := extractNumericID(fileNames[j])
+		return iID < jID
+	})
+
+	return fileNames, nil
 }
 
 // Pomocna funkcija za ekstrakciju numeričkog ID-a iz imena fajla
@@ -1131,5 +1115,27 @@ func deleteWorkflow(taskID string, token string) error {
 
 	// Workflow uspešno obrisan
 	fmt.Printf("Workflow for task %s deleted successfully\n", taskID)
+	return nil
+}
+func UpdateTaskPosition(taskID string, position int, token string) error {
+	// Validate taskID format
+	taskObjectID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return errors.New("invalid task ID format")
+	}
+
+	// Connect to the MongoDB collection
+	collection := db.Client.Database("testdb").Collection("tasks")
+
+	// Update the task position
+	_, err = collection.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": taskObjectID},
+		bson.M{"$set": bson.M{"position": position}},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update task position: %v", err)
+	}
+
 	return nil
 }
